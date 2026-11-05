@@ -19,6 +19,32 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Validate JavaScript syntax
+        run: node --input-type=module --check < src/main.js
+      - name: Validate required 3D model dependencies
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync, existsSync } from "node:fs";
+          import { dirname, resolve } from "node:path";
+          const models = [
+            "assets/3d/Viking_Male.gltf",
+            "assets/3d/CommonTree_1.gltf",
+            "assets/3d/Pine_1.gltf",
+            "assets/3d/TwistedTree_1.gltf",
+            "assets/3d/Rock_Medium_1.gltf"
+          ];
+          for (const file of models) {
+            const gltf = JSON.parse(readFileSync(file, "utf8"));
+            const refs = [...(gltf.buffers || []), ...(gltf.images || [])]
+              .map(item => item.uri)
+              .filter(uri => uri && !uri.startsWith("data:"));
+            for (const uri of refs) {
+              const target = resolve(dirname(file), decodeURIComponent(uri));
+              if (!existsSync(target)) throw new Error(`Missing asset: ${file} -> ${uri}`);
+            }
+            console.log(`OK ${file}: ${refs.length} external dependencies`);
+          }
+          NODE
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload site
