@@ -106,6 +106,9 @@ function loadCharacter(){
    model.position.set(-center.x*scale,-box.min.y*scale,-center.z*scale);
    model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.side=THREE.DoubleSide;}}});
    player.remove(fallback); player.add(model);
+   // Reposiciona as ferramentas depois que o esqueleto do personagem estiver carregado.
+   if(state.axe)createToolVisual("axe");
+   if(state.pickaxe)createToolVisual("pickaxe");
    if(g.animations?.length){
     mixer=new THREE.AnimationMixer(model);
     animationActions={};
@@ -525,16 +528,38 @@ function createShelter(x,z){
 }
 $("craftShelter").addEventListener("click",craftShelter);
 function createToolVisual(type){
+ const key=type==="axe"?"axeObject":"pickaxeObject";
+ const previous=state[key];
+ if(previous?.parent)previous.parent.remove(previous);
  const group=new THREE.Group();
  const woodMat=new THREE.MeshStandardMaterial({color:0x76502e,roughness:1});
  const metalMat=new THREE.MeshStandardMaterial({color:0x89918b,metalness:.65,roughness:.35});
- const handle=new THREE.Mesh(new THREE.CylinderGeometry(.045,.06,.85,7),woodMat);
+ const handle=new THREE.Mesh(new THREE.CylinderGeometry(.045,.06,.85,8),woodMat);
  handle.position.y=.42;group.add(handle);
  const head=new THREE.Mesh(type==="axe"?new THREE.BoxGeometry(.38,.2,.12):new THREE.BoxGeometry(.52,.13,.12),metalMat);
  head.position.set(type==="axe"?-.16:0,.78,0);group.add(head);
  if(type==="pickaxe")head.rotation.z=-.12;
- group.position.set(type==="axe"?.42:.68,.55,.12);group.rotation.z=-.5;group.visible=true;
- group.traverse(o=>{if(o.isMesh)o.castShadow=true;});player.add(group);
+ group.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+ // Cada ferramenta acompanha a mão correspondente, em vez de ficar solta à frente do corpo.
+ let hand=null;
+ const side=type==="axe"?"right":"left";
+ const handPattern=side==="right"?/(right.*hand|hand.*right|righthand|r[_ .:-]?hand|hand[_ .:-]?r)/i:/(left.*hand|hand.*left|lefthand|l[_ .:-]?hand|hand[_ .:-]?l)/i;
+ const rig=player.children.find(o=>o.isObject3D&&o!==fallback&&o.traverse);
+ if(rig)rig.traverse(o=>{if(!hand&&o.isBone&&handPattern.test(o.name||""))hand=o;});
+ if(hand){
+  group.position.set(0,-.08,0);
+  group.rotation.set(Math.PI/2,0,Math.PI/2);
+  group.scale.setScalar(.72);
+  hand.add(group);
+ }else{
+  // Reserva para modelos sem nomes de ossos padronizados: mantém a ferramenta junto ao braço.
+  const model=rig||player;
+  group.position.set(type==="axe"?.34:-.34,1.02,.08);
+  group.rotation.set(0,0,-.5);
+  group.scale.setScalar(.72);
+  model.add(group);
+ }
+ state[key]=group;
 }
 $("collectBtn").addEventListener("click",collect);
 $("runBtn").addEventListener("click",()=>{state.running=!state.running;$("runBtn").textContent=state.running?"ANDAR":"CORRER";});
