@@ -540,21 +540,21 @@ function createToolVisual(type){
  head.position.set(type==="axe"?-.16:0,.78,0);group.add(head);
  if(type==="pickaxe")head.rotation.z=-.12;
  group.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
- // Cada ferramenta acompanha a mão correspondente, em vez de ficar solta à frente do corpo.
+ // Fist.R e Fist.L são articulações do esqueleto deste modelo.
+ // Procuramos pelo nome sem exigir uma classe específica do Three.js.
  let hand=null;
  const side=type==="axe"?"right":"left";
- // Neste modelo os ossos das mãos se chamam exatamente Fist.R e Fist.L.
- const handPattern=side==="right"?/(fist[._ ]?r|r[._ ]?fist|right.*hand|hand.*right)/i:/(fist[._ ]?l|l[._ ]?fist|left.*hand|hand.*left)/i;
+ const handPattern=side==="right"?/(^fist[._ ]?r$|right.*hand|hand.*right)/i:/(^fist[._ ]?l$|left.*hand|hand.*left)/i;
  const rig=state.characterModel||null;
- if(rig)rig.traverse(o=>{if(!hand&&o.isBone&&handPattern.test(o.name||""))hand=o;});
+ if(rig)rig.traverse(o=>{if(!hand&&handPattern.test(o.name||""))hand=o;});
  if(hand){
-  // A ponta superior do cabo fica junto ao punho; o cabo desce ao lado do corpo.
-  group.position.set(0,-.38,0);
+  // Alinha a extremidade superior do cabo ao punho e deixa a ferramenta pendente na mão.
+  group.position.set(0,-.82,0);
   group.rotation.set(0,0,0);
   group.scale.setScalar(.72);
   hand.add(group);
  }else{
-  // Sem esqueleto disponível, mantém a ferramenta visível ao lado do tronco.
+  // Reserva uma posição lateral visível caso o modelo não disponibilize o nó da mão.
   const model=rig||player;
   group.position.set(type==="axe"?.48:.48,1.05,.28);
   group.rotation.set(0,0,-.25);
