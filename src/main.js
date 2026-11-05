@@ -24,20 +24,24 @@ sun.shadow.mapSize.set(1024,1024);
 sun.shadow.camera.left=-55; sun.shadow.camera.right=55; sun.shadow.camera.top=55; sun.shadow.camera.bottom=-55;
 scene.add(sun);
 
+function terrainHeight(x,z){
+ const hill=Math.sin(x*.035)*1.8+Math.cos(z*.041)*1.6+Math.sin((x+z)*.022)*2.4;
+ const clearing=Math.exp(-(x*x+z*z)/500)*-.5;
+ return hill+clearing;
+}
 const groundGeo = new THREE.PlaneGeometry(260,260,100,100);
 groundGeo.rotateX(-Math.PI/2);
 const pos = groundGeo.attributes.position;
 for(let i=0;i<pos.count;i++){
  const x=pos.getX(i), z=pos.getZ(i);
- const hill=Math.sin(x*.035)*1.8+Math.cos(z*.041)*1.6+Math.sin((x+z)*.022)*2.4;
- const clearing=Math.exp(-(x*x+z*z)/500)*-.5;
- pos.setY(i,hill+clearing);
+ pos.setY(i,terrainHeight(x,z));
 }
 groundGeo.computeVertexNormals();
 const ground = new THREE.Mesh(groundGeo,new THREE.MeshStandardMaterial({color:0x526a42,roughness:1}));
 ground.receiveShadow=true; scene.add(ground);
 
 const player = new THREE.Group(); scene.add(player);
+player.position.y=terrainHeight(0,0);
 const fallback = new THREE.Group(); player.add(fallback);
 const body = new THREE.Mesh(new THREE.CapsuleGeometry(.34,.9,5,8),new THREE.MeshStandardMaterial({color:0x59402b}));
 body.position.y=.85; body.castShadow=true; fallback.add(body);
@@ -74,13 +78,15 @@ async function loadTree(name){
 function scatterModel(model,x,z,scale=1){
  if(!model)return;
  const m=model.clone(true);
- m.position.set(x,0,z); m.rotation.y=Math.random()*Math.PI*2;
+ m.position.set(x,terrainHeight(x,z),z); m.rotation.y=Math.random()*Math.PI*2;
  const s=scale*(.78+Math.random()*.5); m.scale.multiplyScalar(s);
  m.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}}); scene.add(m); treeModels.push(m);
 }
-function addRock(x,z,s=1){
+function addRock(x,z,s=1,collectible=false){
  const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.7*s,1),new THREE.MeshStandardMaterial({color:0x77786b,roughness:1}));
- rock.position.set(x,.35*s,z); rock.rotation.set(Math.random(),Math.random(),Math.random()); rock.scale.y=.65; rock.castShadow=true;rock.receiveShadow=true;scene.add(rock);
+ rock.position.set(x,terrainHeight(x,z)+.35*s,z); rock.rotation.set(Math.random(),Math.random(),Math.random()); rock.scale.y=.65; rock.castShadow=true;rock.receiveShadow=true;scene.add(rock);
+ if(collectible)resources.push({object:rock,x,z,type:"stone",active:true});
+ return rock;
 }
 function addGrass(){
  const geo=new THREE.BufferGeometry(), verts=[];
@@ -88,7 +94,8 @@ function addGrass(){
   const x=(Math.random()-.5)*210,z=(Math.random()-.5)*210;
   if(Math.hypot(x,z)<8)continue;
   const h=.18+Math.random()*.35,w=.035;
-  verts.push(x-w,0,z,x+w,0,z,x,h,z);
+  const y=terrainHeight(x,z)+.015;
+  verts.push(x-w,y,z,x+w,y,z,x,y+h,z);
  }
  geo.setAttribute("position",new THREE.Float32BufferAttribute(verts,3));
  const mesh=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x9aa66b,side:THREE.DoubleSide}));
@@ -98,7 +105,7 @@ let resources=[];
 function createResource(x,z){
  const stump=new THREE.Group();
  const log=new THREE.Mesh(new THREE.CylinderGeometry(.23,.3,.9,7),new THREE.MeshStandardMaterial({color:0x76502e}));
- log.rotation.z=Math.PI/2; log.position.y=.3; stump.add(log); stump.position.set(x,0,z); scene.add(stump);
+ log.rotation.z=Math.PI/2; log.position.y=.3; stump.add(log); stump.position.set(x,terrainHeight(x,z),z); scene.add(stump);
  resources.push({object:stump,x,z,type:"wood",active:true});
 }
 async function buildForest(){
@@ -109,24 +116,43 @@ async function buildForest(){
   scatterModel(choices[i%choices.length],p.x,p.z,.8+Math.random()*.55);
   if(i%5===0)createResource(p.x+2,p.z+1);
  });
- for(let i=0;i<35;i++){const a=Math.random()*6.28,r=9+Math.random()*85;addRock(Math.cos(a)*r,Math.sin(a)*r,.45+Math.random()*.9);}
+ for(let i=0;i<35;i++){const a=Math.random()*6.28,r=9+Math.random()*85;addRock(Math.cos(a)*r,Math.sin(a)*r,.45+Math.random()*.9,i%4===0);}
  if(rock){for(let i=0;i<12;i++){const a=Math.random()*6.28,r=12+Math.random()*75;scatterModel(rock,Math.cos(a)*r,Math.sin(a)*r,.7);}}
  addGrass();
 }
 
 const state={health:100,hunger:100,thirst:100,energy:100,wood:0,stone:0,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,near:null};
+function loadGame(){
+ try{
+  const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
+  if(!saved)return;
+  for(const key of ["health","hunger","thirst","energy","wood","stone","day"])if(Number.isFinite(saved[key]))state[key]=saved[key];
+  if(Number.isFinite(saved.x))player.position.x=saved.x;
+  if(Number.isFinite(saved.z))player.position.z=saved.z;
+  player.position.y=terrainHeight(player.position.x,player.position.z);
+ }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
+}
+function saveGame(){
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,energy:state.energy,wood:state.wood,stone:state.stone,day:state.day}));}
+ catch(e){console.warn("Não foi possível salvar o jogo",e);}
+}
+loadGame();
 const cameraTarget=new THREE.Vector3();
-let last=performance.now(),toastTimer=0;
+let last=performance.now(),toastTimer=0,lastSave=0;
 function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>$("toast").classList.remove("show"),1900);}
 function updateHUD(){
  $("healthBar").style.width=state.health+"%";$("hungerBar").style.width=state.hunger+"%";$("thirstBar").style.width=state.thirst+"%";$("energyBar").style.width=state.energy+"%";
  $("wood").textContent=state.wood;$("stone").textContent=state.stone;$("day").textContent=state.day;
  $("collectBtn").disabled=!state.near;
- $("hint").textContent=state.near?"Toque em COLETAR para pegar madeira.":"Explore a floresta e encontre recursos.";
+ $("collectBtn").textContent=state.near?(state.near.type==="stone"?"MINERAR":"COLETAR"):"COLETAR";
+ $("hint").textContent=state.near?(state.near.type==="stone"?"Toque em MINERAR para pegar pedra.":"Toque em COLETAR para pegar madeira."):"Explore a floresta e encontre recursos.";
 }
 function collect(){
  if(!state.near)return;
- state.wood+=2;state.near.object.visible=false;state.near.active=false;state.near=null;toast("Você coletou 2 madeiras.");updateHUD();
+ const resource=state.near;
+ if(resource.type==="stone"){state.stone+=1;toast("Você coletou 1 pedra.");}
+ else{state.wood+=2;toast("Você coletou 2 madeiras.");}
+ resource.object.visible=false;resource.active=false;state.near=null;updateHUD();saveGame();
 }
 $("collectBtn").addEventListener("click",collect);
 $("runBtn").addEventListener("click",()=>{state.running=!state.running;$("runBtn").textContent=state.running?"ANDAR":"CORRER";});
@@ -150,7 +176,7 @@ function update(dt){
  const ky=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0);
  const mx=THREE.MathUtils.clamp(state.moveX+kx,-1,1),my=THREE.MathUtils.clamp(state.moveY+ky,-1,1);
  const moving=Math.hypot(mx,my)>.08;
- const fast=state.running||keys.shift;
+ const fast=(state.running||keys.shift)&&state.energy>0;
  if(moving){
   const direction=new THREE.Vector3(mx,0,my).normalize();
   const angle=state.cameraYaw;
@@ -158,14 +184,15 @@ function update(dt){
   const dz=direction.x*Math.sin(angle)+direction.z*Math.cos(angle);
   const speed=fast?7.1:3.6;
   player.position.x+=dx*speed*dt;player.position.z+=dz*speed*dt;
+  player.position.y=terrainHeight(player.position.x,player.position.z);
   state.yaw=Math.atan2(dx,dz);player.rotation.y=state.yaw;
   if(fast)state.energy=Math.max(0,state.energy-dt*2.5);else state.energy=Math.min(100,state.energy+dt*1.2);
  }else{state.energy=Math.min(100,state.energy+dt*4);}
  state.hunger=Math.max(0,state.hunger-dt*.055);state.thirst=Math.max(0,state.thirst-dt*.085);
  if(mixer)mixer.update(dt);
- cameraTarget.set(player.position.x,1.25,player.position.z);
+ cameraTarget.set(player.position.x,player.position.y+1.25,player.position.z);
  const distance=7.2,cp=Math.cos(state.cameraPitch),sp=Math.sin(state.cameraPitch);
- camera.position.set(player.position.x+Math.sin(state.cameraYaw)*distance*cp,1.25+distance*sp,player.position.z+Math.cos(state.cameraYaw)*distance*cp);
+ camera.position.set(player.position.x-Math.sin(state.cameraYaw)*distance*cp,player.position.y+1.25+distance*sp,player.position.z-Math.cos(state.cameraYaw)*distance*cp);
  camera.lookAt(cameraTarget);
  let closest=null,dist=4.5;
  for(const r of resources){if(!r.active)continue;const d=Math.hypot(player.position.x-r.x,player.position.z-r.z);if(d<dist){dist=d;closest=r;}}
@@ -175,7 +202,7 @@ function update(dt){
 function animate(now){
  requestAnimationFrame(animate);
  const dt=Math.min((now-last)/1000,.05);last=now;
- update(dt);renderer.render(scene,camera);
+ update(dt);if(now-lastSave>5000){saveGame();lastSave=now;}renderer.render(scene,camera);
 }
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));});
 async function start(){
@@ -192,4 +219,5 @@ async function start(){
  toast("Você despertou em uma floresta desconhecida.");
  animate(performance.now());
 }
+addEventListener("beforeunload",saveGame);
 start().catch(err=>{console.error(err);$("loadingText").textContent="Não foi possível carregar o cenário. Atualize a página.";toast("Falha ao iniciar o mundo.");});
