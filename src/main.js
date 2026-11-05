@@ -226,7 +226,7 @@ async function buildForest(){
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,collectedResources:[],berries:0};
+const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,collectedResources:[],berries:0};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
@@ -234,16 +234,19 @@ function loadGame(){
   for(const key of ["health","hunger","thirst","temperature","energy","wood","stone","day","timeOfDay","berries"])if(Number.isFinite(saved[key]))state[key]=saved[key];
   state.axe=saved.axe===true;state.pickaxe=saved.pickaxe===true;
   state.campfire=saved.campfire===true;
+  state.shelter=saved.shelter===true;
   if(Array.isArray(saved.collectedResources))state.collectedResources=saved.collectedResources.filter(v=>typeof v==="string");
   if(Number.isFinite(saved.campfireX))state.campfireX=saved.campfireX;
   if(Number.isFinite(saved.campfireZ))state.campfireZ=saved.campfireZ;
+  if(Number.isFinite(saved.shelterX))state.shelterX=saved.shelterX;
+  if(Number.isFinite(saved.shelterZ))state.shelterZ=saved.shelterZ;
   if(Number.isFinite(saved.x))player.position.x=saved.x;
   if(Number.isFinite(saved.z))player.position.z=saved.z;
   player.position.y=terrainHeight(player.position.x,player.position.z);
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,collectedResources:state.collectedResources,berries:state.berries}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,collectedResources:state.collectedResources,berries:state.berries}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -262,6 +265,8 @@ function updateHUD(){
  $("craftAxe").disabled=state.axe||state.wood<3||state.stone<2;$("craftPickaxe").disabled=state.pickaxe||state.wood<3||state.stone<3;
  $("campfireStatus").textContent=state.campfire?"Fogueira: construída":"Fogueira: não construída";
  $("craftCampfire").disabled=state.campfire||state.wood<5||state.stone<3;
+ $("shelterStatus").textContent=state.shelter?"Abrigo: construído":"Abrigo: não construído";
+ $("craftShelter").disabled=state.shelter||state.wood<10||state.stone<4;
  $("collectBtn").disabled=!state.near;
  $("collectBtn").textContent=state.near?(state.near.type==="stone"?"MINERAR":state.near.type==="water"?"BEBER ÁGUA":"COLETAR"):"COLETAR";
  $("hint").textContent=state.near?(state.near.type==="water"?"Fonte de água encontrada. Toque em BEBER ÁGUA.":state.near.type==="stone"?"Use a picareta para minerar.":state.near.type==="wood"?"Use o machado para cortar madeira.":state.near.type==="branch"?"Galho encontrado. Toque em COLETAR.":state.near.type==="berries"?"Frutas silvestres encontradas. Toque em COLETAR.":"Pedra solta encontrada. Toque em COLETAR."):"Procure recursos e arbustos de frutas pela floresta.";
@@ -336,6 +341,35 @@ function createCampfire(x,z){
  group.position.set(x,terrainHeight(x,z),z);scene.add(group);
  state.campfireObject=group;state.campfire=true;state.campfireX=x;state.campfireZ=z;
 }
+function craftShelter(){
+ if(state.shelter){toast("Você já construiu seu abrigo.");return;}
+ if(state.wood<10||state.stone<4){toast("Faltam materiais: 10 madeiras e 4 pedras.");return;}
+ state.wood-=10;state.stone-=4;
+ const x=player.position.x+Math.sin(player.rotation.y)*2.8;
+ const z=player.position.z+Math.cos(player.rotation.y)*2.8;
+ createShelter(x,z);updateHUD();saveGame();toast("Abrigo construído! Fique perto dele durante a noite.");
+}
+function createShelter(x,z){
+ if(state.shelterObject)scene.remove(state.shelterObject);
+ const group=new THREE.Group();
+ const woodMat=new THREE.MeshStandardMaterial({color:0x76502e,roughness:1});
+ const darkWood=new THREE.MeshStandardMaterial({color:0x4d3523,roughness:1});
+ const postGeo=new THREE.BoxGeometry(.16,1.65,.16);
+ for(const px of [-1.05,1.05]){
+  const post=new THREE.Mesh(postGeo,woodMat);post.position.set(px,.82,.35);post.castShadow=true;group.add(post);
+  const rear=new THREE.Mesh(postGeo,woodMat);rear.position.set(px,.82,-.85);rear.castShadow=true;group.add(rear);
+ }
+ const roof=new THREE.Mesh(new THREE.BoxGeometry(2.45,.16,1.75),darkWood);
+ roof.position.set(0,1.55,-.12);roof.rotation.x=-.32;roof.castShadow=true;roof.receiveShadow=true;group.add(roof);
+ for(let i=0;i<7;i++){
+  const plank=new THREE.Mesh(new THREE.BoxGeometry(.31,.12,1.72),woodMat);
+  plank.position.set(-.93+i*.31,1.66,-.12);plank.rotation.x=-.32;plank.castShadow=true;group.add(plank);
+ }
+ const back=new THREE.Mesh(new THREE.BoxGeometry(2.1,1.35,.12),darkWood);back.position.set(0,.72,-.88);back.castShadow=true;group.add(back);
+ group.position.set(x,terrainHeight(x,z),z);group.rotation.y=player.rotation.y;scene.add(group);
+ state.shelterObject=group;state.shelter=true;state.shelterX=x;state.shelterZ=z;
+}
+$("craftShelter").addEventListener("click",craftShelter);
 function createToolVisual(type){
  const group=new THREE.Group();
  const woodMat=new THREE.MeshStandardMaterial({color:0x76502e,roughness:1});
@@ -407,8 +441,9 @@ function update(dt){
   if(fast)state.energy=Math.max(0,state.energy-dt*2.5);else state.energy=Math.min(100,state.energy+dt*1.2);
  }else{state.energy=Math.min(100,state.energy+dt*4);}
  const nearFire=state.campfire&&Math.hypot(player.position.x-state.campfireX,player.position.z-state.campfireZ)<6;
+ const nearShelter=state.shelter&&Math.hypot(player.position.x-state.shelterX,player.position.z-state.shelterZ)<5;
  if(nearFire){state.energy=Math.min(100,state.energy+dt*5);state.temperature=Math.min(100,state.temperature+dt*9);}
- else{const daylight=THREE.MathUtils.clamp(Math.sin((state.timeOfDay-6)/12*Math.PI),0,1);const coldRate=state.timeOfDay<6||state.timeOfDay>=19?.42:.10;state.temperature=THREE.MathUtils.clamp(state.temperature+dt*(daylight*.32-coldRate),0,100);}
+ else{const daylight=THREE.MathUtils.clamp(Math.sin((state.timeOfDay-6)/12*Math.PI),0,1);let coldRate=state.timeOfDay<6||state.timeOfDay>=19?.42:.10;if(nearShelter)coldRate*=.2;state.temperature=THREE.MathUtils.clamp(state.temperature+dt*(daylight*.32-coldRate),0,100);}
  const floorY=terrainHeight(player.position.x,player.position.z);
  if(isJumping){
   verticalVelocity-=12*dt;
@@ -441,6 +476,7 @@ async function start(){
  $("loadingBar").style.width="20%";
  await buildForest();
  if(state.campfire&&Number.isFinite(state.campfireX)&&Number.isFinite(state.campfireZ))createCampfire(state.campfireX,state.campfireZ);
+ if(state.shelter&&Number.isFinite(state.shelterX)&&Number.isFinite(state.shelterZ))createShelter(state.shelterX,state.shelterZ);
  $("loadingBar").style.width="72%";
  $("loadingText").textContent="Carregando o viajante...";
  const loaded=await loadCharacter();
