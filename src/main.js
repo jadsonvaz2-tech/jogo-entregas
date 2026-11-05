@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 const $ = (id) => document.getElementById(id);
-const raw = "https://raw.githubusercontent.com/jadsonvaz2-tech/jogo-entregas/main/";
+const raw = "https://raw.githubusercontent.com/jadsonvaz2-tech/jogo-entregas/main/assets/3d/";
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9bb3a0);
 scene.fog = new THREE.FogExp2(0x9bb3a0, 0.012);
