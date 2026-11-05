@@ -3,6 +3,9 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 const $ = (id) => document.getElementById(id);
 const raw = "https://raw.githubusercontent.com/jadsonvaz2-tech/jogo-entregas/main/assets/3d/";
+// Mundo procedural determinístico: os recursos permanecem nas mesmas posições entre sessões.
+let worldRandomState=0x5eed2026;
+function worldRandom(){worldRandomState=(worldRandomState*1664525+1013904223)>>>0;return worldRandomState/4294967296;}
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9bb3a0);
 scene.fog = new THREE.FogExp2(0x9bb3a0, 0.012);
@@ -109,7 +112,7 @@ function loadCharacter(){
 }
 const treePositions=[];
 for(let i=0;i<55;i++){
- const a=Math.random()*Math.PI*2, r=12+Math.random()*88;
+ const a=worldRandom()*Math.PI*2, r=12+worldRandom()*88;
  treePositions.push({x:Math.cos(a)*r,z:Math.sin(a)*r});
 }
 const treeModels=[];
@@ -119,22 +122,22 @@ async function loadTree(name){
 function scatterModel(model,x,z,scale=1){
  if(!model)return;
  const m=model.clone(true);
- m.position.set(x,terrainHeight(x,z),z); m.rotation.y=Math.random()*Math.PI*2;
- const s=scale*(.78+Math.random()*.5); m.scale.multiplyScalar(s);
+ m.position.set(x,terrainHeight(x,z),z); m.rotation.y=worldRandom()*Math.PI*2;
+ const s=scale*(.78+worldRandom()*.5); m.scale.multiplyScalar(s);
  m.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}}); scene.add(m); treeModels.push(m);
 }
 function addRock(x,z,s=1,collectible=false){
  const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.7*s,1),new THREE.MeshStandardMaterial({color:0x77786b,roughness:1}));
- rock.position.set(x,terrainHeight(x,z)+.35*s,z); rock.rotation.set(Math.random(),Math.random(),Math.random()); rock.scale.y=.65; rock.castShadow=true;rock.receiveShadow=true;scene.add(rock);
- if(collectible)resources.push({object:rock,x,z,type:"stone",active:true});
+ rock.position.set(x,terrainHeight(x,z)+.35*s,z); rock.rotation.set(worldRandom(),worldRandom(),worldRandom()); rock.scale.y=.65; rock.castShadow=true;rock.receiveShadow=true;scene.add(rock);
+ if(collectible)registerResource({object:rock,x,z,type:"stone",active:true});
  return rock;
 }
 function addGrass(){
  const geo=new THREE.BufferGeometry(), verts=[];
  for(let i=0;i<1600;i++){
-  const x=(Math.random()-.5)*210,z=(Math.random()-.5)*210;
+  const x=(worldRandom()-.5)*210,z=(worldRandom()-.5)*210;
   if(Math.hypot(x,z)<8)continue;
-  const h=.18+Math.random()*.35,w=.035;
+  const h=.18+worldRandom()*.35,w=.035;
   const y=terrainHeight(x,z)+.015;
   verts.push(x-w,y,z,x+w,y,z,x,y+h,z);
  }
@@ -143,23 +146,29 @@ function addGrass(){
  scene.add(mesh);
 }
 let resources=[];
+function resourceId(type,x,z){return `${type}:${x.toFixed(3)}:${z.toFixed(3)}`;}
+function registerResource(resource){
+ resource.id=resourceId(resource.type,resource.x,resource.z);
+ if(state.collectedResources.includes(resource.id)){resource.active=false;resource.object.visible=false;if(resource.target)resource.target.visible=false;}
+ resources.push(resource);
+}
 function createResource(x,z,type="wood",target=null){
  const stump=new THREE.Group();
  const log=new THREE.Mesh(new THREE.CylinderGeometry(.23,.3,.9,7),new THREE.MeshStandardMaterial({color:0x76502e}));
  log.rotation.z=Math.PI/2; log.position.y=.3; stump.add(log); stump.position.set(x,terrainHeight(x,z),z); scene.add(stump);
- resources.push({object:stump,x,z,type,target,active:true});
+ registerResource({object:stump,x,z,type,target,active:true});
 }
 async function buildForest(){
  const [common,pine,twisted,rock] = await Promise.all([loadTree("CommonTree_1"),loadTree("Pine_1"),loadTree("TwistedTree_1"),loadTree("Rock_Medium_1")]);
  const choices=[common,pine,twisted];
  treePositions.forEach((p,i)=>{
   if(Math.hypot(p.x,p.z)<10)return;
-  const tree=scatterModel(choices[i%choices.length],p.x,p.z,.8+Math.random()*.55);
+  const tree=scatterModel(choices[i%choices.length],p.x,p.z,.8+worldRandom()*.55);
   if(i%5===0)createResource(p.x+1.8,p.z+.8,"wood",tree);
  });
- for(let i=0;i<35;i++){const a=Math.random()*6.28,r=9+Math.random()*85;addRock(Math.cos(a)*r,Math.sin(a)*r,.45+Math.random()*.9,i%4===0);}
+ for(let i=0;i<35;i++){const a=worldRandom()*6.28,r=9+worldRandom()*85;addRock(Math.cos(a)*r,Math.sin(a)*r,.45+worldRandom()*.9,i%4===0);}
  // Materiais iniciais são posicionados ao redor da posição salva do jogador.
- const startX=player.position.x,startZ=player.position.z;
+ const startX=0,startZ=0;
  for(let i=0;i<8;i++){
   const a=i*Math.PI/4,r=2.4+(i%2)*.8;
   createResource(startX+Math.cos(a)*r,startZ+Math.sin(a)*r,"branch");
@@ -169,13 +178,13 @@ async function buildForest(){
   const x=startX+Math.cos(a)*r,z=startZ+Math.sin(a)*r;
   const pebble=new THREE.Mesh(new THREE.DodecahedronGeometry(.25,0),new THREE.MeshStandardMaterial({color:0xaaa99c,roughness:1}));
   pebble.position.set(x,terrainHeight(x,z)+.14,z);pebble.castShadow=true;pebble.receiveShadow=true;scene.add(pebble);
-  resources.push({object:pebble,x,z,type:"looseStone",active:true});
+  registerResource({object:pebble,x,z,type:"looseStone",active:true});
  }
- if(rock){for(let i=0;i<12;i++){const a=Math.random()*6.28,r=12+Math.random()*75;scatterModel(rock,Math.cos(a)*r,Math.sin(a)*r,.7);}}
+ if(rock){for(let i=0;i<12;i++){const a=worldRandom()*6.28,r=12+worldRandom()*75;scatterModel(rock,Math.cos(a)*r,Math.sin(a)*r,.7);}}
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,near:null,campfire:false,campfireX:null,campfireZ:null};
+const state={health:100,hunger:100,thirst:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,near:null,campfire:false,campfireX:null,campfireZ:null,collectedResources:[]};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
@@ -183,6 +192,7 @@ function loadGame(){
   for(const key of ["health","hunger","thirst","energy","wood","stone","day"])if(Number.isFinite(saved[key]))state[key]=saved[key];
   state.axe=saved.axe===true;state.pickaxe=saved.pickaxe===true;
   state.campfire=saved.campfire===true;
+  if(Array.isArray(saved.collectedResources))state.collectedResources=saved.collectedResources.filter(v=>typeof v==="string");
   if(Number.isFinite(saved.campfireX))state.campfireX=saved.campfireX;
   if(Number.isFinite(saved.campfireZ))state.campfireZ=saved.campfireZ;
   if(Number.isFinite(saved.x))player.position.x=saved.x;
@@ -191,7 +201,7 @@ function loadGame(){
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,collectedResources:state.collectedResources}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -221,7 +231,9 @@ function collect(){
  else if(resource.type==="looseStone"){state.stone+=1;toast("Você recolheu 1 pedra solta.");}
  else if(resource.type==="stone"){state.stone+=2;toast("Você minerou 2 pedras.");}
  else{state.wood+=3;toast("Você cortou e recolheu 3 madeiras.");}
- resource.object.visible=false;if(resource.target)resource.target.visible=false;resource.active=false;state.near=null;updateHUD();saveGame();
+ resource.object.visible=false;if(resource.target)resource.target.visible=false;resource.active=false;
+ if(resource.id&&!state.collectedResources.includes(resource.id))state.collectedResources.push(resource.id);
+ state.near=null;updateHUD();saveGame();
 }
 function craftTool(type){
  if(type==="axe"){
