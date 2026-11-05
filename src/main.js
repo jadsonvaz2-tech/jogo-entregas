@@ -102,24 +102,24 @@ function addGrass(){
  scene.add(mesh);
 }
 let resources=[];
-function createResource(x,z,type="wood"){
+function createResource(x,z,type="wood",target=null){
  const stump=new THREE.Group();
  const log=new THREE.Mesh(new THREE.CylinderGeometry(.23,.3,.9,7),new THREE.MeshStandardMaterial({color:0x76502e}));
  log.rotation.z=Math.PI/2; log.position.y=.3; stump.add(log); stump.position.set(x,terrainHeight(x,z),z); scene.add(stump);
- resources.push({object:stump,x,z,type,active:true});
+ resources.push({object:stump,x,z,type,target,active:true});
 }
 async function buildForest(){
  const [common,pine,twisted,rock] = await Promise.all([loadTree("CommonTree_1"),loadTree("Pine_1"),loadTree("TwistedTree_1"),loadTree("Rock_Medium_1")]);
  const choices=[common,pine,twisted];
  treePositions.forEach((p,i)=>{
   if(Math.hypot(p.x,p.z)<10)return;
-  scatterModel(choices[i%choices.length],p.x,p.z,.8+Math.random()*.55);
-  if(i%5===0)createResource(p.x+2,p.z+1,"wood");
+  const tree=scatterModel(choices[i%choices.length],p.x,p.z,.8+Math.random()*.55);
+  if(i%5===0)createResource(p.x+1.8,p.z+.8,"wood",tree);
  });
  for(let i=0;i<35;i++){const a=Math.random()*6.28,r=9+Math.random()*85;addRock(Math.cos(a)*r,Math.sin(a)*r,.45+Math.random()*.9,i%4===0);}
  // Materiais iniciais próximos à clareira: galhos e pedras podem ser recolhidos sem ferramentas.
- for(let i=0;i<6;i++){const a=i*Math.PI/3,r=3.5+Math.random()*2;createResource(Math.cos(a)*r,Math.sin(a)*r,"branch");}
- for(let i=0;i<5;i++){const a=i*2.4,r=4+Math.random()*3;const x=Math.cos(a)*r,z=Math.sin(a)*r;const pebble=new THREE.Mesh(new THREE.DodecahedronGeometry(.22,0),new THREE.MeshStandardMaterial({color:0x8b8b80,roughness:1}));pebble.position.set(x,terrainHeight(x,z)+.12,z);pebble.castShadow=true;scene.add(pebble);resources.push({object:pebble,x,z,type:"looseStone",active:true});}
+ for(let i=0;i<6;i++){const a=i*Math.PI/3,r=2.5+Math.random()*1.2;createResource(Math.cos(a)*r,Math.sin(a)*r,"branch");}
+ for(let i=0;i<5;i++){const a=i*2.4,r=2.8+Math.random()*1.3;const x=Math.cos(a)*r,z=Math.sin(a)*r;const pebble=new THREE.Mesh(new THREE.DodecahedronGeometry(.22,0),new THREE.MeshStandardMaterial({color:0x8b8b80,roughness:1}));pebble.position.set(x,terrainHeight(x,z)+.12,z);pebble.castShadow=true;scene.add(pebble);resources.push({object:pebble,x,z,type:"looseStone",active:true});}
  if(rock){for(let i=0;i<12;i++){const a=Math.random()*6.28,r=12+Math.random()*75;scatterModel(rock,Math.cos(a)*r,Math.sin(a)*r,.7);}}
  addGrass();
 }
@@ -162,7 +162,7 @@ function collect(){
  else if(resource.type==="looseStone"){state.stone+=1;toast("Você recolheu 1 pedra solta.");}
  else if(resource.type==="stone"){state.stone+=2;toast("Você minerou 2 pedras.");}
  else{state.wood+=3;toast("Você cortou e recolheu 3 madeiras.");}
- resource.object.visible=false;resource.active=false;state.near=null;updateHUD();saveGame();
+ resource.object.visible=false;if(resource.target)resource.target.visible=false;resource.active=false;state.near=null;updateHUD();saveGame();
 }
 function craftTool(type){
  if(type==="axe"){
@@ -187,7 +187,7 @@ function createToolVisual(type){
  const head=new THREE.Mesh(type==="axe"?new THREE.BoxGeometry(.38,.2,.12):new THREE.BoxGeometry(.52,.13,.12),metalMat);
  head.position.set(type==="axe"?-.16:0,.78,0);group.add(head);
  if(type==="pickaxe")head.rotation.z=-.12;
- group.position.set(.42,.55,.12);group.rotation.z=-.5;group.visible=true;
+ group.position.set(type==="axe"?.42:.68,.55,.12);group.rotation.z=-.5;group.visible=true;
  group.traverse(o=>{if(o.isMesh)o.castShadow=true;});player.add(group);
 }
 $("collectBtn").addEventListener("click",collect);
