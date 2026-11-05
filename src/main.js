@@ -169,6 +169,28 @@ function createBerryBush(x,z){
  bush.position.set(x,terrainHeight(x,z),z);scene.add(bush);
  registerResource({object:bush,x,z,type:"berries",active:true});
 }
+function createWaterSource(x,z){
+ const pond=new THREE.Group();
+ const waterMat=new THREE.MeshStandardMaterial({color:0x477f91,roughness:.22,metalness:.08,transparent:true,opacity:.86});
+ const water=new THREE.Mesh(new THREE.CircleGeometry(2.65,40),waterMat);
+ water.rotation.x=-Math.PI/2;
+ water.position.y=terrainHeight(x,z)+.09;
+ pond.add(water);
+ const rippleMat=new THREE.MeshBasicMaterial({color:0x9acbd0,transparent:true,opacity:.28,side:THREE.DoubleSide});
+ for(let i=0;i<2;i++){
+  const ripple=new THREE.Mesh(new THREE.RingGeometry(.55+i*.55,.59+i*.55,40),rippleMat);
+  ripple.rotation.x=-Math.PI/2;ripple.position.y=water.position.y+.012+i*.003;pond.add(ripple);
+ }
+ const bankMat=new THREE.MeshStandardMaterial({color:0x77766a,roughness:1});
+ for(let i=0;i<14;i++){
+  const a=i*Math.PI*2/14,r=2.75+worldRandom()*.38;
+  const stone=new THREE.Mesh(new THREE.DodecahedronGeometry(.22+worldRandom()*.12,0),bankMat);
+  const sx=x+Math.cos(a)*r,sz=z+Math.sin(a)*r;
+  stone.position.set(sx,terrainHeight(sx,sz)+.16,sz);stone.scale.y=.72;stone.castShadow=true;pond.add(stone);
+ }
+ scene.add(pond);
+ resources.push({object:pond,x,z,type:"water",active:true});
+}
 function createResource(x,z,type="wood",target=null){
  const stump=new THREE.Group();
  const log=new THREE.Mesh(new THREE.CylinderGeometry(.23,.3,.9,7),new THREE.MeshStandardMaterial({color:0x76502e}));
@@ -199,6 +221,7 @@ async function buildForest(){
  }
  if(rock){for(let i=0;i<12;i++){const a=worldRandom()*6.28,r=12+worldRandom()*75;scatterModel(rock,Math.cos(a)*r,Math.sin(a)*r,.7);}}
  for(let i=0;i<14;i++){const a=worldRandom()*Math.PI*2,r=14+worldRandom()*62;createBerryBush(Math.cos(a)*r,Math.sin(a)*r);}
+ createWaterSource(13,0);
  addGrass();
 }
 
@@ -239,12 +262,17 @@ function updateHUD(){
  $("campfireStatus").textContent=state.campfire?"Fogueira: construída":"Fogueira: não construída";
  $("craftCampfire").disabled=state.campfire||state.wood<5||state.stone<3;
  $("collectBtn").disabled=!state.near;
- $("collectBtn").textContent=state.near?(state.near.type==="stone"?"MINERAR":"COLETAR"):"COLETAR";
- $("hint").textContent=state.near?(state.near.type==="stone"?"Use a picareta para minerar.":state.near.type==="wood"?"Use o machado para cortar madeira.":state.near.type==="branch"?"Galho encontrado. Toque em COLETAR.":state.near.type==="berries"?"Frutas silvestres encontradas. Toque em COLETAR.":"Pedra solta encontrada. Toque em COLETAR."):"Procure recursos e arbustos de frutas pela floresta.";
+ $("collectBtn").textContent=state.near?(state.near.type==="stone"?"MINERAR":state.near.type==="water"?"BEBER ÁGUA":"COLETAR"):"COLETAR";
+ $("hint").textContent=state.near?(state.near.type==="water"?"Fonte de água encontrada. Toque em BEBER ÁGUA.":state.near.type==="stone"?"Use a picareta para minerar.":state.near.type==="wood"?"Use o machado para cortar madeira.":state.near.type==="branch"?"Galho encontrado. Toque em COLETAR.":state.near.type==="berries"?"Frutas silvestres encontradas. Toque em COLETAR.":"Pedra solta encontrada. Toque em COLETAR."):"Procure recursos e arbustos de frutas pela floresta.";
 }
 function collect(){
  if(!state.near)return;
  const resource=state.near;
+ if(resource.type==="water"){
+  if(state.thirst>=100){toast("Você não está com sede.");return;}
+  state.thirst=Math.min(100,state.thirst+45);
+  toast("Você bebeu água fresca. Sede recuperada.");updateHUD();saveGame();return;
+ }
  if(resource.type==="wood"&&!state.axe){toast("Você precisa fabricar um machado.");return;}
  if(resource.type==="stone"&&!state.pickaxe){toast("Você precisa fabricar uma picareta.");return;}
  if(resource.type==="branch"){state.wood+=1;toast("Você recolheu 1 galho.");}
