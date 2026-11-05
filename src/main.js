@@ -404,7 +404,7 @@ $("craftCampfire").addEventListener("click",craftCampfire);
  function eatMeat(){
   if(state.meat<1||state.hunger>=100)return;
   state.meat--;state.hunger=Math.min(100,state.hunger+32);
-  updateHUD();saveGame();toast("Você comeu carne assada? Prepare uma fogueira para cozinhar melhor.");
+  updateHUD();saveGame();toast("Você comeu carne e recuperou 32 pontos de fome.");
  }
  function eatBerry(){
   if(state.berries<1||state.hunger>=100)return;
