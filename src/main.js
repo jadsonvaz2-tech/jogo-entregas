@@ -105,7 +105,7 @@ function loadCharacter(){
    model.scale.setScalar(scale);
    model.position.set(-center.x*scale,-box.min.y*scale,-center.z*scale);
    model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.side=THREE.DoubleSide;}}});
-   player.remove(fallback); player.add(model);
+   player.remove(fallback); player.add(model);state.characterModel=model;
    // Reposiciona as ferramentas depois que o esqueleto do personagem estiver carregado.
    if(state.axe)createToolVisual("axe");
    if(state.pickaxe)createToolVisual("pickaxe");
@@ -544,7 +544,7 @@ function createToolVisual(type){
  let hand=null;
  const side=type==="axe"?"right":"left";
  const handPattern=side==="right"?/(right.*hand|hand.*right|righthand|r[_ .:-]?hand|hand[_ .:-]?r)/i:/(left.*hand|hand.*left|lefthand|l[_ .:-]?hand|hand[_ .:-]?l)/i;
- const rig=player.children.find(o=>o.isObject3D&&o!==fallback&&o.traverse);
+ const rig=state.characterModel||null;
  if(rig)rig.traverse(o=>{if(!hand&&o.isBone&&handPattern.test(o.name||""))hand=o;});
  if(hand){
   group.position.set(0,-.08,0);
