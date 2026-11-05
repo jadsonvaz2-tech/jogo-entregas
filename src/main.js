@@ -249,7 +249,8 @@ function loadGame(){
   for(const key of ["health","hunger","thirst","temperature","energy","wood","stone","day","timeOfDay","berries","fiber"])if(Number.isFinite(saved[key]))state[key]=saved[key];
   state.axe=saved.axe===true;state.pickaxe=saved.pickaxe===true;
   state.campfire=saved.campfire===true;
-  state.shelter=saved.shelter===true;\n  state.coldCloak=saved.coldCloak===true;
+  state.shelter=saved.shelter===true;
+  state.coldCloak=saved.coldCloak===true;
   if(Array.isArray(saved.collectedResources))state.collectedResources=saved.collectedResources.filter(v=>typeof v==="string");
   if(Number.isFinite(saved.campfireX))state.campfireX=saved.campfireX;
   if(Number.isFinite(saved.campfireZ))state.campfireZ=saved.campfireZ;
@@ -267,14 +268,18 @@ function saveGame(){
 loadGame();
 // Recria visualmente as ferramentas que já foram fabricadas e salvas.
 if(state.axe)createToolVisual("axe");
-if(state.pickaxe)createToolVisual("pickaxe");\nif(state.coldCloak)createCloakVisual();
+if(state.pickaxe)createToolVisual("pickaxe");
+if(state.coldCloak)createCloakVisual();
 const cameraTarget=new THREE.Vector3();
 let last=performance.now(),toastTimer=0,lastSave=0;
 function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>$("toast").classList.remove("show"),1900);}
 function updateHUD(){
  $("healthBar").style.width=state.health+"%";$("hungerBar").style.width=state.hunger+"%";$("thirstBar").style.width=state.thirst+"%";$("temperatureBar").style.width=state.temperature+"%";$("energyBar").style.width=state.energy+"%";
  $("wood").textContent=state.wood;$("stone").textContent=state.stone;$("day").textContent=state.day;
- $("berryStatus").textContent="Frutas silvestres: "+state.berries;\n $("fiber").textContent=state.fiber;\n $("cloakStatus").textContent=state.coldCloak?"Manto térmico: equipado":"Manto térmico: não fabricado";\n $("craftCloak").disabled=state.coldCloak||state.fiber<5||state.wood<2;
+ $("berryStatus").textContent="Frutas silvestres: "+state.berries;
+ $("fiber").textContent=state.fiber;
+ $("cloakStatus").textContent=state.coldCloak?"Manto térmico: equipado":"Manto térmico: não fabricado";
+ $("craftCloak").disabled=state.coldCloak||state.fiber<5||state.wood<2;
  $("eatBerry").disabled=state.berries<1||state.hunger>=100;
  $("axeStatus").textContent=state.axe?"Machado: fabricado":"Machado: não fabricado";$("pickaxeStatus").textContent=state.pickaxe?"Picareta: fabricada":"Picareta: não fabricada";
  $("craftAxe").disabled=state.axe||state.wood<3||state.stone<2;$("craftPickaxe").disabled=state.pickaxe||state.wood<3||state.stone<3;
@@ -297,7 +302,8 @@ function collect(){
  if(resource.type==="wood"&&!state.axe){toast("Você precisa fabricar um machado.");return;}
  if(resource.type==="stone"&&!state.pickaxe){toast("Você precisa fabricar uma picareta.");return;}
  if(resource.type==="branch"){state.wood+=1;toast("Você recolheu 1 galho.");}
- else if(resource.type==="berries"){state.berries+=3;toast("Você recolheu 3 frutas silvestres.");}\n else if(resource.type==="fiber"){state.fiber+=2;toast("Você recolheu fibras vegetais.");}
+ else if(resource.type==="berries"){state.berries+=3;toast("Você recolheu 3 frutas silvestres.");}
+ else if(resource.type==="fiber"){state.fiber+=2;toast("Você recolheu fibras vegetais.");}
  else if(resource.type==="looseStone"){state.stone+=1;toast("Você recolheu 1 pedra solta.");}
  else if(resource.type==="stone"){state.stone+=2;toast("Você minerou 2 pedras.");}
  else{state.wood+=3;toast("Você cortou e recolheu 3 madeiras.");}
@@ -356,7 +362,22 @@ function createCampfire(x,z){
  group.position.set(x,terrainHeight(x,z),z);scene.add(group);
  state.campfireObject=group;state.campfire=true;state.campfireX=x;state.campfireZ=z;
 }
-function craftCloak(){\n if(state.coldCloak){toast("Você já está usando o manto térmico.");return;}\n if(state.fiber<5||state.wood<2){toast("Faltam materiais: 5 fibras e 2 madeiras.");return;}\n state.fiber-=5;state.wood-=2;state.coldCloak=true;createCloakVisual();updateHUD();saveGame();toast("Manto térmico fabricado! Você perde menos calor no frio.");\n}\nfunction createCloakVisual(){\n if(state.cloakObject)player.remove(state.cloakObject);\n const cloak=new THREE.Group();\n const fur=new THREE.MeshStandardMaterial({color:0x65452f,roughness:1});\n const trim=new THREE.MeshStandardMaterial({color:0xb49a6b,roughness:1});\n const cape=new THREE.Mesh(new THREE.SphereGeometry(.48,12,10),fur);cape.scale.set(.9,1.25,.34);cape.position.set(0,1.02,-.22);cape.castShadow=true;cloak.add(cape);\n const collar=new THREE.Mesh(new THREE.TorusGeometry(.28,.075,6,12),trim);collar.rotation.x=Math.PI/2;collar.position.set(0,1.52,-.04);collar.castShadow=true;cloak.add(collar);\n player.add(cloak);state.cloakObject=cloak;\n}\n$("craftCloak").addEventListener("click",craftCloak);\nfunction craftShelter(){
+function craftCloak(){
+ if(state.coldCloak){toast("Você já está usando o manto térmico.");return;}
+ if(state.fiber<5||state.wood<2){toast("Faltam materiais: 5 fibras e 2 madeiras.");return;}
+ state.fiber-=5;state.wood-=2;state.coldCloak=true;createCloakVisual();updateHUD();saveGame();toast("Manto térmico fabricado! Você perde menos calor no frio.");
+}
+function createCloakVisual(){
+ if(state.cloakObject)player.remove(state.cloakObject);
+ const cloak=new THREE.Group();
+ const fur=new THREE.MeshStandardMaterial({color:0x65452f,roughness:1});
+ const trim=new THREE.MeshStandardMaterial({color:0xb49a6b,roughness:1});
+ const cape=new THREE.Mesh(new THREE.SphereGeometry(.48,12,10),fur);cape.scale.set(.9,1.25,.34);cape.position.set(0,1.02,-.22);cape.castShadow=true;cloak.add(cape);
+ const collar=new THREE.Mesh(new THREE.TorusGeometry(.28,.075,6,12),trim);collar.rotation.x=Math.PI/2;collar.position.set(0,1.52,-.04);collar.castShadow=true;cloak.add(collar);
+ player.add(cloak);state.cloakObject=cloak;
+}
+$("craftCloak").addEventListener("click",craftCloak);
+function craftShelter(){
  if(state.shelter){toast("Você já construiu seu abrigo.");return;}
  if(state.wood<10||state.stone<4){toast("Faltam materiais: 10 madeiras e 4 pedras.");return;}
  state.wood-=10;state.stone-=4;
