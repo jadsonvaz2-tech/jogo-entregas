@@ -175,20 +175,23 @@ async function buildForest(){
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,near:null};
+const state={health:100,hunger:100,thirst:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,near:null,campfire:false,campfireX:null,campfireZ:null};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
   if(!saved)return;
   for(const key of ["health","hunger","thirst","energy","wood","stone","day"])if(Number.isFinite(saved[key]))state[key]=saved[key];
   state.axe=saved.axe===true;state.pickaxe=saved.pickaxe===true;
+  state.campfire=saved.campfire===true;
+  if(Number.isFinite(saved.campfireX))state.campfireX=saved.campfireX;
+  if(Number.isFinite(saved.campfireZ))state.campfireZ=saved.campfireZ;
   if(Number.isFinite(saved.x))player.position.x=saved.x;
   if(Number.isFinite(saved.z))player.position.z=saved.z;
   player.position.y=terrainHeight(player.position.x,player.position.z);
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -203,6 +206,8 @@ function updateHUD(){
  $("wood").textContent=state.wood;$("stone").textContent=state.stone;$("day").textContent=state.day;
  $("axeStatus").textContent=state.axe?"Machado: fabricado":"Machado: não fabricado";$("pickaxeStatus").textContent=state.pickaxe?"Picareta: fabricada":"Picareta: não fabricada";
  $("craftAxe").disabled=state.axe||state.wood<3||state.stone<2;$("craftPickaxe").disabled=state.pickaxe||state.wood<3||state.stone<3;
+ $("campfireStatus").textContent=state.campfire?"Fogueira: construída":"Fogueira: não construída";
+ $("craftCampfire").disabled=state.campfire||state.wood<5||state.stone<3;
  $("collectBtn").disabled=!state.near;
  $("collectBtn").textContent=state.near?(state.near.type==="stone"?"MINERAR":"COLETAR"):"COLETAR";
  $("hint").textContent=state.near?(state.near.type==="stone"?"Use a picareta para minerar.":state.near.type==="wood"?"Use o machado para cortar madeira.":state.near.type==="branch"?"Galho encontrado. Toque em COLETAR.":"Pedra solta encontrada. Toque em COLETAR."):"Procure os galhos e pedras próximos; aproxime-se e toque em COLETAR.";
@@ -232,6 +237,37 @@ const craftToggle=$("craftToggle"),craftPanel=$("craftPanel");
 craftToggle.addEventListener("click",()=>{const open=craftPanel.classList.toggle("open");craftToggle.textContent=open?"FECHAR OFICINA":"FABRICAR";});
 $("craftAxe").addEventListener("click",()=>craftTool("axe"));
 $("craftPickaxe").addEventListener("click",()=>craftTool("pickaxe"));
+$("craftCampfire").addEventListener("click",craftCampfire);
+function craftCampfire(){
+ if(state.campfire){toast("Você já construiu sua fogueira.");return;}
+ if(state.wood<5||state.stone<3){toast("Faltam materiais: 5 madeiras e 3 pedras.");return;}
+ state.wood-=5;state.stone-=3;
+ const x=player.position.x+Math.sin(player.rotation.y)*2.4;
+ const z=player.position.z+Math.cos(player.rotation.y)*2.4;
+ createCampfire(x,z);
+ updateHUD();saveGame();toast("Fogueira construída! Descanse perto dela para recuperar energia.");
+}
+function createCampfire(x,z){
+ if(state.campfireObject)scene.remove(state.campfireObject);
+ const group=new THREE.Group();
+ const stoneMat=new THREE.MeshStandardMaterial({color:0x77766d,roughness:1});
+ const woodMat=new THREE.MeshStandardMaterial({color:0x68452b,roughness:1});
+ for(let i=0;i<9;i++){
+  const a=i*Math.PI*2/9;
+  const stone=new THREE.Mesh(new THREE.DodecahedronGeometry(.22,0),stoneMat);
+  stone.position.set(Math.cos(a)*.62,.16,Math.sin(a)*.62);stone.scale.set(1,.72,.9);stone.castShadow=true;group.add(stone);
+ }
+ for(let i=0;i<3;i++){
+  const log=new THREE.Mesh(new THREE.CylinderGeometry(.09,.11,1.15,7),woodMat);
+  log.rotation.z=Math.PI/2;log.rotation.y=i*Math.PI/3;log.position.y=.22+i*.025;log.castShadow=true;group.add(log);
+ }
+ const flameMat=new THREE.MeshStandardMaterial({color:0xff8a24,emissive:0xff4b08,emissiveIntensity:1.7,roughness:.4});
+ const flame=new THREE.Mesh(new THREE.ConeGeometry(.22,.8,7),flameMat);flame.position.y=.68;group.add(flame);
+ const core=new THREE.Mesh(new THREE.SphereGeometry(.15,8,8),new THREE.MeshBasicMaterial({color:0xffd36a}));core.position.y=.43;group.add(core);
+ const light=new THREE.PointLight(0xff9a42,1.8,10);light.position.y=1.1;group.add(light);
+ group.position.set(x,terrainHeight(x,z),z);scene.add(group);
+ state.campfireObject=group;state.campfire=true;state.campfireX=x;state.campfireZ=z;
+}
 function createToolVisual(type){
  const group=new THREE.Group();
  const woodMat=new THREE.MeshStandardMaterial({color:0x76502e,roughness:1});
@@ -287,6 +323,7 @@ function update(dt){
   state.yaw=Math.atan2(dx,dz);player.rotation.y=state.yaw;
   if(fast)state.energy=Math.max(0,state.energy-dt*2.5);else state.energy=Math.min(100,state.energy+dt*1.2);
  }else{state.energy=Math.min(100,state.energy+dt*4);}
+ if(state.campfire&&Math.hypot(player.position.x-state.campfireX,player.position.z-state.campfireZ)<6){state.energy=Math.min(100,state.energy+dt*5);}
  const floorY=terrainHeight(player.position.x,player.position.z);
  if(isJumping){
   verticalVelocity-=12*dt;
@@ -318,10 +355,10 @@ async function start(){
  $("loadingText").textContent="Criando o terreno e a floresta...";
  $("loadingBar").style.width="20%";
  await buildForest();
+ if(state.campfire&&Number.isFinite(state.campfireX)&&Number.isFinite(state.campfireZ))createCampfire(state.campfireX,state.campfireZ);
  $("loadingBar").style.width="72%";
  $("loadingText").textContent="Carregando o viajante...";
  const loaded=await loadCharacter();
- if(state.axe)createToolVisual("axe");if(state.pickaxe)createToolVisual("pickaxe");
  if(!loaded)toast("Modelo do viajante indisponível: usando personagem provisório.");
  $("loadingBar").style.width="100%";
  updateHUD();
