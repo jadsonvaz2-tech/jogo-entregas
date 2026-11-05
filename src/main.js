@@ -308,7 +308,7 @@ async function buildForest(){
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[]};
+const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[]};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
@@ -318,6 +318,7 @@ function loadGame(){
   state.campfire=saved.campfire===true;
   state.shelter=saved.shelter===true;
   state.coldCloak=saved.coldCloak===true;
+  state.leatherBoots=saved.leatherBoots===true;
   if(Array.isArray(saved.collectedResources))state.collectedResources=saved.collectedResources.filter(v=>typeof v==="string");
   if(Array.isArray(saved.huntedAnimals))state.huntedAnimals=saved.huntedAnimals.filter(v=>typeof v==="string");
   if(Number.isFinite(saved.campfireX))state.campfireX=saved.campfireX;
@@ -330,7 +331,7 @@ function loadGame(){
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,huntedAnimals:state.huntedAnimals}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,huntedAnimals:state.huntedAnimals}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -338,6 +339,7 @@ loadGame();
 if(state.axe)createToolVisual("axe");
 if(state.pickaxe)createToolVisual("pickaxe");
 if(state.coldCloak)createCloakVisual();
+if(state.leatherBoots)createBootsVisual();
 const cameraTarget=new THREE.Vector3();
 let last=performance.now(),toastTimer=0,lastSave=0;
 function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>$("toast").classList.remove("show"),1900);}
@@ -352,6 +354,8 @@ function updateHUD(){
  $("eatMeat").disabled=state.meat<1||state.hunger>=100;
  $("cloakStatus").textContent=state.coldCloak?"Manto térmico: equipado":"Manto térmico: não fabricado";
  $("craftCloak").disabled=state.coldCloak||state.fiber<5||state.wood<2;
+ $("bootsStatus").textContent=state.leatherBoots?"Botas de couro: equipadas":"Botas de couro: não fabricadas";
+ $("craftBoots").disabled=state.leatherBoots||state.hide<2||state.fiber<3;
  $("eatBerry").disabled=state.berries<1||state.hunger>=100;
  $("eatMeat").disabled=state.meat<1||state.hunger>=100;
  $("axeStatus").textContent=state.axe?"Machado: fabricado":"Machado: não fabricado";$("pickaxeStatus").textContent=state.pickaxe?"Picareta: fabricada":"Picareta: não fabricada";
@@ -462,6 +466,24 @@ function craftCloak(){
  if(state.fiber<5||state.wood<2){toast("Faltam materiais: 5 fibras e 2 madeiras.");return;}
  state.fiber-=5;state.wood-=2;state.coldCloak=true;createCloakVisual();updateHUD();saveGame();toast("Manto térmico fabricado! Você perde menos calor no frio.");
 }
+function craftBoots(){
+ if(state.leatherBoots){toast("Você já está usando as botas de couro.");return;}
+ if(state.hide<2||state.fiber<3){toast("Faltam materiais: 2 couros e 3 fibras.");return;}
+ state.hide-=2;state.fiber-=3;state.leatherBoots=true;createBootsVisual();updateHUD();saveGame();toast("Botas de couro fabricadas! Você perde menos calor.");
+}
+function createBootsVisual(){
+ if(state.bootsObject)player.remove(state.bootsObject);
+ const boots=new THREE.Group();
+ const leather=new THREE.MeshStandardMaterial({color:0x49301f,roughness:1});
+ const sole=new THREE.MeshStandardMaterial({color:0x241b15,roughness:1});
+ for(const x of [-.2,.2]){
+  const foot=new THREE.Mesh(new THREE.BoxGeometry(.22,.19,.38),leather);
+  foot.position.set(x,.11,.07);foot.castShadow=true;boots.add(foot);
+  const base=new THREE.Mesh(new THREE.BoxGeometry(.23,.055,.39),sole);
+  base.position.set(x,.035,.07);base.castShadow=true;boots.add(base);
+ }
+ player.add(boots);state.bootsObject=boots;
+}
 function createCloakVisual(){
  if(state.cloakObject)player.remove(state.cloakObject);
  const cloak=new THREE.Group();
@@ -472,6 +494,7 @@ function createCloakVisual(){
  player.add(cloak);state.cloakObject=cloak;
 }
 $("craftCloak").addEventListener("click",craftCloak);
+$("craftBoots").addEventListener("click",craftBoots);
 function craftShelter(){
  if(state.shelter){toast("Você já construiu seu abrigo.");return;}
  if(state.wood<10||state.stone<4){toast("Faltam materiais: 10 madeiras e 4 pedras.");return;}
@@ -575,7 +598,7 @@ function update(dt){
  const nearFire=state.campfire&&Math.hypot(player.position.x-state.campfireX,player.position.z-state.campfireZ)<6;
  const nearShelter=state.shelter&&Math.hypot(player.position.x-state.shelterX,player.position.z-state.shelterZ)<5;
  if(nearFire){state.energy=Math.min(100,state.energy+dt*5);state.temperature=Math.min(100,state.temperature+dt*9);}
- else{const daylight=THREE.MathUtils.clamp(Math.sin((state.timeOfDay-6)/12*Math.PI),0,1);let coldRate=state.timeOfDay<6||state.timeOfDay>=19?.42:.10;if(nearShelter)coldRate*=.2;if(state.coldCloak)coldRate*=.45;state.temperature=THREE.MathUtils.clamp(state.temperature+dt*(daylight*.32-coldRate),0,100);}
+ else{const daylight=THREE.MathUtils.clamp(Math.sin((state.timeOfDay-6)/12*Math.PI),0,1);let coldRate=state.timeOfDay<6||state.timeOfDay>=19?.42:.10;if(nearShelter)coldRate*=.2;if(state.coldCloak)coldRate*=.45;if(state.leatherBoots)coldRate*=.7;state.temperature=THREE.MathUtils.clamp(state.temperature+dt*(daylight*.32-coldRate),0,100);}
  const floorY=terrainHeight(player.position.x,player.position.z);
  if(isJumping){
   verticalVelocity-=12*dt;
