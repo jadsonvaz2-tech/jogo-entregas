@@ -275,8 +275,9 @@ function update(dt){
  if(moving){
   const direction=new THREE.Vector3(mx,0,my).normalize();
   const angle=state.cameraYaw;
-  const dx=direction.x*Math.cos(angle)-direction.z*Math.sin(angle);
-  const dz=direction.x*Math.sin(angle)+direction.z*Math.cos(angle);
+  // Corrige o eixo horizontal relativo à câmera: direita no joystick move para a direita da tela.
+  const dx=direction.x*Math.cos(angle)+direction.z*Math.sin(angle);
+  const dz=-direction.x*Math.sin(angle)+direction.z*Math.cos(angle);
   const speed=fast?7.1:3.6;
   player.position.x+=dx*speed*dt;player.position.z+=dz*speed*dt;
   state.yaw=Math.atan2(dx,dz);player.rotation.y=state.yaw;
