@@ -240,7 +240,7 @@ async function buildForest(){
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,fiber:0,collectedResources:[],berries:0,fiber:0,coldCloak:false};
+const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,fiber:0,collectedResources:[],berries:0};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
