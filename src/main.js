@@ -192,6 +192,9 @@ function saveGame(){
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
+// Recria visualmente as ferramentas que já foram fabricadas e salvas.
+if(state.axe)createToolVisual("axe");
+if(state.pickaxe)createToolVisual("pickaxe");
 const cameraTarget=new THREE.Vector3();
 let last=performance.now(),toastTimer=0,lastSave=0;
 function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>$("toast").classList.remove("show"),1900);}
