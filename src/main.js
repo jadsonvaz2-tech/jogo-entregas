@@ -81,6 +81,17 @@ function jumpCharacter(){
 function attackCharacter(){
  if(!characterReady || isJumping || lockedAnimation)return;
  playOneShot("swordslash");
+ const animal=nearestWildAnimal(3.8);
+ if(animal){
+  animal.health--;
+  if(animal.health<=0){
+   animal.alive=false;animal.object.visible=false;
+   if(!state.huntedAnimals.includes(animal.id))state.huntedAnimals.push(animal.id);
+   createCarcass(animal.x,animal.z);
+   toast("Veado abatido! Recolha a carne e o couro.");
+   saveGame();
+  }else toast("Você atingiu o veado! Ele está ferido.");
+ }
 }
 const loader = new GLTFLoader();
 function loadCharacter(){
@@ -147,11 +158,66 @@ function addGrass(){
  scene.add(mesh);
 }
 let resources=[];
+const wildAnimals=[];
 function resourceId(type,x,z){return `${type}:${x.toFixed(3)}:${z.toFixed(3)}`;}
 function registerResource(resource){
  resource.id=resourceId(resource.type,resource.x,resource.z);
  if(state.collectedResources.includes(resource.id)){resource.active=false;resource.object.visible=false;if(resource.target)resource.target.visible=false;}
  resources.push(resource);
+}
+function createCarcass(x,z){
+ const bodyMat=new THREE.MeshStandardMaterial({color:0x76513a,roughness:1});
+ const darkMat=new THREE.MeshStandardMaterial({color:0x49382c,roughness:1});
+ const carcass=new THREE.Group();
+ const body=new THREE.Mesh(new THREE.SphereGeometry(.48,9,7),bodyMat);
+ body.scale.set(1.35,.55,.8);body.position.set(0,.38,0);body.castShadow=true;carcass.add(body);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.2,7,6),darkMat);
+ head.position.set(0,.32,.58);head.castShadow=true;carcass.add(head);
+ carcass.position.set(x,terrainHeight(x,z),z);scene.add(carcass);
+ registerResource({object:carcass,x,z,type:"carcass",active:true});
+}
+function createDeer(x,z,index){
+ const id="deer-"+index;
+ if(state.huntedAnimals.includes(id)){createCarcass(x,z);return;}
+ const deer=new THREE.Group();
+ const coat=new THREE.MeshStandardMaterial({color:0x8b6442,roughness:1});
+ const belly=new THREE.MeshStandardMaterial({color:0xd3bd9a,roughness:1});
+ const dark=new THREE.MeshStandardMaterial({color:0x33271e,roughness:1});
+ const body=new THREE.Mesh(new THREE.SphereGeometry(.58,10,8),coat);
+ body.scale.set(1,.78,1.45);body.position.y=1.02;body.castShadow=true;deer.add(body);
+ const neck=new THREE.Mesh(new THREE.CylinderGeometry(.16,.22,.72,7),coat);
+ neck.position.set(0,1.32,.55);neck.rotation.x=.48;neck.castShadow=true;deer.add(neck);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.23,8,7),coat);
+ head.position.set(0,1.64,.82);head.castShadow=true;deer.add(head);
+ const muzzle=new THREE.Mesh(new THREE.SphereGeometry(.12,7,6),belly);
+ muzzle.scale.set(.85,.65,1.2);muzzle.position.set(0,1.58,1.01);deer.add(muzzle);
+ const legs=[];
+ for(const lx of [-.29,.29])for(const lz of [-.48,.48]){
+  const leg=new THREE.Mesh(new THREE.CylinderGeometry(.055,.075,.68,6),dark);
+  leg.position.set(lx,.42,lz);leg.castShadow=true;deer.add(leg);legs.push(leg);
+ }
+ const tail=new THREE.Mesh(new THREE.SphereGeometry(.12,6,5),belly);
+ tail.position.set(0,1.12,-.82);deer.add(tail);
+ deer.position.set(x,terrainHeight(x,z),z);scene.add(deer);
+ wildAnimals.push({id,object:deer,x,z,heading:worldRandom()*Math.PI*2,health:2,alive:true,wander:1+worldRandom()*2,legs});
+}
+function nearestWildAnimal(maxDistance){
+ let nearest=null,dist=maxDistance;
+ for(const animal of wildAnimals){if(!animal.alive)continue;const d=Math.hypot(player.position.x-animal.x,player.position.z-animal.z);if(d<dist){dist=d;nearest=animal;}}
+ return nearest;
+}
+function updateWildlife(dt){
+ for(const animal of wildAnimals){
+  if(!animal.alive)continue;
+  const dx=animal.x-player.position.x,dz=animal.z-player.position.z,d=Math.hypot(dx,dz);
+  let speed=.45;
+  if(d<9){animal.heading=Math.atan2(dx,dz);speed=3.2;}
+  else{animal.wander-=dt;if(animal.wander<=0){animal.heading+=(worldRandom()-.5)*1.8;animal.wander=2+worldRandom()*3;}}
+  animal.x+=Math.sin(animal.heading)*speed*dt;
+  animal.z+=Math.cos(animal.heading)*speed*dt;
+  animal.object.position.set(animal.x,terrainHeight(animal.x,animal.z),animal.z);
+  animal.object.rotation.y=animal.heading;
+ }
 }
 function createFiberPlant(x,z){
  const plant=new THREE.Group();
@@ -237,21 +303,23 @@ async function buildForest(){
  if(rock){for(let i=0;i<12;i++){const a=worldRandom()*6.28,r=12+worldRandom()*75;scatterModel(rock,Math.cos(a)*r,Math.sin(a)*r,.7);}}
  for(let i=0;i<14;i++){const a=worldRandom()*Math.PI*2,r=14+worldRandom()*62;createBerryBush(Math.cos(a)*r,Math.sin(a)*r);}
  for(let i=0;i<16;i++){const a=worldRandom()*Math.PI*2,r=8+worldRandom()*48;createFiberPlant(Math.cos(a)*r,Math.sin(a)*r);}
+ for(let i=0;i<6;i++){const a=worldRandom()*Math.PI*2,r=24+worldRandom()*52;createDeer(Math.cos(a)*r,Math.sin(a)*r,i);}
  createWaterSource(13,0);
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,fiber:0,collectedResources:[],berries:0};
+const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,fiber:0,collectedResources:[],berries:0,meat:0,hide:0,huntedAnimals:[]};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
   if(!saved)return;
-  for(const key of ["health","hunger","thirst","temperature","energy","wood","stone","day","timeOfDay","berries","fiber"])if(Number.isFinite(saved[key]))state[key]=saved[key];
+  for(const key of ["health","hunger","thirst","temperature","energy","wood","stone","day","timeOfDay","berries","fiber","meat","hide"])if(Number.isFinite(saved[key]))state[key]=saved[key];
   state.axe=saved.axe===true;state.pickaxe=saved.pickaxe===true;
   state.campfire=saved.campfire===true;
   state.shelter=saved.shelter===true;
   state.coldCloak=saved.coldCloak===true;
   if(Array.isArray(saved.collectedResources))state.collectedResources=saved.collectedResources.filter(v=>typeof v==="string");
+  if(Array.isArray(saved.huntedAnimals))state.huntedAnimals=saved.huntedAnimals.filter(v=>typeof v==="string");
   if(Number.isFinite(saved.campfireX))state.campfireX=saved.campfireX;
   if(Number.isFinite(saved.campfireZ))state.campfireZ=saved.campfireZ;
   if(Number.isFinite(saved.shelterX))state.shelterX=saved.shelterX;
@@ -262,7 +330,7 @@ function loadGame(){
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,meat:state.meat,hide:state.hide,huntedAnimals:state.huntedAnimals}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -277,10 +345,13 @@ function updateHUD(){
  $("healthBar").style.width=state.health+"%";$("hungerBar").style.width=state.hunger+"%";$("thirstBar").style.width=state.thirst+"%";$("temperatureBar").style.width=state.temperature+"%";$("energyBar").style.width=state.energy+"%";
  $("wood").textContent=state.wood;$("stone").textContent=state.stone;$("day").textContent=state.day;
  $("berryStatus").textContent="Frutas silvestres: "+state.berries;
- $("fiber").textContent=state.fiber;
+ $("fiber").textContent=state.fiber;$("meat").textContent=state.meat;$("hide").textContent=state.hide;
+ $("meatStatus").textContent="Carne: "+state.meat+" · Couro: "+state.hide;
+ $("eatMeat").disabled=state.meat<1||state.hunger>=100;
  $("cloakStatus").textContent=state.coldCloak?"Manto térmico: equipado":"Manto térmico: não fabricado";
  $("craftCloak").disabled=state.coldCloak||state.fiber<5||state.wood<2;
  $("eatBerry").disabled=state.berries<1||state.hunger>=100;
+ $("eatMeat").disabled=state.meat<1||state.hunger>=100;
  $("axeStatus").textContent=state.axe?"Machado: fabricado":"Machado: não fabricado";$("pickaxeStatus").textContent=state.pickaxe?"Picareta: fabricada":"Picareta: não fabricada";
  $("craftAxe").disabled=state.axe||state.wood<3||state.stone<2;$("craftPickaxe").disabled=state.pickaxe||state.wood<3||state.stone<3;
  $("campfireStatus").textContent=state.campfire?"Fogueira: construída":"Fogueira: não construída";
@@ -289,7 +360,8 @@ function updateHUD(){
  $("craftShelter").disabled=state.shelter||state.wood<10||state.stone<4;
  $("collectBtn").disabled=!state.near;
  $("collectBtn").textContent=state.near?(state.near.type==="stone"?"MINERAR":state.near.type==="water"?"BEBER ÁGUA":"COLETAR"):"COLETAR";
- $("hint").textContent=state.near?(state.near.type==="water"?"Fonte de água encontrada. Toque em BEBER ÁGUA.":state.near.type==="stone"?"Use a picareta para minerar.":state.near.type==="wood"?"Use o machado para cortar madeira.":state.near.type==="branch"?"Galho encontrado. Toque em COLETAR.":state.near.type==="berries"?"Frutas silvestres encontradas. Toque em COLETAR.":state.near.type==="fiber"?"Planta fibrosa encontrada. Toque em COLETAR.":"Pedra solta encontrada. Toque em COLETAR."):"Procure recursos e arbustos de frutas pela floresta.";
+ const nearbyAnimal=nearestWildAnimal(5);
+ $("hint").textContent=nearbyAnimal?"Veado por perto. Aproxime-se e toque em ATACAR.":state.near?(state.near.type==="water"?"Fonte de água encontrada. Toque em BEBER ÁGUA.":state.near.type==="stone"?"Use a picareta para minerar.":state.near.type==="wood"?"Use o machado para cortar madeira.":state.near.type==="branch"?"Galho encontrado. Toque em COLETAR.":state.near.type==="berries"?"Frutas silvestres encontradas. Toque em COLETAR.":state.near.type==="fiber"?"Planta fibrosa encontrada. Toque em COLETAR.":"Pedra solta encontrada. Toque em COLETAR."):"Procure recursos e arbustos de frutas pela floresta.";
 }
 function collect(){
  if(!state.near)return;
@@ -304,6 +376,7 @@ function collect(){
  if(resource.type==="branch"){state.wood+=1;toast("Você recolheu 1 galho.");}
  else if(resource.type==="berries"){state.berries+=3;toast("Você recolheu 3 frutas silvestres.");}
  else if(resource.type==="fiber"){state.fiber+=2;toast("Você recolheu fibras vegetais.");}
+ else if(resource.type==="carcass"){state.meat+=2;state.hide+=1;toast("Você recolheu 2 carnes e 1 couro.");}
  else if(resource.type==="looseStone"){state.stone+=1;toast("Você recolheu 1 pedra solta.");}
  else if(resource.type==="stone"){state.stone+=2;toast("Você minerou 2 pedras.");}
  else{state.wood+=3;toast("Você cortou e recolheu 3 madeiras.");}
@@ -327,6 +400,12 @@ $("craftAxe").addEventListener("click",()=>craftTool("axe"));
 $("craftPickaxe").addEventListener("click",()=>craftTool("pickaxe"));
 $("craftCampfire").addEventListener("click",craftCampfire);
  $("eatBerry").addEventListener("click",eatBerry);
+ $("eatMeat").addEventListener("click",eatMeat);
+ function eatMeat(){
+  if(state.meat<1||state.hunger>=100)return;
+  state.meat--;state.hunger=Math.min(100,state.hunger+32);
+  updateHUD();saveGame();toast("Você comeu carne assada? Prepare uma fogueira para cozinhar melhor.");
+ }
  function eatBerry(){
   if(state.berries<1||state.hunger>=100)return;
   state.berries--;state.hunger=Math.min(100,state.hunger+18);state.thirst=Math.min(100,state.thirst+4);
@@ -460,6 +539,7 @@ function updateWorldLighting(dt){
 }
 function update(dt){
  updateWorldLighting(dt);
+ updateWildlife(dt);
  const kx=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);
  const ky=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0);
  const mx=THREE.MathUtils.clamp(state.moveX+kx,-1,1),my=THREE.MathUtils.clamp(state.moveY+ky,-1,1);
