@@ -174,12 +174,12 @@ function createWaterSource(x,z){
  const waterMat=new THREE.MeshStandardMaterial({color:0x477f91,roughness:.22,metalness:.08,transparent:true,opacity:.86});
  const water=new THREE.Mesh(new THREE.CircleGeometry(2.65,40),waterMat);
  water.rotation.x=-Math.PI/2;
- water.position.y=terrainHeight(x,z)+.09;
+ water.position.set(x,terrainHeight(x,z)+.09,z);
  pond.add(water);
  const rippleMat=new THREE.MeshBasicMaterial({color:0x9acbd0,transparent:true,opacity:.28,side:THREE.DoubleSide});
  for(let i=0;i<2;i++){
   const ripple=new THREE.Mesh(new THREE.RingGeometry(.55+i*.55,.59+i*.55,40),rippleMat);
-  ripple.rotation.x=-Math.PI/2;ripple.position.y=water.position.y+.012+i*.003;pond.add(ripple);
+  ripple.rotation.x=-Math.PI/2;ripple.position.set(x,water.position.y+.012+i*.003,z);pond.add(ripple);
  }
  const bankMat=new THREE.MeshStandardMaterial({color:0x77766a,roughness:1});
  for(let i=0;i<14;i++){
