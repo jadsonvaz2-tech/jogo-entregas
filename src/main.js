@@ -543,19 +543,21 @@ function createToolVisual(type){
  // Cada ferramenta acompanha a mão correspondente, em vez de ficar solta à frente do corpo.
  let hand=null;
  const side=type==="axe"?"right":"left";
- const handPattern=side==="right"?/(right.*hand|hand.*right|righthand|r[_ .:-]?hand|hand[_ .:-]?r)/i:/(left.*hand|hand.*left|lefthand|l[_ .:-]?hand|hand[_ .:-]?l)/i;
+ // Neste modelo os ossos das mãos se chamam exatamente Fist.R e Fist.L.
+ const handPattern=side==="right"?/(fist[._ ]?r|r[._ ]?fist|right.*hand|hand.*right)/i:/(fist[._ ]?l|l[._ ]?fist|left.*hand|hand.*left)/i;
  const rig=state.characterModel||null;
  if(rig)rig.traverse(o=>{if(!hand&&o.isBone&&handPattern.test(o.name||""))hand=o;});
  if(hand){
-  group.position.set(0,-.08,0);
-  group.rotation.set(Math.PI/2,0,Math.PI/2);
+  // A ponta superior do cabo fica junto ao punho; o cabo desce ao lado do corpo.
+  group.position.set(0,-.38,0);
+  group.rotation.set(0,0,0);
   group.scale.setScalar(.72);
   hand.add(group);
  }else{
-  // Reserva para modelos sem nomes de ossos padronizados: mantém a ferramenta junto ao braço.
+  // Sem esqueleto disponível, mantém a ferramenta visível ao lado do tronco.
   const model=rig||player;
-  group.position.set(type==="axe"?.34:-.34,1.02,.08);
-  group.rotation.set(0,0,-.5);
+  group.position.set(type==="axe"?.48:.48,1.05,.28);
+  group.rotation.set(0,0,-.25);
   group.scale.setScalar(.72);
   model.add(group);
  }
