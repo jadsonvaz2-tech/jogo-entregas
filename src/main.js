@@ -575,21 +575,18 @@ function createToolVisual(type){
  const rig=state.characterModel||null;
  let hand=null;
  if(rig)rig.traverse(o=>{if(!hand&&handPattern.test(o.name||""))hand=o;});
- // Prende a ferramenta diretamente ao osso da mão para acompanhar
- // a animação sem depender de conversões de coordenadas a cada quadro.
+ // Mantém o objeto na raiz do personagem e acompanha a posição
+ // mundial do punho a cada quadro. Isso evita herdar escala e rotação
+ // inesperadas da hierarquia do esqueleto.
  group.scale.setScalar(.78);
  group.visible=true;
- group.traverse(o=>{if(o.isMesh){o.frustumCulled=false;o.renderOrder=5;}});
- if(hand){
-  state[handKey]=hand;
-  hand.add(group);
-  group.position.set(side==="right"?.015:-.015,-.055,.075);
-  group.rotation.set(0,0,0);
- }else{
-  state[handKey]=null;
-  player.add(group);
-  group.position.set(side==="right"?.42:-.42,1.02,.3);
- }
+ group.traverse(o=>{if(o.isMesh){
+  o.frustumCulled=false;o.renderOrder=20;
+  if(o.material){o.material.depthTest=false;o.material.depthWrite=false;}
+ }});
+ player.add(group);
+ state[handKey]=hand;
+ group.position.set(side==="right"?.38:-.38,1.02,.22);
  state[key]=group;
 }
 function updateToolAttachments(){
@@ -597,19 +594,21 @@ function updateToolAttachments(){
  for(const type of ["axe","pickaxe"]){
   const group=state[type==="axe"?"axeObject":"pickaxeObject"];
   const hand=state[type==="axe"?"axeHand":"pickaxeHand"];
-  if(!group||!hand||group.parent!==player)continue;
-  hand.updateWorldMatrix(true,false);
-  hand.getWorldPosition(handPosition);
-  player.worldToLocal(handPosition);
-  group.position.copy(handPosition);
-  // Deslocamento pequeno para que a empunhadura atravesse a palma,
-  // enquanto o cabo permanece apontado para baixo.
-  group.position.x+=type==="axe"?.025:-.025;
-  group.position.y-=.035;
-  group.position.z+=.035;
+  if(!group||group.parent!==player)continue;
+  if(hand){
+   hand.updateWorldMatrix(true,false);
+   hand.getWorldPosition(handPosition);
+   player.worldToLocal(handPosition);
+   group.position.copy(handPosition);
+   group.position.x+=type==="axe"?.045:-.045;
+   group.position.y-=.04;
+   group.position.z+=.10;
+  }else{
+   group.position.set(type==="axe"?.38:-.38,1.02,.22);
+  }
+  group.visible=true;
  }
 }
-
 $("collectBtn").addEventListener("click",collect);
 $("runBtn").addEventListener("click",()=>{state.running=!state.running;$("runBtn").textContent=state.running?"ANDAR":"CORRER";});
 const joy=$("joystick"),stick=$("stick");
