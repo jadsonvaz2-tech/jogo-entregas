@@ -153,6 +153,20 @@ function registerResource(resource){
  if(state.collectedResources.includes(resource.id)){resource.active=false;resource.object.visible=false;if(resource.target)resource.target.visible=false;}
  resources.push(resource);
 }
+function createFiberPlant(x,z){
+ const plant=new THREE.Group();
+ const stemMat=new THREE.MeshStandardMaterial({color:0x668044,roughness:1});
+ const fiberMat=new THREE.MeshStandardMaterial({color:0xb5a477,roughness:1});
+ for(let i=0;i<5;i++){
+  const a=i*Math.PI*2/5;
+  const stem=new THREE.Mesh(new THREE.CylinderGeometry(.025,.04,.72,5),stemMat);
+  stem.position.set(Math.cos(a)*.12,.36,Math.sin(a)*.12);stem.rotation.z=Math.cos(a)*-.22;stem.rotation.x=Math.sin(a)*.22;plant.add(stem);
+  const tuft=new THREE.Mesh(new THREE.SphereGeometry(.09,6,5),fiberMat);
+  tuft.position.set(Math.cos(a)*.18,.72,Math.sin(a)*.18);tuft.scale.set(.65,1.8,.65);plant.add(tuft);
+ }
+ plant.position.set(x,terrainHeight(x,z),z);scene.add(plant);
+ registerResource({object:plant,x,z,type:"fiber",active:true});
+}
 function createBerryBush(x,z){
  const bush=new THREE.Group();
  const leafMat=new THREE.MeshStandardMaterial({color:0x355d32,roughness:1});
@@ -221,20 +235,20 @@ async function buildForest(){
   registerResource({object:pebble,x,z,type:"looseStone",active:true});
  }
  if(rock){for(let i=0;i<12;i++){const a=worldRandom()*6.28,r=12+worldRandom()*75;scatterModel(rock,Math.cos(a)*r,Math.sin(a)*r,.7);}}
- for(let i=0;i<14;i++){const a=worldRandom()*Math.PI*2,r=14+worldRandom()*62;createBerryBush(Math.cos(a)*r,Math.sin(a)*r);}
+ for(let i=0;i<14;i++){const a=worldRandom()*Math.PI*2,r=14+worldRandom()*62;createBerryBush(Math.cos(a)*r,Math.sin(a)*r);}\n for(let i=0;i<16;i++){const a=worldRandom()*Math.PI*2,r=8+worldRandom()*48;createFiberPlant(Math.cos(a)*r,Math.sin(a)*r);}
  createWaterSource(13,0);
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,collectedResources:[],berries:0};
+const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,fiber:0,collectedResources:[],berries:0,fiber:0,coldCloak:false};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
   if(!saved)return;
-  for(const key of ["health","hunger","thirst","temperature","energy","wood","stone","day","timeOfDay","berries"])if(Number.isFinite(saved[key]))state[key]=saved[key];
+  for(const key of ["health","hunger","thirst","temperature","energy","wood","stone","day","timeOfDay","berries","fiber"])if(Number.isFinite(saved[key]))state[key]=saved[key];
   state.axe=saved.axe===true;state.pickaxe=saved.pickaxe===true;
   state.campfire=saved.campfire===true;
-  state.shelter=saved.shelter===true;
+  state.shelter=saved.shelter===true;\n  state.coldCloak=saved.coldCloak===true;
   if(Array.isArray(saved.collectedResources))state.collectedResources=saved.collectedResources.filter(v=>typeof v==="string");
   if(Number.isFinite(saved.campfireX))state.campfireX=saved.campfireX;
   if(Number.isFinite(saved.campfireZ))state.campfireZ=saved.campfireZ;
@@ -246,20 +260,20 @@ function loadGame(){
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,collectedResources:state.collectedResources,berries:state.berries}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
 // Recria visualmente as ferramentas que já foram fabricadas e salvas.
 if(state.axe)createToolVisual("axe");
-if(state.pickaxe)createToolVisual("pickaxe");
+if(state.pickaxe)createToolVisual("pickaxe");\nif(state.coldCloak)createCloakVisual();
 const cameraTarget=new THREE.Vector3();
 let last=performance.now(),toastTimer=0,lastSave=0;
 function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>$("toast").classList.remove("show"),1900);}
 function updateHUD(){
  $("healthBar").style.width=state.health+"%";$("hungerBar").style.width=state.hunger+"%";$("thirstBar").style.width=state.thirst+"%";$("temperatureBar").style.width=state.temperature+"%";$("energyBar").style.width=state.energy+"%";
  $("wood").textContent=state.wood;$("stone").textContent=state.stone;$("day").textContent=state.day;
- $("berryStatus").textContent="Frutas silvestres: "+state.berries;
+ $("berryStatus").textContent="Frutas silvestres: "+state.berries;\n $("fiber").textContent=state.fiber;\n $("cloakStatus").textContent=state.coldCloak?"Manto térmico: equipado":"Manto térmico: não fabricado";\n $("craftCloak").disabled=state.coldCloak||state.fiber<5||state.wood<2;
  $("eatBerry").disabled=state.berries<1||state.hunger>=100;
  $("axeStatus").textContent=state.axe?"Machado: fabricado":"Machado: não fabricado";$("pickaxeStatus").textContent=state.pickaxe?"Picareta: fabricada":"Picareta: não fabricada";
  $("craftAxe").disabled=state.axe||state.wood<3||state.stone<2;$("craftPickaxe").disabled=state.pickaxe||state.wood<3||state.stone<3;
@@ -269,7 +283,7 @@ function updateHUD(){
  $("craftShelter").disabled=state.shelter||state.wood<10||state.stone<4;
  $("collectBtn").disabled=!state.near;
  $("collectBtn").textContent=state.near?(state.near.type==="stone"?"MINERAR":state.near.type==="water"?"BEBER ÁGUA":"COLETAR"):"COLETAR";
- $("hint").textContent=state.near?(state.near.type==="water"?"Fonte de água encontrada. Toque em BEBER ÁGUA.":state.near.type==="stone"?"Use a picareta para minerar.":state.near.type==="wood"?"Use o machado para cortar madeira.":state.near.type==="branch"?"Galho encontrado. Toque em COLETAR.":state.near.type==="berries"?"Frutas silvestres encontradas. Toque em COLETAR.":"Pedra solta encontrada. Toque em COLETAR."):"Procure recursos e arbustos de frutas pela floresta.";
+ $("hint").textContent=state.near?(state.near.type==="water"?"Fonte de água encontrada. Toque em BEBER ÁGUA.":state.near.type==="stone"?"Use a picareta para minerar.":state.near.type==="wood"?"Use o machado para cortar madeira.":state.near.type==="branch"?"Galho encontrado. Toque em COLETAR.":state.near.type==="berries"?"Frutas silvestres encontradas. Toque em COLETAR.":state.near.type==="fiber"?"Planta fibrosa encontrada. Toque em COLETAR.":"Pedra solta encontrada. Toque em COLETAR."):"Procure recursos e arbustos de frutas pela floresta.";
 }
 function collect(){
  if(!state.near)return;
@@ -282,7 +296,7 @@ function collect(){
  if(resource.type==="wood"&&!state.axe){toast("Você precisa fabricar um machado.");return;}
  if(resource.type==="stone"&&!state.pickaxe){toast("Você precisa fabricar uma picareta.");return;}
  if(resource.type==="branch"){state.wood+=1;toast("Você recolheu 1 galho.");}
- else if(resource.type==="berries"){state.berries+=3;toast("Você recolheu 3 frutas silvestres.");}
+ else if(resource.type==="berries"){state.berries+=3;toast("Você recolheu 3 frutas silvestres.");}\n else if(resource.type==="fiber"){state.fiber+=2;toast("Você recolheu fibras vegetais.");}
  else if(resource.type==="looseStone"){state.stone+=1;toast("Você recolheu 1 pedra solta.");}
  else if(resource.type==="stone"){state.stone+=2;toast("Você minerou 2 pedras.");}
  else{state.wood+=3;toast("Você cortou e recolheu 3 madeiras.");}
@@ -341,7 +355,7 @@ function createCampfire(x,z){
  group.position.set(x,terrainHeight(x,z),z);scene.add(group);
  state.campfireObject=group;state.campfire=true;state.campfireX=x;state.campfireZ=z;
 }
-function craftShelter(){
+function craftCloak(){\n if(state.coldCloak){toast("Você já está usando o manto térmico.");return;}\n if(state.fiber<5||state.wood<2){toast("Faltam materiais: 5 fibras e 2 madeiras.");return;}\n state.fiber-=5;state.wood-=2;state.coldCloak=true;createCloakVisual();updateHUD();saveGame();toast("Manto térmico fabricado! Você perde menos calor no frio.");\n}\nfunction createCloakVisual(){\n if(state.cloakObject)player.remove(state.cloakObject);\n const cloak=new THREE.Group();\n const fur=new THREE.MeshStandardMaterial({color:0x65452f,roughness:1});\n const trim=new THREE.MeshStandardMaterial({color:0xb49a6b,roughness:1});\n const cape=new THREE.Mesh(new THREE.SphereGeometry(.48,12,10),fur);cape.scale.set(.9,1.25,.34);cape.position.set(0,1.02,-.22);cape.castShadow=true;cloak.add(cape);\n const collar=new THREE.Mesh(new THREE.TorusGeometry(.28,.075,6,12),trim);collar.rotation.x=Math.PI/2;collar.position.set(0,1.52,-.04);collar.castShadow=true;cloak.add(collar);\n player.add(cloak);state.cloakObject=cloak;\n}\n$("craftCloak").addEventListener("click",craftCloak);\nfunction craftShelter(){
  if(state.shelter){toast("Você já construiu seu abrigo.");return;}
  if(state.wood<10||state.stone<4){toast("Faltam materiais: 10 madeiras e 4 pedras.");return;}
  state.wood-=10;state.stone-=4;
@@ -443,7 +457,7 @@ function update(dt){
  const nearFire=state.campfire&&Math.hypot(player.position.x-state.campfireX,player.position.z-state.campfireZ)<6;
  const nearShelter=state.shelter&&Math.hypot(player.position.x-state.shelterX,player.position.z-state.shelterZ)<5;
  if(nearFire){state.energy=Math.min(100,state.energy+dt*5);state.temperature=Math.min(100,state.temperature+dt*9);}
- else{const daylight=THREE.MathUtils.clamp(Math.sin((state.timeOfDay-6)/12*Math.PI),0,1);let coldRate=state.timeOfDay<6||state.timeOfDay>=19?.42:.10;if(nearShelter)coldRate*=.2;state.temperature=THREE.MathUtils.clamp(state.temperature+dt*(daylight*.32-coldRate),0,100);}
+ else{const daylight=THREE.MathUtils.clamp(Math.sin((state.timeOfDay-6)/12*Math.PI),0,1);let coldRate=state.timeOfDay<6||state.timeOfDay>=19?.42:.10;if(nearShelter)coldRate*=.2;if(state.coldCloak)coldRate*=.45;state.temperature=THREE.MathUtils.clamp(state.temperature+dt*(daylight*.32-coldRate),0,100);}
  const floorY=terrainHeight(player.position.x,player.position.z);
  if(isJumping){
   verticalVelocity-=12*dt;
