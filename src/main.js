@@ -588,3 +588,113 @@ function updateToolAttachments(){
   group.position.z+=.035;
  }
 }
+
+$("collectBtn").addEventListener("click",collect);
+$("runBtn").addEventListener("click",()=>{state.running=!state.running;$("runBtn").textContent=state.running?"ANDAR":"CORRER";});
+const joy=$("joystick"),stick=$("stick");
+let joyPointer=null;
+joy.addEventListener("pointerdown",e=>{joyPointer=e.pointerId;joy.setPointerCapture(e.pointerId);moveJoy(e);});
+joy.addEventListener("pointermove",e=>{if(e.pointerId===joyPointer)moveJoy(e);});
+function moveJoy(e){const r=joy.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=e.clientX-cx,dy=e.clientY-cy;const len=Math.hypot(dx,dy),max=35;if(len>max){dx=dx/len*max;dy=dy/len*max;}stick.style.transform=`translate(${dx}px,${dy}px)`;// Inverte somente o eixo horizontal para alinhar esquerda/direita do controle ao movimento esperado.
+ state.moveX=-dx/max;state.moveY=-dy/max;}
+function resetJoy(e){if(e.pointerId!==joyPointer)return;joyPointer=null;state.moveX=0;state.moveY=0;stick.style.transform="translate(0,0)";}
+joy.addEventListener("pointerup",resetJoy);joy.addEventListener("pointercancel",resetJoy);
+const keys={};
+addEventListener("keydown",e=>{
+ keys[e.key.toLowerCase()]=true;
+ if(e.key.toLowerCase()==="e")collect();
+ if(e.key==="Shift")state.running=true;
+ if(e.code==="Space"){e.preventDefault();jumpCharacter();}
+ if(e.key.toLowerCase()==="f")attackCharacter();
+});
+addEventListener("keyup",e=>{keys[e.key.toLowerCase()]=false;if(e.key==="Shift")state.running=false;});
+$("jumpBtn").addEventListener("click",jumpCharacter);
+$("attackBtn").addEventListener("click",attackCharacter);
+let lookPointer=null,lastX=0,lastY=0;
+renderer.domElement.addEventListener("pointerdown",e=>{if(e.pointerType==="mouse"||e.clientX>innerWidth*.38){lookPointer=e.pointerId;lastX=e.clientX;lastY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId);}});
+renderer.domElement.addEventListener("pointermove",e=>{if(e.pointerId!==lookPointer)return;const dx=e.clientX-lastX,dy=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;state.cameraYaw-=dx*.005;state.cameraPitch=THREE.MathUtils.clamp(state.cameraPitch+dy*.003,-.72,1.12);});
+renderer.domElement.addEventListener("pointerup",e=>{if(e.pointerId===lookPointer)lookPointer=null;});
+renderer.domElement.addEventListener("pointercancel",e=>{if(e.pointerId===lookPointer)lookPointer=null;});
+function updateWorldLighting(dt){
+ state.timeOfDay+=dt*24/900;
+ if(state.timeOfDay>=24){state.timeOfDay-=24;state.day++;}
+ const hour=state.timeOfDay;
+ const daylight=THREE.MathUtils.clamp(Math.sin((hour-6)/12*Math.PI),0,1);
+ sun.position.set(Math.cos((hour-6)/12*Math.PI)*45,Math.max(3,daylight*65),25);
+ sun.intensity=.08+daylight*2.05;
+ sun.color.setRGB(1,.72+daylight*.16,.48+daylight*.48);
+ ambient.intensity=.35+daylight*1.65;
+ const sky=new THREE.Color(0x18283d).lerp(new THREE.Color(0x9bb3a0),daylight);
+ scene.background.copy(sky);scene.fog.color.copy(sky);
+ const period=hour<5||hour>=20?"NOITE":hour<7?"AMANHECER":hour<17?"DIA":hour<19?"PÔR DO SOL":"ANOITECER";
+ $("period").textContent=period;$("day").textContent=state.day;
+}
+function update(dt){
+ updateWorldLighting(dt);
+ updateWildlife(dt);
+ const kx=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);
+ const ky=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0);
+ const mx=THREE.MathUtils.clamp(state.moveX+kx,-1,1),my=THREE.MathUtils.clamp(state.moveY+ky,-1,1);
+ const moving=Math.hypot(mx,my)>.08;
+ const fast=(state.running||keys.shift)&&state.energy>0;
+ if(moving){
+  const direction=new THREE.Vector3(mx,0,my).normalize();
+  const angle=state.cameraYaw;
+  // Corrige o eixo horizontal relativo à câmera: direita no joystick move para a direita da tela.
+  const dx=direction.x*Math.cos(angle)+direction.z*Math.sin(angle);
+  const dz=-direction.x*Math.sin(angle)+direction.z*Math.cos(angle);
+  const speed=fast?7.1:3.6;
+  player.position.x+=dx*speed*dt;player.position.z+=dz*speed*dt;
+  state.yaw=Math.atan2(dx,dz);player.rotation.y=state.yaw;
+  if(fast)state.energy=Math.max(0,state.energy-dt*2.5);else state.energy=Math.min(100,state.energy+dt*1.2);
+ }else{state.energy=Math.min(100,state.energy+dt*4);}
+ const nearFire=state.campfire&&Math.hypot(player.position.x-state.campfireX,player.position.z-state.campfireZ)<6;
+ const nearShelter=state.shelter&&Math.hypot(player.position.x-state.shelterX,player.position.z-state.shelterZ)<5;
+ if(nearFire){state.energy=Math.min(100,state.energy+dt*5);state.temperature=Math.min(100,state.temperature+dt*9);}
+ else{const daylight=THREE.MathUtils.clamp(Math.sin((state.timeOfDay-6)/12*Math.PI),0,1);let coldRate=state.timeOfDay<6||state.timeOfDay>=19?.42:.10;if(nearShelter)coldRate*=.2;if(state.coldCloak)coldRate*=.45;if(state.leatherBoots)coldRate*=.7;state.temperature=THREE.MathUtils.clamp(state.temperature+dt*(daylight*.32-coldRate),0,100);}
+ const floorY=terrainHeight(player.position.x,player.position.z);
+ if(isJumping){
+  verticalVelocity-=12*dt;
+  player.position.y+=verticalVelocity*dt;
+  if(player.position.y<=floorY){player.position.y=floorY;verticalVelocity=0;isJumping=false;lockedAnimation=null;}
+ }else{player.position.y=floorY;}
+ if(characterReady && !lockedAnimation && !isJumping){
+  const desired=moving?(fast?"run":"walk"):"idle";
+  if(currentAnimation!==animationActions[desired])playCharacterAnimation(desired);
+ }
+ state.hunger=Math.max(0,state.hunger-dt*.055);state.thirst=Math.max(0,state.thirst-dt*.085);
+ if(mixer)mixer.update(dt);
+ updateToolAttachments();
+ cameraTarget.set(player.position.x,player.position.y+1.25,player.position.z);
+ const distance=7.2,cp=Math.cos(state.cameraPitch),sp=Math.sin(state.cameraPitch);
+ camera.position.set(player.position.x-Math.sin(state.cameraYaw)*distance*cp,player.position.y+1.25+distance*sp,player.position.z-Math.cos(state.cameraYaw)*distance*cp);
+ camera.lookAt(cameraTarget);
+ let closest=null,dist=6.0;
+ for(const r of resources){if(!r.active)continue;const d=Math.hypot(player.position.x-r.x,player.position.z-r.z);if(d<dist){dist=d;closest=r;}}
+ state.near=closest;updateHUD();
+ if(state.hunger<=0||state.thirst<=0||state.temperature<=0){state.health=Math.max(0,state.health-dt*.7);}
+}
+function animate(now){
+ requestAnimationFrame(animate);
+ const dt=Math.min((now-last)/1000,.05);last=now;
+ update(dt);if(now-lastSave>5000){saveGame();lastSave=now;}renderer.render(scene,camera);
+}
+addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));});
+async function start(){
+ $("loadingText").textContent="Criando o terreno e a floresta...";
+ $("loadingBar").style.width="20%";
+ await buildForest();
+ if(state.campfire&&Number.isFinite(state.campfireX)&&Number.isFinite(state.campfireZ))createCampfire(state.campfireX,state.campfireZ);
+ if(state.shelter&&Number.isFinite(state.shelterX)&&Number.isFinite(state.shelterZ))createShelter(state.shelterX,state.shelterZ);
+ $("loadingBar").style.width="72%";
+ $("loadingText").textContent="Carregando o viajante...";
+ const loaded=await loadCharacter();
+ if(!loaded)toast("Modelo do viajante indisponível: usando personagem provisório.");
+ $("loadingBar").style.width="100%";
+ updateHUD();
+ setTimeout(()=>{$("loading").style.opacity="0";setTimeout(()=>$("loading").remove(),700);},350);
+ toast("Você despertou em uma floresta desconhecida.");
+ animate(performance.now());
+}
+addEventListener("beforeunload",saveGame);
+start().catch(err=>{console.error(err);$("loadingText").textContent="Não foi possível carregar o cenário. Atualize a página.";toast("Falha ao iniciar o mundo.");});
