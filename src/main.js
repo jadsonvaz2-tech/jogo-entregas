@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 const $ = (id) => document.getElementById(id);
-const raw = "https://raw.githubusercontent.com/jadsonvaz2-tech/jogo-entregas/main/assets/3d/";
+const raw = new URL("../assets/3d/", import.meta.url).href;
 // Mundo procedural determinístico: os recursos permanecem nas mesmas posições entre sessões.
 let worldRandomState=0x5eed2026;
 function worldRandom(){worldRandomState=(worldRandomState*1664525+1013904223)>>>0;return worldRandomState/4294967296;}
@@ -96,7 +96,11 @@ function attackCharacter(){
 const loader = new GLTFLoader();
 function loadCharacter(){
  return new Promise(resolve=>{
+  let finished=false;
+  const timer=setTimeout(()=>{if(!finished){finished=true;resolve(false);}},18000);
   loader.load(raw+"Viking_Male.gltf",g=>{
+   if(finished)return;
+   finished=true;clearTimeout(timer);
    const model=g.scene;
    const box=new THREE.Box3().setFromObject(model);
    const size=box.getSize(new THREE.Vector3());
@@ -122,7 +126,10 @@ function loadCharacter(){
     });
    }
    characterReady=true; resolve(true);
-  },undefined,()=>resolve(false));
+  },undefined,()=>{
+   if(finished)return;
+   finished=true;clearTimeout(timer);resolve(false);
+  });
  });
 }
 const treePositions=[];
@@ -132,7 +139,17 @@ for(let i=0;i<55;i++){
 }
 const treeModels=[];
 async function loadTree(name){
- return new Promise(resolve=>loader.load(raw+name+".gltf",g=>resolve(g.scene),undefined,()=>resolve(null)));
+ return new Promise(resolve=>{
+  let finished=false;
+  const timer=setTimeout(()=>{if(!finished){finished=true;resolve(null);}},12000);
+  loader.load(raw+name+".gltf",g=>{
+   if(finished)return;
+   finished=true;clearTimeout(timer);resolve(g.scene);
+  },undefined,()=>{
+   if(finished)return;
+   finished=true;clearTimeout(timer);resolve(null);
+  });
+ });
 }
 function scatterModel(model,x,z,scale=1){
  if(!model)return;
