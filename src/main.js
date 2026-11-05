@@ -158,9 +158,19 @@ async function buildForest(){
   if(i%5===0)createResource(p.x+1.8,p.z+.8,"wood",tree);
  });
  for(let i=0;i<35;i++){const a=Math.random()*6.28,r=9+Math.random()*85;addRock(Math.cos(a)*r,Math.sin(a)*r,.45+Math.random()*.9,i%4===0);}
- // Materiais iniciais próximos à clareira: galhos e pedras podem ser recolhidos sem ferramentas.
- for(let i=0;i<6;i++){const a=i*Math.PI/3,r=2.5+Math.random()*1.2;createResource(Math.cos(a)*r,Math.sin(a)*r,"branch");}
- for(let i=0;i<5;i++){const a=i*2.4,r=2.8+Math.random()*1.3;const x=Math.cos(a)*r,z=Math.sin(a)*r;const pebble=new THREE.Mesh(new THREE.DodecahedronGeometry(.22,0),new THREE.MeshStandardMaterial({color:0x8b8b80,roughness:1}));pebble.position.set(x,terrainHeight(x,z)+.12,z);pebble.castShadow=true;scene.add(pebble);resources.push({object:pebble,x,z,type:"looseStone",active:true});}
+ // Materiais iniciais são posicionados ao redor da posição salva do jogador.
+ const startX=player.position.x,startZ=player.position.z;
+ for(let i=0;i<8;i++){
+  const a=i*Math.PI/4,r=2.4+(i%2)*.8;
+  createResource(startX+Math.cos(a)*r,startZ+Math.sin(a)*r,"branch");
+ }
+ for(let i=0;i<8;i++){
+  const a=i*Math.PI/4+.35,r=3.4+(i%2)*.7;
+  const x=startX+Math.cos(a)*r,z=startZ+Math.sin(a)*r;
+  const pebble=new THREE.Mesh(new THREE.DodecahedronGeometry(.25,0),new THREE.MeshStandardMaterial({color:0xaaa99c,roughness:1}));
+  pebble.position.set(x,terrainHeight(x,z)+.14,z);pebble.castShadow=true;pebble.receiveShadow=true;scene.add(pebble);
+  resources.push({object:pebble,x,z,type:"looseStone",active:true});
+ }
  if(rock){for(let i=0;i<12;i++){const a=Math.random()*6.28,r=12+Math.random()*75;scatterModel(rock,Math.cos(a)*r,Math.sin(a)*r,.7);}}
  addGrass();
 }
@@ -192,7 +202,7 @@ function updateHUD(){
  $("craftAxe").disabled=state.axe||state.wood<3||state.stone<2;$("craftPickaxe").disabled=state.pickaxe||state.wood<3||state.stone<3;
  $("collectBtn").disabled=!state.near;
  $("collectBtn").textContent=state.near?(state.near.type==="stone"?"MINERAR":"COLETAR"):"COLETAR";
- $("hint").textContent=state.near?(state.near.type==="stone"?"Use a picareta para minerar.":state.near.type==="wood"?"Use o machado para cortar madeira.":"Recolha este material com as mãos."):"Recolha galhos e pedras soltas para fabricar suas ferramentas.";
+ $("hint").textContent=state.near?(state.near.type==="stone"?"Use a picareta para minerar.":state.near.type==="wood"?"Use o machado para cortar madeira.":state.near.type==="branch"?"Galho encontrado. Toque em COLETAR.":"Pedra solta encontrada. Toque em COLETAR."):"Procure os galhos e pedras próximos; aproxime-se e toque em COLETAR.";
 }
 function collect(){
  if(!state.near)return;
@@ -288,7 +298,7 @@ function update(dt){
  const distance=7.2,cp=Math.cos(state.cameraPitch),sp=Math.sin(state.cameraPitch);
  camera.position.set(player.position.x-Math.sin(state.cameraYaw)*distance*cp,player.position.y+1.25+distance*sp,player.position.z-Math.cos(state.cameraYaw)*distance*cp);
  camera.lookAt(cameraTarget);
- let closest=null,dist=4.5;
+ let closest=null,dist=6.0;
  for(const r of resources){if(!r.active)continue;const d=Math.hypot(player.position.x-r.x,player.position.z-r.z);if(d<dist){dist=d;closest=r;}}
  state.near=closest;updateHUD();
  if(state.hunger<=0||state.thirst<=0){state.health=Math.max(0,state.health-dt*.7);}
