@@ -20,7 +20,8 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 $("game").prepend(renderer.domElement);
 
-scene.add(new THREE.HemisphereLight(0xdce9df,0x46513a,2.0));
+const ambient = new THREE.HemisphereLight(0xdce9df,0x46513a,2.0);
+scene.add(ambient);
 const sun = new THREE.DirectionalLight(0xffe2b3,2.1);
 sun.position.set(-35,65,25); sun.castShadow=true;
 sun.shadow.mapSize.set(1024,1024);
@@ -225,12 +226,12 @@ async function buildForest(){
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,near:null,campfire:false,campfireX:null,campfireZ:null,collectedResources:[],berries:0};
+const state={health:100,hunger:100,thirst:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,collectedResources:[],berries:0};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
   if(!saved)return;
-  for(const key of ["health","hunger","thirst","energy","wood","stone","day","berries"])if(Number.isFinite(saved[key]))state[key]=saved[key];
+  for(const key of ["health","hunger","thirst","energy","wood","stone","day","timeOfDay","berries"])if(Number.isFinite(saved[key]))state[key]=saved[key];
   state.axe=saved.axe===true;state.pickaxe=saved.pickaxe===true;
   state.campfire=saved.campfire===true;
   if(Array.isArray(saved.collectedResources))state.collectedResources=saved.collectedResources.filter(v=>typeof v==="string");
@@ -242,7 +243,7 @@ function loadGame(){
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,collectedResources:state.collectedResources,berries:state.berries}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,collectedResources:state.collectedResources,berries:state.berries}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -373,7 +374,22 @@ renderer.domElement.addEventListener("pointerdown",e=>{if(e.pointerType==="mouse
 renderer.domElement.addEventListener("pointermove",e=>{if(e.pointerId!==lookPointer)return;const dx=e.clientX-lastX,dy=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;state.cameraYaw-=dx*.005;state.cameraPitch=THREE.MathUtils.clamp(state.cameraPitch+dy*.003,-.72,1.12);});
 renderer.domElement.addEventListener("pointerup",e=>{if(e.pointerId===lookPointer)lookPointer=null;});
 renderer.domElement.addEventListener("pointercancel",e=>{if(e.pointerId===lookPointer)lookPointer=null;});
+function updateWorldLighting(dt){
+ state.timeOfDay+=dt*24/900;
+ if(state.timeOfDay>=24){state.timeOfDay-=24;state.day++;}
+ const hour=state.timeOfDay;
+ const daylight=THREE.MathUtils.clamp(Math.sin((hour-6)/12*Math.PI),0,1);
+ sun.position.set(Math.cos((hour-6)/12*Math.PI)*45,Math.max(3,daylight*65),25);
+ sun.intensity=.08+daylight*2.05;
+ sun.color.setRGB(1,.72+daylight*.16,.48+daylight*.48);
+ ambient.intensity=.35+daylight*1.65;
+ const sky=new THREE.Color(0x18283d).lerp(new THREE.Color(0x9bb3a0),daylight);
+ scene.background.copy(sky);scene.fog.color.copy(sky);
+ const period=hour<5||hour>=20?"NOITE":hour<7?"AMANHECER":hour<17?"DIA":hour<19?"PÔR DO SOL":"ANOITECER";
+ $("period").textContent=period;$("day").textContent=state.day;
+}
 function update(dt){
+ updateWorldLighting(dt);
  const kx=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);
  const ky=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0);
  const mx=THREE.MathUtils.clamp(state.moveX+kx,-1,1),my=THREE.MathUtils.clamp(state.moveY+ky,-1,1);
