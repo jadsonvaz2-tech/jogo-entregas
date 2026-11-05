@@ -48,6 +48,36 @@ body.position.y=.85; body.castShadow=true; fallback.add(body);
 const head = new THREE.Mesh(new THREE.SphereGeometry(.23,12,10),new THREE.MeshStandardMaterial({color:0xc49a75}));
 head.position.y=1.55; head.castShadow=true; fallback.add(head);
 let mixer=null, characterReady=false;
+let animationActions={},currentAnimation=null,lockedAnimation=null;
+let verticalVelocity=0,isJumping=false;
+function playCharacterAnimation(name,once=false){
+ const next=animationActions[name.toLowerCase()];
+ if(!next)return false;
+ if(currentAnimation===next && !once)return true;
+ next.reset();
+ next.enabled=true;
+ next.setEffectiveTimeScale(1);
+ next.setEffectiveWeight(1);
+ next.setLoop(once?THREE.LoopOnce:THREE.LoopRepeat,once?1:Infinity);
+ next.clampWhenFinished=once;
+ if(currentAnimation && currentAnimation!==next)currentAnimation.fadeOut(.16);
+ next.fadeIn(.16).play();
+ currentAnimation=next;
+ if(once)lockedAnimation=next;
+ return true;
+}
+function playOneShot(name){
+ if(!characterReady || lockedAnimation || isJumping)return;
+ playCharacterAnimation(name,true);
+}
+function jumpCharacter(){
+ if(!characterReady || isJumping || lockedAnimation)return;
+ if(playCharacterAnimation("jump",true)){isJumping=true;verticalVelocity=5.2;}
+}
+function attackCharacter(){
+ if(!characterReady || isJumping || lockedAnimation)return;
+ playOneShot("swordslash");
+}
 const loader = new GLTFLoader();
 function loadCharacter(){
  return new Promise(resolve=>{
@@ -61,7 +91,18 @@ function loadCharacter(){
    model.position.set(-center.x*scale,-box.min.y*scale,-center.z*scale);
    model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.side=THREE.DoubleSide;}}});
    player.remove(fallback); player.add(model);
-   if(g.animations?.length){mixer=new THREE.AnimationMixer(model);mixer.clipAction(g.animations[0]).play();}
+   if(g.animations?.length){
+    mixer=new THREE.AnimationMixer(model);
+    animationActions={};
+    for(const clip of g.animations){
+     const key=clip.name.toLowerCase().replace(/[^a-z]/g,"");
+     animationActions[key]=mixer.clipAction(clip);
+    }
+    playCharacterAnimation("idle");
+    mixer.addEventListener("finished",event=>{
+     if(event.action===lockedAnimation){lockedAnimation=null;}
+    });
+   }
    characterReady=true; resolve(true);
   },undefined,()=>resolve(false));
  });
@@ -200,8 +241,16 @@ function moveJoy(e){const r=joy.getBoundingClientRect(),cx=r.left+r.width/2,cy=r
 function resetJoy(e){if(e.pointerId!==joyPointer)return;joyPointer=null;state.moveX=0;state.moveY=0;stick.style.transform="translate(0,0)";}
 joy.addEventListener("pointerup",resetJoy);joy.addEventListener("pointercancel",resetJoy);
 const keys={};
-addEventListener("keydown",e=>{keys[e.key.toLowerCase()]=true;if(e.key.toLowerCase()==="e")collect();if(e.key==="Shift")state.running=true;});
+addEventListener("keydown",e=>{
+ keys[e.key.toLowerCase()]=true;
+ if(e.key.toLowerCase()==="e")collect();
+ if(e.key==="Shift")state.running=true;
+ if(e.code==="Space"){e.preventDefault();jumpCharacter();}
+ if(e.key.toLowerCase()==="f")attackCharacter();
+});
 addEventListener("keyup",e=>{keys[e.key.toLowerCase()]=false;if(e.key==="Shift")state.running=false;});
+$("jumpBtn").addEventListener("click",jumpCharacter);
+$("attackBtn").addEventListener("click",attackCharacter);
 let lookPointer=null,lastX=0,lastY=0;
 renderer.domElement.addEventListener("pointerdown",e=>{if(e.pointerType==="mouse"||e.clientX>innerWidth*.38){lookPointer=e.pointerId;lastX=e.clientX;lastY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId);}});
 renderer.domElement.addEventListener("pointermove",e=>{if(e.pointerId!==lookPointer)return;const dx=e.clientX-lastX,dy=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;state.cameraYaw-=dx*.005;state.cameraPitch=THREE.MathUtils.clamp(state.cameraPitch+dy*.003,-.05,.75);});
@@ -220,10 +269,19 @@ function update(dt){
   const dz=direction.x*Math.sin(angle)+direction.z*Math.cos(angle);
   const speed=fast?7.1:3.6;
   player.position.x+=dx*speed*dt;player.position.z+=dz*speed*dt;
-  player.position.y=terrainHeight(player.position.x,player.position.z);
   state.yaw=Math.atan2(dx,dz);player.rotation.y=state.yaw;
   if(fast)state.energy=Math.max(0,state.energy-dt*2.5);else state.energy=Math.min(100,state.energy+dt*1.2);
  }else{state.energy=Math.min(100,state.energy+dt*4);}
+ const floorY=terrainHeight(player.position.x,player.position.z);
+ if(isJumping){
+  verticalVelocity-=12*dt;
+  player.position.y+=verticalVelocity*dt;
+  if(player.position.y<=floorY){player.position.y=floorY;verticalVelocity=0;isJumping=false;lockedAnimation=null;}
+ }else{player.position.y=floorY;}
+ if(characterReady && !lockedAnimation && !isJumping){
+  const desired=moving?(fast?"run":"walk"):"idle";
+  if(currentAnimation!==animationActions[desired])playCharacterAnimation(desired);
+ }
  state.hunger=Math.max(0,state.hunger-dt*.055);state.thirst=Math.max(0,state.thirst-dt*.085);
  if(mixer)mixer.update(dt);
  cameraTarget.set(player.position.x,player.position.y+1.25,player.position.z);
