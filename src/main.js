@@ -532,32 +532,40 @@ function createToolVisual(type){
  const previous=state[key];
  if(previous?.parent)previous.parent.remove(previous);
  const group=new THREE.Group();
- const woodMat=new THREE.MeshStandardMaterial({color:0x76502e,roughness:1});
- const metalMat=new THREE.MeshStandardMaterial({color:0x89918b,metalness:.65,roughness:.35});
- const handle=new THREE.Mesh(new THREE.CylinderGeometry(.045,.06,.85,8),woodMat);
- handle.position.y=.42;group.add(handle);
- const head=new THREE.Mesh(type==="axe"?new THREE.BoxGeometry(.38,.2,.12):new THREE.BoxGeometry(.52,.13,.12),metalMat);
- head.position.set(type==="axe"?-.16:0,.78,0);group.add(head);
- if(type==="pickaxe")head.rotation.z=-.12;
+ const woodMat=new THREE.MeshStandardMaterial({color:0x76502e,roughness:.92});
+ const metalMat=new THREE.MeshStandardMaterial({color:0x9ba39d,metalness:.55,roughness:.38});
+ // O ponto de origem do grupo fica no punho; o cabo desce em direção ao chão.
+ const handle=new THREE.Mesh(new THREE.CylinderGeometry(.035,.052,.78,9),woodMat);
+ handle.position.set(0,-.43,0);group.add(handle);
+ const head=new THREE.Mesh(type==="axe"?new THREE.BoxGeometry(.34,.19,.13):new THREE.BoxGeometry(.58,.13,.13),metalMat);
+ head.position.set(0,-.055,0);group.add(head);
+ if(type==="axe"){
+  const blade=new THREE.Mesh(new THREE.BoxGeometry(.12,.23,.17),metalMat);
+  blade.position.set(.19,-.055,0);group.add(blade);
+ }else{
+  const tipA=new THREE.Mesh(new THREE.ConeGeometry(.085,.19,8),metalMat);
+  tipA.rotation.z=Math.PI/2;tipA.position.set(.37,-.055,0);group.add(tipA);
+  const tipB=new THREE.Mesh(new THREE.ConeGeometry(.085,.19,8),metalMat);
+  tipB.rotation.z=-Math.PI/2;tipB.position.set(-.37,-.055,0);group.add(tipB);
+ }
  group.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
- // Fist.R e Fist.L são articulações do esqueleto deste modelo.
- // Procuramos pelo nome sem exigir uma classe específica do Three.js.
  let hand=null;
  const side=type==="axe"?"right":"left";
- const handPattern=side==="right"?/(^fist[._ ]?r$|right.*hand|hand.*right)/i:/(^fist[._ ]?l$|left.*hand|hand.*left)/i;
+ const handPattern=side==="right"?/^fist[._ ]?r$/i:/^fist[._ ]?l$/i;
  const rig=state.characterModel||null;
  if(rig)rig.traverse(o=>{if(!hand&&handPattern.test(o.name||""))hand=o;});
  if(hand){
-  // Alinha a extremidade superior do cabo ao punho e deixa a ferramenta pendente na mão.
-  group.position.set(0,-.82,0);
+  // Fist.R/Fist.L são os ossos terminais do punho no Viking_Male.gltf.
+  // Origem no punho e ferramenta apontada para baixo, acompanhando a animação.
+  group.position.set(0,0,0);
   group.rotation.set(0,0,0);
   group.scale.setScalar(.72);
   hand.add(group);
  }else{
-  // Reserva uma posição lateral visível caso o modelo não disponibilize o nó da mão.
+  // Mantém a ferramenta visível no personagem até o modelo/ossos estarem prontos.
   const model=rig||player;
-  group.position.set(type==="axe"?.48:.48,1.05,.28);
-  group.rotation.set(0,0,-.25);
+  group.position.set(type==="axe"?.42:.42,1.02,.30);
+  group.rotation.set(0,0,Math.PI);
   group.scale.setScalar(.72);
   model.add(group);
  }
