@@ -102,11 +102,11 @@ function addGrass(){
  scene.add(mesh);
 }
 let resources=[];
-function createResource(x,z){
+function createResource(x,z,type="wood"){
  const stump=new THREE.Group();
  const log=new THREE.Mesh(new THREE.CylinderGeometry(.23,.3,.9,7),new THREE.MeshStandardMaterial({color:0x76502e}));
  log.rotation.z=Math.PI/2; log.position.y=.3; stump.add(log); stump.position.set(x,terrainHeight(x,z),z); scene.add(stump);
- resources.push({object:stump,x,z,type:"wood",active:true});
+ resources.push({object:stump,x,z,type,active:true});
 }
 async function buildForest(){
  const [common,pine,twisted,rock] = await Promise.all([loadTree("CommonTree_1"),loadTree("Pine_1"),loadTree("TwistedTree_1"),loadTree("Rock_Medium_1")]);
@@ -114,26 +114,30 @@ async function buildForest(){
  treePositions.forEach((p,i)=>{
   if(Math.hypot(p.x,p.z)<10)return;
   scatterModel(choices[i%choices.length],p.x,p.z,.8+Math.random()*.55);
-  if(i%5===0)createResource(p.x+2,p.z+1);
+  if(i%5===0)createResource(p.x+2,p.z+1,"wood");
  });
  for(let i=0;i<35;i++){const a=Math.random()*6.28,r=9+Math.random()*85;addRock(Math.cos(a)*r,Math.sin(a)*r,.45+Math.random()*.9,i%4===0);}
+ // Materiais iniciais próximos à clareira: galhos e pedras podem ser recolhidos sem ferramentas.
+ for(let i=0;i<6;i++){const a=i*Math.PI/3,r=3.5+Math.random()*2;createResource(Math.cos(a)*r,Math.sin(a)*r,"branch");}
+ for(let i=0;i<5;i++){const a=i*2.4,r=4+Math.random()*3;const x=Math.cos(a)*r,z=Math.sin(a)*r;const pebble=new THREE.Mesh(new THREE.DodecahedronGeometry(.22,0),new THREE.MeshStandardMaterial({color:0x8b8b80,roughness:1}));pebble.position.set(x,terrainHeight(x,z)+.12,z);pebble.castShadow=true;scene.add(pebble);resources.push({object:pebble,x,z,type:"looseStone",active:true});}
  if(rock){for(let i=0;i<12;i++){const a=Math.random()*6.28,r=12+Math.random()*75;scatterModel(rock,Math.cos(a)*r,Math.sin(a)*r,.7);}}
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,energy:100,wood:0,stone:0,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,near:null};
+const state={health:100,hunger:100,thirst:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,near:null};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
   if(!saved)return;
   for(const key of ["health","hunger","thirst","energy","wood","stone","day"])if(Number.isFinite(saved[key]))state[key]=saved[key];
+  state.axe=saved.axe===true;state.pickaxe=saved.pickaxe===true;
   if(Number.isFinite(saved.x))player.position.x=saved.x;
   if(Number.isFinite(saved.z))player.position.z=saved.z;
   player.position.y=terrainHeight(player.position.x,player.position.z);
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,energy:state.energy,wood:state.wood,stone:state.stone,day:state.day}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -143,16 +147,48 @@ function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");
 function updateHUD(){
  $("healthBar").style.width=state.health+"%";$("hungerBar").style.width=state.hunger+"%";$("thirstBar").style.width=state.thirst+"%";$("energyBar").style.width=state.energy+"%";
  $("wood").textContent=state.wood;$("stone").textContent=state.stone;$("day").textContent=state.day;
+ $("axeStatus").textContent=state.axe?"Machado: fabricado":"Machado: não fabricado";$("pickaxeStatus").textContent=state.pickaxe?"Picareta: fabricada":"Picareta: não fabricada";
+ $("craftAxe").disabled=state.axe||state.wood<3||state.stone<2;$("craftPickaxe").disabled=state.pickaxe||state.wood<3||state.stone<3;
  $("collectBtn").disabled=!state.near;
  $("collectBtn").textContent=state.near?(state.near.type==="stone"?"MINERAR":"COLETAR"):"COLETAR";
- $("hint").textContent=state.near?(state.near.type==="stone"?"Toque em MINERAR para pegar pedra.":"Toque em COLETAR para pegar madeira."):"Explore a floresta e encontre recursos.";
+ $("hint").textContent=state.near?(state.near.type==="stone"?"Use a picareta para minerar.":state.near.type==="wood"?"Use o machado para cortar madeira.":"Recolha este material com as mãos."):"Recolha galhos e pedras soltas para fabricar suas ferramentas.";
 }
 function collect(){
  if(!state.near)return;
  const resource=state.near;
- if(resource.type==="stone"){state.stone+=1;toast("Você coletou 1 pedra.");}
- else{state.wood+=2;toast("Você coletou 2 madeiras.");}
+ if(resource.type==="wood"&&!state.axe){toast("Você precisa fabricar um machado.");return;}
+ if(resource.type==="stone"&&!state.pickaxe){toast("Você precisa fabricar uma picareta.");return;}
+ if(resource.type==="branch"){state.wood+=1;toast("Você recolheu 1 galho.");}
+ else if(resource.type==="looseStone"){state.stone+=1;toast("Você recolheu 1 pedra solta.");}
+ else if(resource.type==="stone"){state.stone+=2;toast("Você minerou 2 pedras.");}
+ else{state.wood+=3;toast("Você cortou e recolheu 3 madeiras.");}
  resource.object.visible=false;resource.active=false;state.near=null;updateHUD();saveGame();
+}
+function craftTool(type){
+ if(type==="axe"){
+  if(state.axe||state.wood<3||state.stone<2){toast("Faltam materiais: 3 madeiras e 2 pedras.");return;}
+  state.wood-=3;state.stone-=2;state.axe=true;createToolVisual("axe");toast("Machado fabricado! Agora pode cortar árvores.");
+ }else{
+  if(state.pickaxe||state.wood<3||state.stone<3){toast("Faltam materiais: 3 madeiras e 3 pedras.");return;}
+  state.wood-=3;state.stone-=3;state.pickaxe=true;createToolVisual("pickaxe");toast("Picareta fabricada! Agora pode minerar rochas.");
+ }
+ updateHUD();saveGame();
+}
+const craftToggle=$("craftToggle"),craftPanel=$("craftPanel");
+craftToggle.addEventListener("click",()=>{const open=craftPanel.classList.toggle("open");craftToggle.textContent=open?"FECHAR OFICINA":"FABRICAR";});
+$("craftAxe").addEventListener("click",()=>craftTool("axe"));
+$("craftPickaxe").addEventListener("click",()=>craftTool("pickaxe"));
+function createToolVisual(type){
+ const group=new THREE.Group();
+ const woodMat=new THREE.MeshStandardMaterial({color:0x76502e,roughness:1});
+ const metalMat=new THREE.MeshStandardMaterial({color:0x89918b,metalness:.65,roughness:.35});
+ const handle=new THREE.Mesh(new THREE.CylinderGeometry(.045,.06,.85,7),woodMat);
+ handle.position.y=.42;group.add(handle);
+ const head=new THREE.Mesh(type==="axe"?new THREE.BoxGeometry(.38,.2,.12):new THREE.BoxGeometry(.52,.13,.12),metalMat);
+ head.position.set(type==="axe"?-.16:0,.78,0);group.add(head);
+ if(type==="pickaxe")head.rotation.z=-.12;
+ group.position.set(.42,.55,.12);group.rotation.z=-.5;group.visible=true;
+ group.traverse(o=>{if(o.isMesh)o.castShadow=true;});player.add(group);
 }
 $("collectBtn").addEventListener("click",collect);
 $("runBtn").addEventListener("click",()=>{state.running=!state.running;$("runBtn").textContent=state.running?"ANDAR":"CORRER";});
@@ -212,6 +248,7 @@ async function start(){
  $("loadingBar").style.width="72%";
  $("loadingText").textContent="Carregando o viajante...";
  const loaded=await loadCharacter();
+ if(state.axe)createToolVisual("axe");if(state.pickaxe)createToolVisual("pickaxe");
  if(!loaded)toast("Modelo do viajante indisponível: usando personagem provisório.");
  $("loadingBar").style.width="100%";
  updateHUD();
