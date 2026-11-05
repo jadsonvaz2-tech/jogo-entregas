@@ -575,15 +575,19 @@ function createToolVisual(type){
  const rig=state.characterModel||null;
  let hand=null;
  if(rig)rig.traverse(o=>{if(!hand&&handPattern.test(o.name||""))hand=o;});
- // A ferramenta fica na raiz do jogador, não como filha do osso.
- // Assim ela não herda rotações/escala imprevisíveis do punho; a posição
- // é atualizada a cada quadro usando a posição real da mão animada.
+ // Prende a ferramenta diretamente ao osso da mão para acompanhar
+ // a animação sem depender de conversões de coordenadas a cada quadro.
  group.scale.setScalar(.78);
- player.add(group);
+ group.visible=true;
+ group.traverse(o=>{if(o.isMesh){o.frustumCulled=false;o.renderOrder=5;}});
  if(hand){
   state[handKey]=hand;
-  group.position.set(side==="right"?.35:-.35,1.05,.3);
+  hand.add(group);
+  group.position.set(side==="right"?.015:-.015,-.055,.075);
+  group.rotation.set(0,0,0);
  }else{
+  state[handKey]=null;
+  player.add(group);
   group.position.set(side==="right"?.42:-.42,1.02,.3);
  }
  state[key]=group;
