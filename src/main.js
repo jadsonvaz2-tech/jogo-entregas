@@ -572,29 +572,19 @@ function createToolVisual(type){
  state[key]=group;
 }
 function updateToolAttachments(){
- const handWorldPosition=new THREE.Vector3();
- const localPosition=new THREE.Vector3();
- const handWorldQuaternion=new THREE.Quaternion();
- const playerWorldQuaternion=new THREE.Quaternion();
- const localQuaternion=new THREE.Quaternion();
- const gripOffset=new THREE.Vector3(0,.045,0);
+ const handPosition=new THREE.Vector3();
  for(const type of ["axe","pickaxe"]){
   const group=state[type==="axe"?"axeObject":"pickaxeObject"];
   const hand=state[type==="axe"?"axeHand":"pickaxeHand"];
   if(!group||!hand||group.parent!==player)continue;
-  // Atualiza a matriz do esqueleto após a animação deste quadro.
-  player.updateWorldMatrix(true,true);
-  hand.getWorldPosition(handWorldPosition);
-  hand.getWorldQuaternion(handWorldQuaternion);
-  player.getWorldQuaternion(playerWorldQuaternion);
-  // Converte a posição e a orientação da mão para o espaço local do jogador.
-  // O deslocamento segue o eixo da palma, não os eixos globais da cena.
-  localPosition.copy(gripOffset).applyQuaternion(handWorldQuaternion);
-  handWorldPosition.add(localPosition);
-  player.worldToLocal(handWorldPosition);
-  group.position.copy(handWorldPosition);
-  localQuaternion.copy(playerWorldQuaternion).invert().multiply(handWorldQuaternion);
-  group.quaternion.copy(localQuaternion);
+  hand.updateWorldMatrix(true,false);
+  hand.getWorldPosition(handPosition);
+  player.worldToLocal(handPosition);
+  group.position.copy(handPosition);
+  // Deslocamento pequeno para que a empunhadura atravesse a palma,
+  // enquanto o cabo permanece apontado para baixo.
+  group.position.x+=type==="axe"?.025:-.025;
+  group.position.y-=.035;
+  group.position.z+=.035;
  }
 }
-
