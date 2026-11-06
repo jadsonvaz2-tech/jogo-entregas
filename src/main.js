@@ -2059,6 +2059,21 @@ function buildPlacementTerrainCheck(type,c,yaw){
  const limit=type==="floor"?.7:type==="fence"?.55:Infinity;
  return {average,difference:max-min,level:max-min<=limit};
 }
+function buildFloorModulesOverlap(a,b){
+ const dx=b.x-a.x,dz=b.z-a.z;
+ const axes=[a.yaw||0,(a.yaw||0)+Math.PI/2,b.yaw||0,(b.yaw||0)+Math.PI/2];
+ for(const angle of axes){
+  const ax=Math.cos(angle),az=-Math.sin(angle);
+  const distance=Math.abs(dx*ax+dz*az);
+  const radiusA=1.5*(Math.abs(Math.cos((a.yaw||0)-angle))+Math.abs(Math.sin((a.yaw||0)-angle)));
+  const radiusB=1.5*(Math.abs(Math.cos((b.yaw||0)-angle))+Math.abs(Math.sin((b.yaw||0)-angle)));
+  if(distance>=radiusA+radiusB-.035)return false;
+ }
+ return true;
+}
+function buildFloorPlacementOccupied(candidate){
+ return state.floorTiles.some(tile=>buildFloorModulesOverlap(candidate,tile));
+}
 function buildFloorPlacementContinuity(c,terrainCheck){
  let neighbor=null,nearest=3.35;
  for(const tile of state.floorTiles){
@@ -2074,7 +2089,7 @@ function updateBuildPreview(){
  if(!activeBuildPlacement||!buildPreviewGroup)return;
  const p=activeBuildPlacement,type=p.type,spec=buildPlacementSpec(type),c=buildPreviewCandidate();
  const hasFloor=type==="floor"||type==="fence"||!!c.anchor;
- const floorOccupied=type==="floor"&&state.floorTiles.some(t=>Math.hypot(t.x-c.x,t.z-c.z)<2.3);
+ const floorOccupied=type==="floor"&&buildFloorPlacementOccupied(c);
  const occupiedPanelSlot=(type==="wall"||type==="window"||type==="door")&&[...state.wallPanels,...state.windowPanels,...state.doorPanels].some(t=>Math.hypot(t.x-c.x,t.z-c.z)<0.45);
  const roofOccupied=type==="roof"&&state.roofTiles.some(t=>Math.hypot(t.x-c.x,t.z-c.z)<2.3);
  const fenceOccupied=type==="fence"&&state.fenceSections.some(t=>Math.hypot(t.x-c.x,t.z-c.z)<5.8);
