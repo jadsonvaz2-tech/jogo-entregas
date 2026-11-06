@@ -2042,6 +2042,23 @@ function buildPreviewCandidate(){
  }
  return {x,z,yaw,anchor,slot};
 }
+function buildPlacementTerrainCheck(type,c,yaw){
+ const samples=[[0,0]];
+ if(type==="floor"){
+  for(const x of [-1.38,1.38])for(const z of [-1.38,1.38])samples.push([x,z]);
+ }else if(type==="fence"){
+  for(const x of [-3.1,-1.55,1.55,3.1])samples.push([x,0]);
+ }
+ const heights=samples.map(([lx,lz])=>{
+  const x=c.x+lx*Math.cos(yaw)+lz*Math.sin(yaw);
+  const z=c.z-lx*Math.sin(yaw)+lz*Math.cos(yaw);
+  return terrainHeight(x,z);
+ });
+ const min=Math.min(...heights),max=Math.max(...heights);
+ const average=heights.reduce((sum,value)=>sum+value,0)/heights.length;
+ const limit=type==="floor"?.7:type==="fence"?.55:Infinity;
+ return {average,difference:max-min,level:max-min<=limit};
+}
 function updateBuildPreview(){
  if(!activeBuildPlacement||!buildPreviewGroup)return;
  const p=activeBuildPlacement,type=p.type,spec=buildPlacementSpec(type),c=buildPreviewCandidate();
@@ -2052,8 +2069,9 @@ function updateBuildPreview(){
  const fenceOccupied=type==="fence"&&state.fenceSections.some(t=>Math.hypot(t.x-c.x,t.z-c.z)<5.8);
  const limits={floor:state.floorTiles.length<100,wall:state.wallPanels.length<100,window:state.windowPanels.length<100,door:state.doorPanels.length<100,roof:state.roofTiles.length<100,fence:state.fenceSections.length<200};
  const missingMaterials=state.wood<spec.wood||state.fiber<spec.fiber;
- let valid=hasFloor&&!missingMaterials&&!floorOccupied&&!occupiedPanelSlot&&!roofOccupied&&!fenceOccupied&&limits[type];
- const ground=terrainHeight(c.x,c.z);
+ const terrainCheck=buildPlacementTerrainCheck(type,c,c.yaw);
+ let valid=hasFloor&&!missingMaterials&&!floorOccupied&&!occupiedPanelSlot&&!roofOccupied&&!fenceOccupied&&limits[type]&&terrainCheck.level;
+ const ground=terrainCheck.average;
  const y=ground+spec.height;
  buildPreviewGroup.position.set(c.x,y,c.z);buildPreviewGroup.rotation.y=c.yaw;
  buildPreviewMaterial.color.setHex(valid?0x55e58a:0xff514d);
@@ -2062,7 +2080,7 @@ function updateBuildPreview(){
  if(confirm){confirm.disabled=!valid;confirm.style.opacity=valid?"1":".45";}
  const label=$("buildPlacementLabel");
  if(label){
-  const status=!hasFloor?"PRECISA DE UM PISO":missingMaterials?"FALTAM MATERIAIS":floorOccupied?"ESTE LOCAL JÁ TEM UM PISO":occupiedPanelSlot?"ESTE LADO JÁ TEM UMA PAREDE":roofOccupied?"ESTE PISO JÁ TEM TELHADO":fenceOccupied?"CERCA MUITO PRÓXIMA":!limits[type]?"LIMITE DE CONSTRUÇÃO ATINGIDO":valid?"ENCAIXE LIVRE · PODE CONFIRMAR":"POSIÇÃO INVÁLIDA";
+  const status=!hasFloor?"PRECISA DE UM PISO":missingMaterials?"FALTAM MATERIAIS":floorOccupied?"ESTE LOCAL JÁ TEM UM PISO":occupiedPanelSlot?"ESTE LADO JÁ TEM UMA PAREDE":roofOccupied?"ESTE PISO JÁ TEM TELHADO":fenceOccupied?"CERCA MUITO PRÓXIMA":!limits[type]?"LIMITE DE CONSTRUÇÃO ATINGIDO":!terrainCheck.level?"TERRENO MUITO INCLINADO":valid?"ENCAIXE LIVRE · PODE CONFIRMAR":"POSIÇÃO INVÁLIDA";
   label.textContent="POSICIONAR: "+spec.label+" · "+status;
  }
 }
