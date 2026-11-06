@@ -377,7 +377,7 @@ async function buildForest(){
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],pathTiles:[],lanternPosts:[],wells:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
+const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],pathTiles:[],lanternPosts:[],wells:[],gardenPlots:[],gardenObjects:[],nearGardenIndex:-1,doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
@@ -409,6 +409,7 @@ function loadGame(){
   if(Array.isArray(saved.pathTiles))state.pathTiles=saved.pathTiles.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,200);
   if(Array.isArray(saved.lanternPosts))state.lanternPosts=saved.lanternPosts.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,24);
   if(Array.isArray(saved.wells))state.wells=saved.wells.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)).slice(0,5);
+  if(Array.isArray(saved.gardenPlots))state.gardenPlots=saved.gardenPlots.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,8).map(v=>({...v,plantedAt:Number.isFinite(v.plantedAt)?v.plantedAt:0}));
   if(Array.isArray(saved.doorPanels))state.doorPanels=saved.doorPanels.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100).map(v=>({...v,open:v.open===true}));
   if(Array.isArray(saved.windowShutters))state.windowShutters=saved.windowShutters.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100).map(v=>({...v,open:v.open===true}));
   if(Number.isFinite(saved.campfireX))state.campfireX=saved.campfireX;
@@ -425,7 +426,7 @@ function loadGame(){
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,wells:state.wells,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,wells:state.wells,gardenPlots:state.gardenPlots,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -523,6 +524,8 @@ function updateHUD(){
   $("pathTileStatus").textContent="Caminhos de pedra: "+state.pathTiles.length+" trechos";
   $("lanternPostStatus").textContent="Postes de iluminação: "+state.lanternPosts.length+"/24";
   $("wellStatus").textContent="Poços comunitários: "+state.wells.length+"/5";
+  $("gardenStatus").textContent="Hortas comunitárias: "+state.gardenPlots.length+"/8";
+  $("craftGarden").disabled=state.wood<4||state.fiber<2||state.gardenPlots.length>=8;
   $("craftWell").disabled=state.stone<12||state.wood<5||state.wells.length>=5;
   $("craftLanternPost").disabled=state.wood<3||state.fiber<2||state.lanternPosts.length>=24||state.pathTiles.length===0;
   $("craftPathTile").disabled=state.stone<5||state.wood<1||state.pathTiles.length>=200;
@@ -675,6 +678,8 @@ $("craftStorageChest").addEventListener("click",craftStorageChest);
  $("craftPathTile").addEventListener("click",craftPathTile);
  $("craftLanternPost").addEventListener("click",craftLanternPost);
  $("craftWell").addEventListener("click",craftWell);
+ $("craftGarden").addEventListener("click",craftGardenPlot);
+ $("gardenAction").addEventListener("click",gardenAction);
  $("drinkWell").addEventListener("click",drinkFromWell);
  $("craftDoorPanel").addEventListener("click",craftDoorPanel);
  $("doorToggle").addEventListener("click",toggleNearbyDoor);
@@ -795,6 +800,72 @@ function findFenceConnection(targetX,targetZ,extension){
   state.stone-=12;state.wood-=5;
   createWell(well);state.wells.push(well);
   updateHUD();saveGame();toast("Poço comunitário construído! Agora você pode beber e encher o cantil aqui.");
+ }
+ function craftGardenPlot(){
+  if(state.gardenPlots.length>=8){toast("Limite de 8 hortas comunitárias atingido.");return;}
+  if(state.wood<4||state.fiber<2){toast("Faltam materiais: 4 madeiras e 2 fibras.");return;}
+  const yaw=Math.round(state.cameraYaw/(Math.PI/2))*(Math.PI/2);
+  const x=Math.round((player.position.x+Math.sin(yaw)*5)/3)*3;
+  const z=Math.round((player.position.z+Math.cos(yaw)*5)/3)*3;
+  if(state.gardenPlots.some(plot=>Math.hypot(plot.x-x,plot.z-z)<4.5)){
+   toast("Já existe uma horta muito próxima. Afaste-se para construir outra.");return;
+  }
+  const plot={x,z,yaw,plantedAt:0};
+  state.wood-=4;state.fiber-=2;
+  state.gardenPlots.push(plot);state.gardenObjects.push(createGardenPlot(plot));
+  updateHUD();saveGame();toast("Horta comunitária construída! Aproxime-se dela para plantar frutas silvestres.");
+ }
+ function createGardenPlot(plot){
+  const group=new THREE.Group();
+  const soil=new THREE.Mesh(new THREE.BoxGeometry(3.15,.2,2.15),new THREE.MeshStandardMaterial({color:0x493323,roughness:1}));
+  soil.position.y=.12;group.add(soil);
+  const wood=new THREE.MeshStandardMaterial({color:0x684326,roughness:1});
+  for(const z of [-1.12,1.12]){
+   const rail=new THREE.Mesh(new THREE.BoxGeometry(3.35,.2,.14),wood);
+   rail.position.set(0,.28,z);group.add(rail);
+  }
+  for(const x of [-1.62,1.62]){
+   const rail=new THREE.Mesh(new THREE.BoxGeometry(.14,.2,2.25),wood);
+   rail.position.set(x,.28,0);group.add(rail);
+  }
+  if(plot.plantedAt>0){
+   const mature=Date.now()-plot.plantedAt>=150000;
+   const leafMat=new THREE.MeshStandardMaterial({color:0x477b37,roughness:1});
+   const fruitMat=new THREE.MeshStandardMaterial({color:0x9d2921,roughness:.55});
+   for(let row=0;row<2;row++)for(let col=0;col<4;col++){
+    const x=-1.05+col*.7,z=-.48+row*.92;
+    const stem=new THREE.Mesh(new THREE.CylinderGeometry(.035,.05,.42,5),leafMat);
+    stem.position.set(x,.42,z);group.add(stem);
+    for(const side of [-1,1]){
+     const leaf=new THREE.Mesh(new THREE.SphereGeometry(.16,6,5),leafMat);
+     leaf.scale.set(1,.45,.7);leaf.position.set(x+side*.12,.5,z);group.add(leaf);
+    }
+    if(mature){
+     const fruit=new THREE.Mesh(new THREE.SphereGeometry(.095,8,6),fruitMat);
+     fruit.position.set(x,.68,z+.12);group.add(fruit);
+    }
+   }
+  }
+  group.traverse(obj=>{if(obj.isMesh){obj.castShadow=true;obj.receiveShadow=true;}});
+  group.position.set(plot.x,terrainHeight(plot.x,plot.z),plot.z);
+  group.rotation.y=plot.yaw;scene.add(group);return group;
+ }
+ function refreshGardenPlot(index){
+  const old=state.gardenObjects[index];if(old)scene.remove(old);
+  state.gardenObjects[index]=createGardenPlot(state.gardenPlots[index]);
+ }
+ function gardenAction(){
+  const index=state.nearGardenIndex;
+  if(index<0||!state.gardenPlots[index]){toast("Aproxime-se de uma horta comunitária.");return;}
+  const plot=state.gardenPlots[index];
+  if(plot.plantedAt>0){
+   if(Date.now()-plot.plantedAt<150000){toast("As frutas ainda estão crescendo. Volte em alguns minutos.");return;}
+   state.berries+=6;plot.plantedAt=0;refreshGardenPlot(index);
+   updateHUD();saveGame();toast("Colheita concluída: +6 frutas silvestres!");return;
+  }
+  if(state.berries<3){toast("Você precisa de 3 frutas silvestres para plantar.");return;}
+  state.berries-=3;plot.plantedAt=Date.now();refreshGardenPlot(index);
+  updateHUD();saveGame();toast("Frutas plantadas! A colheita ficará pronta em 2 minutos e 30 segundos.");
  }
  function createWell(well){
   const group=new THREE.Group();
@@ -1784,7 +1855,18 @@ function update(dt){
  camera.lookAt(cameraTarget);
  let closest=null,dist=6.0;
  for(const r of resources){if(!r.active)continue;const d=Math.hypot(player.position.x-r.x,player.position.z-r.z);if(d<dist){dist=d;closest=r;}}
- state.near=closest;updateHUD();
+ state.near=closest;
+  let nearGarden=-1,gardenDistance=4.2;
+  for(let i=0;i<state.gardenPlots.length;i++){const plot=state.gardenPlots[i],d=Math.hypot(player.position.x-plot.x,player.position.z-plot.z);if(d<gardenDistance){gardenDistance=d;nearGarden=i;}}
+  state.nearGardenIndex=nearGarden;
+  const gardenActionButton=$("gardenAction");
+  gardenActionButton.hidden=nearGarden<0;
+  if(nearGarden>=0){
+   const plot=state.gardenPlots[nearGarden],ready=plot.plantedAt>0&&Date.now()-plot.plantedAt>=150000;
+   gardenActionButton.textContent=ready?"COLHER FRUTAS (+6)":plot.plantedAt>0?"CULTIVO CRESCENDO":"PLANTAR 3 FRUTAS";
+   gardenActionButton.disabled=!ready&& (plot.plantedAt>0||state.berries<3);
+  }
+  updateHUD();
  if(state.hunger<=0||state.thirst<=0||state.temperature<=0){state.health=Math.max(0,state.health-dt*.7);}
 }
 function animate(now){
@@ -1811,6 +1893,7 @@ async function start(){
  for(const chimney of state.chimneys)createChimney(chimney);
  for(const lantern of state.lanternPosts)createLanternPost(lantern);
  for(const well of state.wells)createWell(well);
+ for(const plot of state.gardenPlots)state.gardenObjects.push(createGardenPlot(plot));
  for(const door of state.doorPanels)createDoorPanel(door);
  for(const shutters of state.windowShutters)createWindowShutters(shutters);
  for(const gate of state.gates)createGate(gate);
