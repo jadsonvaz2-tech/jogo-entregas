@@ -95,7 +95,7 @@ function updateWolfHealthBar(wolf){
  const ratio=THREE.MathUtils.clamp(wolf.health/3,0,1);
  wolf.healthBar.visible=wolf.alive&&ratio<1;
  wolf.healthFill.scale.x=ratio;
- wolf.healthFill.position.x=-.05-.38*(1-ratio);
+ wolf.healthFill.position.x=-.38*(1-ratio);
  wolf.healthFill.material.color.setHex(ratio>.66?0x76bd55:ratio>.33?0xe2a43b:0xd94b43);
 }
 function reactWolfToHit(wolf){
@@ -355,7 +355,7 @@ function createWolf(x,z,index){
  const healthBack=new THREE.Mesh(new THREE.PlaneGeometry(.86,.105),new THREE.MeshBasicMaterial({color:0x171512,transparent:true,opacity:.88,depthWrite:false,side:THREE.DoubleSide}));
  healthBack.position.z=0;healthBar.add(healthBack);
  const healthFill=new THREE.Mesh(new THREE.PlaneGeometry(.76,.055),new THREE.MeshBasicMaterial({color:0x76bd55,depthWrite:false,side:THREE.DoubleSide}));
- healthFill.position.set(-.05,0,.008);healthBar.add(healthFill);
+ healthFill.position.set(0,0,.008);healthBar.add(healthFill);
  healthBar.position.set(0,1.78,0);healthBar.visible=false;healthBar.renderOrder=5;wolf.add(healthBar);
  const warningRing=new THREE.Mesh(new THREE.RingGeometry(.72,.94,32),new THREE.MeshBasicMaterial({color:0xff3328,transparent:true,opacity:.72,side:THREE.DoubleSide,depthWrite:false}));
  warningRing.rotation.x=-Math.PI/2;warningRing.position.y=.045;warningRing.visible=false;wolf.add(warningRing);
