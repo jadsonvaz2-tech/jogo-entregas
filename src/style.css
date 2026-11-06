@@ -22,7 +22,7 @@
  padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));
 }
 @media(min-width:800px){
- #craftToggle{right:28px;top:auto;bottom:18px}
+ #craftToggle{right:28px;top:230px;bottom:auto}
  #craftPanel{left:20px;right:auto;bottom:70px;max-height:75vh}
 }
 
