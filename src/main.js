@@ -360,7 +360,7 @@ function createDeer(x,z,index){
  healthFill.position.set(0,0,.008);healthBar.add(healthFill);
  healthBar.position.set(0,2.02,0);healthBar.visible=false;healthBar.renderOrder=5;deer.add(healthBar);
  deer.position.set(x,terrainHeight(x,z),z);scene.add(deer);
- wildAnimals.push({id,object:deer,body,x,z,heading:worldRandom()*Math.PI*2,moveSpeed:.45,health:2,alive:true,wander:1+worldRandom()*2,healthBar,healthFill,legs,tail,head,neck,ears,eyes,blinkTimer:2+worldRandom()*3,blinkTime:0,breathPhase:worldRandom()*Math.PI*2,grazeTimer:2+worldRandom()*4,grazeBlend:0,grazing:false});
+ wildAnimals.push({id,object:deer,body,x,z,heading:worldRandom()*Math.PI*2,moveSpeed:.45,health:2,alive:true,wander:1+worldRandom()*2,healthBar,healthFill,legs,tail,head,neck,ears,eyes,blinkTimer:2+worldRandom()*3,blinkTime:0,breathPhase:worldRandom()*Math.PI*2,grazeTimer:2+worldRandom()*4,grazeBlend:0,alarmBlend:0,grazing:false});
 }
 function createWolf(x,z,index){
  const id="wolf-"+index;
@@ -513,7 +513,7 @@ function updateWildlife(dt){
   animal.legs.forEach((leg,i)=>{leg.rotation.x=(i===0||i===3?1:-1)*gait*(.7+runBlend*.65);leg.rotation.z=(i<2?1:-1)*runBlend*.045;});
   animal.object.position.y=terrainHeight(animal.x,animal.z)+Math.abs(gait)*(.018+runBlend*.045);
   if(animal.body){const breath=Math.sin(performance.now()*.0019+animal.breathPhase);animal.body.scale.y=.78+breath*.012;animal.body.position.y=1.02+breath*.004;animal.body.rotation.z=Math.sin(performance.now()*.012+animal.x)*.035*runBlend;animal.body.rotation.x=-.035*runBlend+Math.sin(performance.now()*.018+animal.z)*.018*runBlend;}
-  if(animal.tail){animal.tail.rotation.x=-.18+Math.sin(performance.now()*.004+animal.z)*.12;animal.tail.rotation.z=Math.sin(performance.now()*.0027+animal.x*1.3)*.13;}
+  animal.alarmBlend+=( ((d<9||predatorThreat)?1:0)-animal.alarmBlend)*Math.min(1,dt*3.2);\n  if(animal.tail){const alarm=animal.alarmBlend;animal.tail.rotation.x=-.18-alarm*.42+Math.sin(performance.now()*(.004+alarm*.008)+animal.z)*(.12+alarm*.12);animal.tail.rotation.z=Math.sin(performance.now()*(.0027+alarm*.009)+animal.x*1.3)*(.13+alarm*.2);}
   if(d>=9&&!predatorThreat){
    animal.grazeTimer-=dt;
    if(animal.grazeTimer<=0){animal.grazing=!animal.grazing;animal.grazeTimer=animal.grazing?2.4+worldRandom()*1.8:4+worldRandom()*4;}
