@@ -425,7 +425,7 @@ function updateWildlife(dt){
   let speed=.35;
   if(wolf.hitStunTime>0){wolf.heading=wolf.hitHeading;speed=1.8;wolf.object.rotation.x=-.12;}
   else if(wolf.staggerTime>0){wolf.heading=wolf.staggerHeading;speed=2.4;wolf.object.rotation.x=0;}
-  else if(d<14){wolf.object.rotation.x=0;wolf.heading=Math.atan2(dx,dz);speed=d>1.55?2.65:0;}
+  else if(d<14){wolf.object.rotation.x=0;const chaseHeading=Math.atan2(dx,dz);const turnDelta=Math.atan2(Math.sin(chaseHeading-wolf.heading),Math.cos(chaseHeading-wolf.heading));wolf.heading+=turnDelta*Math.min(1,dt*5.2);speed=d>1.55?2.65:0;}
   else{wolf.wander-=dt;if(wolf.wander<=0){wolf.heading+=(worldRandom()-.5)*1.4;wolf.wander=2+worldRandom()*3;}}
   if(wolf.hitStunTime<=0&&wolf.staggerTime<=0&&d<1.9&&wolf.attackCooldown<=0&&!(wolf.attackWindup>0))wolf.attackWindup=.75;
   if(wolf.attackWindup>0){
