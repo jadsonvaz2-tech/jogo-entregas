@@ -377,7 +377,7 @@ async function buildForest(){
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
+const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
@@ -405,6 +405,7 @@ function loadGame(){
   if(Array.isArray(saved.roofTiles))state.roofTiles=saved.roofTiles.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100);
   if(Array.isArray(saved.gablePanels))state.gablePanels=saved.gablePanels.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100);
   if(Array.isArray(saved.ridgeCaps))state.ridgeCaps=saved.ridgeCaps.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100);
+  if(Array.isArray(saved.chimneys))state.chimneys=saved.chimneys.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100);
   if(Array.isArray(saved.doorPanels))state.doorPanels=saved.doorPanels.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100).map(v=>({...v,open:v.open===true}));
   if(Array.isArray(saved.windowShutters))state.windowShutters=saved.windowShutters.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100).map(v=>({...v,open:v.open===true}));
   if(Number.isFinite(saved.campfireX))state.campfireX=saved.campfireX;
@@ -421,7 +422,7 @@ function loadGame(){
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -513,6 +514,8 @@ function updateHUD(){
   $("roofTileStatus").textContent="Telhados modulares: "+state.roofTiles.length+" módulos";
   $("gableStatus").textContent="Fechamentos triangulares: "+state.gablePanels.length+" conjuntos";
   $("ridgeCapStatus").textContent="Cumeeiras reforçadas: "+state.ridgeCaps.length+" telhados";
+  $("chimneyStatus").textContent="Chaminés de pedra: "+state.chimneys.length;
+  $("craftChimney").disabled=state.stone<6||state.wood<2||state.chimneys.length>=100||state.roofTiles.length===0;
   $("craftRidgeCap").disabled=state.wood<3||state.fiber<1||state.ridgeCaps.length>=100||state.roofTiles.length===0;
   $("craftGable").disabled=state.wood<8||state.fiber<3||state.gablePanels.length>=100||state.roofTiles.length===0;
   $("doorPanelStatus").textContent="Portas de madeira: "+state.doorPanels.length;
@@ -657,6 +660,7 @@ $("craftStorageChest").addEventListener("click",craftStorageChest);
  $("craftRoofTile").addEventListener("click",craftRoofTile);
  $("craftGable").addEventListener("click",craftGablePanel);
  $("craftRidgeCap").addEventListener("click",craftRidgeCap);
+ $("craftChimney").addEventListener("click",craftChimney);
  $("craftDoorPanel").addEventListener("click",craftDoorPanel);
  $("doorToggle").addEventListener("click",toggleNearbyDoor);
  $("craftShutters").addEventListener("click",craftWindowShutters);
@@ -921,6 +925,60 @@ function craftRidgeCap(){
   state.wood-=3;state.fiber-=1;
   createRidgeCap(ridge);state.ridgeCaps.push(ridge);
   updateHUD();saveGame();toast("Cumeeira de madeira reforçada e instalada!");
+}
+function craftChimney(){
+  if(state.chimneys.length>=100){toast("Limite de 100 chaminés atingido.");return;}
+  if(state.stone<6||state.wood<2){toast("Faltam materiais: 6 pedras e 2 madeiras.");return;}
+  if(!state.roofTiles.length){toast("Construa primeiro um telhado modular.");return;}
+  let nearest=null,nearestDistance=6.5;
+  for(const roof of state.roofTiles){
+   const distance=Math.hypot(player.position.x-roof.x,player.position.z-roof.z);
+   if(distance<nearestDistance){nearestDistance=distance;nearest=roof;}
+  }
+  if(!nearest){toast("Aproxime-se de um telhado modular.");return;}
+  if(state.chimneys.some(c=>Math.hypot(c.x-nearest.x,c.z-nearest.z)<2.2)){
+   toast("Este telhado já possui uma chaminé.");return;
+  }
+  const chimney={x:nearest.x,z:nearest.z,yaw:nearest.yaw};
+  state.stone-=6;state.wood-=2;
+  createChimney(chimney);state.chimneys.push(chimney);
+  updateHUD();saveGame();toast("Chaminé de pedra construída no telhado!");
+}
+function createChimney(chimney){
+  const group=new THREE.Group();
+  const stone=new THREE.MeshStandardMaterial({color:0x77736b,roughness:1});
+  const stoneLight=new THREE.MeshStandardMaterial({color:0x928b7e,roughness:1});
+  const dark=new THREE.MeshStandardMaterial({color:0x292723,roughness:1});
+  const mortar=new THREE.MeshStandardMaterial({color:0x49443c,roughness:1});
+  const cx=-1.02,cz=.48,baseY=2.67,height=1.48,width=.72,depth=.72;
+  const back=new THREE.Mesh(new THREE.BoxGeometry(width,height,.12),stone);
+  back.position.set(cx,baseY+height/2,cz-depth/2);group.add(back);
+  const front=new THREE.Mesh(new THREE.BoxGeometry(width,height,.12),stone);
+  front.position.set(cx,baseY+height/2,cz+depth/2);group.add(front);
+  const left=new THREE.Mesh(new THREE.BoxGeometry(.12,height,depth-.18),stoneLight);
+  left.position.set(cx-width/2,baseY+height/2,cz);group.add(left);
+  const right=new THREE.Mesh(new THREE.BoxGeometry(.12,height,depth-.18),stoneLight);
+  right.position.set(cx+width/2,baseY+height/2,cz);group.add(right);
+  for(let course=0;course<4;course++){
+   const seam=new THREE.Mesh(new THREE.BoxGeometry(width+.035,.035,depth+.035),mortar);
+   seam.position.set(cx,baseY+.28+course*.34,cz);group.add(seam);
+  }
+  const opening=new THREE.Mesh(new THREE.BoxGeometry(.42,.035,.42),dark);
+  opening.position.set(cx,baseY+height+.015,cz);group.add(opening);
+  for(const side of [-1,1]){
+   const rim=new THREE.Mesh(new THREE.BoxGeometry(.16,.16,depth+.22),stoneLight);
+   rim.position.set(cx+side*.31,baseY+height+.09,cz);group.add(rim);
+  }
+  for(const side of [-1,1]){
+   const rim=new THREE.Mesh(new THREE.BoxGeometry(width+.22,.16,.16),stoneLight);
+   rim.position.set(cx,baseY+height+.09,cz+side*.31);group.add(rim);
+  }
+  const cap=new THREE.Mesh(new THREE.BoxGeometry(width+.28,.12,depth+.28),stone);
+  cap.position.set(cx,baseY+height+.2,cz);group.add(cap);
+  group.traverse(obj=>{if(obj.isMesh){obj.castShadow=true;obj.receiveShadow=true;}});
+  group.position.set(chimney.x,terrainHeight(chimney.x,chimney.z)+.28,chimney.z);
+  group.rotation.y=chimney.yaw;scene.add(group);
+  return group;
 }
 function createRidgeCap(ridge){
   const group=new THREE.Group();
@@ -1588,6 +1646,7 @@ async function start(){
  for(const roofTile of state.roofTiles)createRoofTile(roofTile);
  for(const gable of state.gablePanels)createGablePanel(gable);
  for(const ridge of state.ridgeCaps)createRidgeCap(ridge);
+ for(const chimney of state.chimneys)createChimney(chimney);
  for(const door of state.doorPanels)createDoorPanel(door);
  for(const shutters of state.windowShutters)createWindowShutters(shutters);
  for(const gate of state.gates)createGate(gate);
