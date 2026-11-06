@@ -1125,7 +1125,7 @@ $("craftStorageChest").addEventListener("click",craftStorageChest);
  $("buyFiber").addEventListener("click",()=>buyMarketSupplies("fiber"));
  $("gardenAction").addEventListener("click",gardenAction);
  $("drinkWell").addEventListener("click",drinkFromWell);
- $("craftDoorPanel").addEventListener("click",craftDoorPanel);
+ $("craftDoorPanel").addEventListener("click",()=>beginBuildPlacement("door"));
  $("doorToggle").addEventListener("click",toggleNearbyDoor);
  $("craftShutters").addEventListener("click",craftWindowShutters);
  $("shutterToggle").addEventListener("click",toggleNearbyShutters);
@@ -1881,7 +1881,7 @@ function ensureBuildPlacementUI(){
  make("buildRight","▶",()=>{if(activeBuildPlacement){activeBuildPlacement.offsetX+=.5;updateBuildPreview();}});
  make("buildRotate","GIRAR 90°",()=>{if(activeBuildPlacement){activeBuildPlacement.rotationStep=(activeBuildPlacement.rotationStep+1)%4;updateBuildPreview();}});
  const actions=document.createElement("div");actions.style.cssText="display:flex;gap:8px;width:100%";
- const confirm=document.createElement("button");confirm.type="button";confirm.textContent="✓ CONFIRMAR";confirm.style.cssText="flex:1;min-height:44px;border:0;border-radius:9px;background:#628d4b;color:white;font:800 13px system-ui";confirm.addEventListener("click",confirmBuildPlacement);
+ const confirm=document.createElement("button");confirm.type="button";confirm.id="buildConfirmButton";confirm.textContent="✓ CONFIRMAR";confirm.style.cssText="flex:1;min-height:44px;border:0;border-radius:9px;background:#628d4b;color:white;font:800 13px system-ui";confirm.addEventListener("click",confirmBuildPlacement);
  const cancel=document.createElement("button");cancel.type="button";cancel.textContent="✕ CANCELAR";cancel.style.cssText="flex:1;min-height:44px;border:1px solid #b99a8d;border-radius:9px;background:#633f38;color:white;font:800 13px system-ui";cancel.addEventListener("click",cancelBuildPlacement);
  actions.append(confirm,cancel);panel.append(label,row,actions);document.body.appendChild(panel);buildPlacementUI=panel;
 }
@@ -1982,7 +1982,7 @@ function updateBuildPreview(){
  buildPreviewGroup.position.set(c.x,y,c.z);buildPreviewGroup.rotation.y=c.yaw;
  buildPreviewMaterial.color.setHex(valid?0x55e58a:0xff514d);
  activeBuildPlacement.valid=valid;activeBuildPlacement.placement={x:c.x,z:c.z,yaw:c.yaw,ground};
- const confirm=$("buildPlacementUI")?.querySelector("button");
+ const confirm=$("buildConfirmButton");
  if(confirm){confirm.disabled=!valid;confirm.style.opacity=valid?"1":".45";}
 }
 function cancelBuildPlacement(showMessage=true){
