@@ -3714,7 +3714,12 @@ function update(dt){
   // Corrige o eixo horizontal relativo à câmera: direita no joystick move para a direita da tela.
   const dx=direction.x*Math.cos(angle)+direction.z*Math.sin(angle);
   const dz=-direction.x*Math.sin(angle)+direction.z*Math.cos(angle);
-  const speed=fast?7.1:3.6;
+  // O deslocamento acompanha o relevo: subir reduz um pouco a velocidade e descer permite ganhar ritmo.
+  const currentGround=terrainHeight(player.position.x,player.position.z);
+  const lookAhead=1.6;
+  const terrainRise=terrainHeight(player.position.x+dx*lookAhead,player.position.z+dz*lookAhead)-currentGround;
+  const slopeSpeed=THREE.MathUtils.clamp(1-terrainRise*.24,.78,1.12);
+  const speed=(fast?7.1:3.6)*slopeSpeed;
   player.position.x+=dx*speed*dt;player.position.z+=dz*speed*dt;
   state.yaw=Math.atan2(dx,dz);player.rotation.y=state.yaw;
   if(fast)state.energy=Math.max(0,state.energy-dt*2.5);else state.energy=Math.min(100,state.energy+dt*1.2);
