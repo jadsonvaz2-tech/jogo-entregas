@@ -796,15 +796,15 @@ function createResource(x,z,type="wood",target=null){
  registerResource({object:stump,x,z,type,target,active:true});
 }
 async function buildForest(){
- const [common,pine,twisted,rock,grassShort,grassTall,wispyGrass,rockPathA,rockPathB] = await Promise.all([
+ const [common,pine,twisted,rock,grassShort,grassTall,wispyGrass,wispyGrassTall,rockPathA,rockPathB] = await Promise.all([
   loadTree("CommonTree_1"),loadTree("Pine_1"),loadTree("TwistedTree_1"),loadTree("Rock_Medium_1"),
-  loadTree("Grass_Common_Short"),loadTree("Grass_Common_Tall"),loadTree("Grass_Wispy_Short"),
+  loadTree("Grass_Common_Short"),loadTree("Grass_Common_Tall"),loadTree("Grass_Wispy_Short"),loadTree("Grass_Wispy_Tall"),
   loadTree("RockPath_Round_Small_1"),loadTree("RockPath_Round_Small_2")
  ]);
  const choices=[common,pine,twisted];
  // Vegetação real do pacote de assets: tufos distribuídos nas encostas e clareiras, sem cobrir o acampamento inicial.
- const groundCover=[grassShort,grassTall,wispyGrass].filter(Boolean);
- for(let i=0;i<115&&groundCover.length;i++){
+ const groundCover=[grassShort,grassTall,wispyGrass,wispyGrassTall].filter(Boolean);
+ for(let i=0;i<128&&groundCover.length;i++){
   const a=worldRandom()*Math.PI*2,r=10+worldRandom()*94,x=Math.cos(a)*r,z=Math.sin(a)*r;
   const model=groundCover[i%groundCover.length];
   scatterModel(model,x,z,.48+worldRandom()*.32);
