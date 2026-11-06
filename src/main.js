@@ -553,14 +553,14 @@ function createToolVisual(type){
  const group=new THREE.Group();
  const woodMat=new THREE.MeshStandardMaterial({color:0x8a5a2b,roughness:.88});
  const gripMat=new THREE.MeshStandardMaterial({color:0x382719,roughness:1});
- const metalMat=new THREE.MeshStandardMaterial({color:0xb7c2c5,metalness:.42,roughness:.32,emissive:0x252b2d});
+ const metalMat=new THREE.MeshStandardMaterial({color:0xd8e1e4,metalness:.25,roughness:.28,emissive:0x66747a,emissiveIntensity:.7});
  // O punho fica dentro da palma; o cabo desce pelo lado de fora do antebraço.
- const handle=new THREE.Mesh(new THREE.CylinderGeometry(.045,.06,1.02,12),woodMat);
- handle.position.set(0,-.43,0);group.add(handle);
- const grip=new THREE.Mesh(new THREE.CylinderGeometry(.065,.065,.22,12),gripMat);
- grip.position.set(0,.015,0);group.add(grip);
- const head=new THREE.Mesh(type==="axe"?new THREE.BoxGeometry(.42,.19,.17):new THREE.BoxGeometry(.68,.16,.16),metalMat);
- head.position.set(0,.14,0);group.add(head);
+ const handle=new THREE.Mesh(new THREE.CylinderGeometry(.055,.07,1.12,12),woodMat);
+ handle.position.set(0,-.47,0);group.add(handle);
+ const grip=new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,.25,12),gripMat);
+ grip.position.set(0,.015,-.025);group.add(grip);
+ const head=new THREE.Mesh(type==="axe"?new THREE.BoxGeometry(.5,.22,.2):new THREE.BoxGeometry(.76,.19,.2),metalMat);
+ head.position.set(0,.18,-.07);group.add(head);
  if(type==="axe"){
   const blade=new THREE.Mesh(new THREE.BoxGeometry(.22,.34,.22),metalMat);
   blade.position.set(.25,.14,0);group.add(blade);
@@ -571,7 +571,7 @@ function createToolVisual(type){
   tipB.rotation.z=-Math.PI/2;tipB.position.set(-.45,.14,0);group.add(tipB);
  }
  // Aumenta a leitura visual em tela pequena; o cabo não fica escondido dentro do punho.
- group.scale.setScalar(1.25);
+ group.scale.setScalar(1.4);
  group.visible=true;
  group.traverse(o=>{if(o.isMesh){
   o.castShadow=true;o.frustumCulled=false;o.renderOrder=100;
@@ -587,12 +587,12 @@ function createToolVisual(type){
   // Filho direto do osso correto: herda a pose e a rotação da mão em cada animação.
   hand.add(group);
   // Desloca a empunhadura para fora da palma e à frente do corpo, sem perder o vínculo com o osso.
-  group.position.set(side==="right"?.10:-.10,-.02,.13);
-  group.rotation.set(0,0,side==="right"?-.18:.18);
+  group.position.set(side==="right"?.025:-.025,0,-.16);
+  group.rotation.set(0,0,side==="right"?-.10:.10);
  }else{
   // Fallback temporário até o modelo terminar de carregar.
   player.add(group);
-  group.position.set(side==="right"?.62:-.62,1.02,.42);
+  group.position.set(side==="right"?.62:-.62,1.02,-.42);
  }
  state[key]=group;
 }
@@ -606,8 +606,8 @@ function updateToolAttachments(){
    continue;
   }
   if(group.parent!==player)player.add(group);
-  group.position.set(type==="axe"?.62:-.62,1.02,.42);
-  group.rotation.set(0,0,type==="axe"?-.18:.18);
+  group.position.set(type==="axe"?.62:-.62,1.02,-.42);
+  group.rotation.set(0,0,type==="axe"?-.10:.10);
   group.visible=true;
  }
 }
