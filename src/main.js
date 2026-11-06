@@ -377,12 +377,12 @@ async function buildForest(){
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,herbs:0,herbBeds:[],herbObjects:[],nearHerbBedIndex:-1,meat:0,cookedMeat:0,smokedMeat:0,healingSalve:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,herbs:0,meat:0,cookedMeat:0,smokedMeat:0,healingSalve:0,hide:0,bandages:0,honey:0,wool:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],pathTiles:[],lanternPosts:[],wells:[],gardenPlots:[],gardenObjects:[],nearGardenIndex:-1,marketStalls:[],nearMarketIndex:-1,coins:0,chickenCoops:[],nearCoopIndex:-1,eggs:0,apiaries:[],nearApiaryIndex:-1,honey:0,sheepPens:[],nearSheepPenIndex:-1,wool:0,loom:null,nearLoom:false,woolGarment:false,smokehouse:null,nearSmokehouse:false,herbalistHut:null,nearHerbalist:false,watchtowers:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
+const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,herbs:0,herbBeds:[],herbObjects:[],nearHerbBedIndex:-1,meat:0,cookedMeat:0,smokedMeat:0,healingSalve:0,hide:0,leather:0,tannery:null,nearTannery:false,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,herbs:0,meat:0,cookedMeat:0,smokedMeat:0,healingSalve:0,hide:0,bandages:0,honey:0,wool:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],pathTiles:[],lanternPosts:[],wells:[],gardenPlots:[],gardenObjects:[],nearGardenIndex:-1,marketStalls:[],nearMarketIndex:-1,coins:0,chickenCoops:[],nearCoopIndex:-1,eggs:0,apiaries:[],nearApiaryIndex:-1,honey:0,sheepPens:[],nearSheepPenIndex:-1,wool:0,loom:null,nearLoom:false,woolGarment:false,smokehouse:null,nearSmokehouse:false,herbalistHut:null,nearHerbalist:false,watchtowers:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
   if(!saved)return;
-  for(const key of ["health","hunger","thirst","temperature","energy","wood","stone","day","timeOfDay","berries","fiber","herbs","meat","cookedMeat","smokedMeat","healingSalve","hide","bandages","waterCharges","arrows","coins","eggs","honey","wool"])if(Number.isFinite(saved[key]))state[key]=saved[key];
+  for(const key of ["health","hunger","thirst","temperature","energy","wood","stone","day","timeOfDay","berries","fiber","herbs","meat","cookedMeat","smokedMeat","healingSalve","hide","leather","bandages","waterCharges","arrows","coins","eggs","honey","wool"])if(Number.isFinite(saved[key]))state[key]=saved[key];
   state.axe=saved.axe===true;state.pickaxe=saved.pickaxe===true;
   state.starterKitGranted=saved.starterKitGranted===true;
   state.campfire=saved.campfire===true;
@@ -392,13 +392,14 @@ function loadGame(){
   state.waterSkin=saved.waterSkin===true;
   state.bow=saved.bow===true;
   state.waterCharges=Math.max(0,Math.min(3,state.waterCharges));
-  if(saved.storage&&typeof saved.storage==="object")for(const key of ["wood","stone","fiber","berries","herbs","meat","cookedMeat","smokedMeat","healingSalve","hide","bandages","honey","wool"])if(Number.isFinite(saved.storage[key]))state.storage[key]=Math.max(0,saved.storage[key]);
+  if(saved.storage&&typeof saved.storage==="object")for(const key of ["wood","stone","fiber","berries","herbs","meat","cookedMeat","smokedMeat","healingSalve","hide","leather","bandages","honey","wool"])if(Number.isFinite(saved.storage[key]))state.storage[key]=Math.max(0,saved.storage[key]);
   state.coldCloak=saved.coldCloak===true;
   state.leatherBoots=saved.leatherBoots===true;
   state.woolGarment=saved.woolGarment===true;
   if(saved.loom&&Number.isFinite(saved.loom.x)&&Number.isFinite(saved.loom.z)&&Number.isFinite(saved.loom.yaw))state.loom=saved.loom;
   if(saved.smokehouse&&Number.isFinite(saved.smokehouse.x)&&Number.isFinite(saved.smokehouse.z)&&Number.isFinite(saved.smokehouse.yaw))state.smokehouse=saved.smokehouse;
   if(saved.herbalistHut&&Number.isFinite(saved.herbalistHut.x)&&Number.isFinite(saved.herbalistHut.z)&&Number.isFinite(saved.herbalistHut.yaw))state.herbalistHut=saved.herbalistHut;
+  if(saved.tannery&&Number.isFinite(saved.tannery.x)&&Number.isFinite(saved.tannery.z)&&Number.isFinite(saved.tannery.yaw)&&Number.isFinite(saved.tannery.startedAt))state.tannery=saved.tannery;
   if(Array.isArray(saved.herbBeds))state.herbBeds=saved.herbBeds.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)&&Number.isFinite(v.plantedAt)).slice(0,6);
   if(Array.isArray(saved.collectedResources))state.collectedResources=saved.collectedResources.filter(v=>typeof v==="string");
   if(Array.isArray(saved.huntedAnimals))state.huntedAnimals=saved.huntedAnimals.filter(v=>typeof v==="string");
@@ -436,7 +437,7 @@ function loadGame(){
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,herbs:state.herbs,herbBeds:state.herbBeds,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,smokedMeat:state.smokedMeat,smokehouse:state.smokehouse,healingSalve:state.healingSalve,herbalistHut:state.herbalistHut,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,wells:state.wells,gardenPlots:state.gardenPlots,watchtowers:state.watchtowers,marketStalls:state.marketStalls,coins:state.coins,chickenCoops:state.chickenCoops,apiaries:state.apiaries,honey:state.honey,sheepPens:state.sheepPens,wool:state.wool,loom:state.loom,woolGarment:state.woolGarment,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,herbs:state.herbs,herbBeds:state.herbBeds,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,smokedMeat:state.smokedMeat,smokehouse:state.smokehouse,healingSalve:state.healingSalve,herbalistHut:state.herbalistHut,leather:state.leather,tannery:state.tannery,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,wells:state.wells,gardenPlots:state.gardenPlots,watchtowers:state.watchtowers,marketStalls:state.marketStalls,coins:state.coins,chickenCoops:state.chickenCoops,apiaries:state.apiaries,honey:state.honey,sheepPens:state.sheepPens,wool:state.wool,loom:state.loom,woolGarment:state.woolGarment,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -545,6 +546,12 @@ function updateHUD(){
   $("craftHerbBed").disabled=state.herbBeds.length>=6||state.wood<3||state.fiber<2;
   $("herbGardenAction").hidden=state.nearHerbBedIndex<0;
   if(state.nearHerbBedIndex>=0){const bed=state.herbBeds[state.nearHerbBedIndex],ready=bed.plantedAt>0&&Date.now()-bed.plantedAt>=90000;$("herbGardenAction").textContent=ready?"COLHER ERVAS (+4)":bed.plantedAt>0?"ERVAS CRESCENDO":"PLANTAR 2 FRUTAS";$("herbGardenAction").disabled=!ready&&(bed.plantedAt>0||state.berries<2);}
+  $("tanneryStatus").textContent=state.tannery?"Curtume construído · Couro curtido: "+state.leather+(state.tannery.startedAt>0?" · Curtimento em andamento":""):"Curtume comunitário: não construído";
+  $("craftTannery").disabled=!!state.tannery||state.wood<10||state.stone<5;
+  $("startTanning").hidden=!state.nearTannery;
+  $("startTanning").disabled=!state.nearTannery||state.tannery?.startedAt>0||state.hide<1;
+  $("collectLeather").hidden=!state.nearTannery;
+  $("collectLeather").disabled=!state.nearTannery||!(state.tannery?.startedAt>0&&Date.now()-state.tannery.startedAt>=120000);
   $("herbalistStatus").textContent=state.herbalistHut?"Cabana do herbalista construída · Bálsamos: "+state.healingSalve:"Cabana do herbalista: não construída";
   $("craftHerbalistHut").disabled=!!state.herbalistHut||state.wood<8||state.stone<4;
   $("craftSalve").hidden=!state.nearHerbalist;
@@ -619,7 +626,7 @@ function updateHUD(){
   if(nearestShutter>=0)$("shutterToggle").textContent=state.windowShutters[nearestShutter].open?"FECHAR PERSIANAS":"ABRIR PERSIANAS";
  $("craftStorageChest").disabled=state.storageChest||state.wood<6||state.stone<2;
  const nearChest=state.storageChest&&Math.hypot(player.position.x-state.storageChestX,player.position.z-state.storageChestZ)<3.5;
- const carried=["wood","stone","fiber","berries","herbs","meat","cookedMeat","smokedMeat","healingSalve","hide","bandages"].some(k=>state[k]>0);
+ const carried=["wood","stone","fiber","berries","herbs","meat","cookedMeat","smokedMeat","healingSalve","hide","leather","bandages"].some(k=>state[k]>0);
  const stored=Object.values(state.storage).some(v=>v>0);
  $("storeResources").disabled=!nearChest||!carried;
  $("takeResources").disabled=!nearChest||!stored;
@@ -765,6 +772,10 @@ $("craftStorageChest").addEventListener("click",craftStorageChest);
  $("sellHoney").addEventListener("click",()=>sellMarketGoods("honey"));
  $("sellWool").addEventListener("click",()=>sellMarketGoods("wool"));
  $("sellSalve").addEventListener("click",()=>sellMarketGoods("salve"));
+ $("sellLeather").addEventListener("click",()=>sellMarketGoods("leather"));
+ $("craftTannery").addEventListener("click",craftTannery);
+ $("startTanning").addEventListener("click",startTanning);
+ $("collectLeather").addEventListener("click",collectLeather);
  $("buyWood").addEventListener("click",()=>buyMarketSupplies("wood"));
  $("buyStone").addEventListener("click",()=>buyMarketSupplies("stone"));
  $("buyFiber").addEventListener("click",()=>buyMarketSupplies("fiber"));
@@ -1254,6 +1265,7 @@ function findFenceConnection(targetX,targetZ,extension){
   else if(type==="honey"&&state.honey>=1){amount=1;price=8;state.honey-=amount;label="1 pote de mel";}
   else if(type==="wool"&&state.wool>=1){amount=1;price=10;state.wool-=amount;label="1 porção de lã";}
   else if(type==="salve"&&state.healingSalve>=1){amount=1;price=9;state.healingSalve-=amount;label="1 bálsamo medicinal";}
+  else if(type==="leather"&&state.leather>=1){amount=1;price=18;state.leather-=amount;label="1 couro curtido";}
   else{toast("Você não tem quantidade suficiente para esta venda.");return;}
   state.coins+=price;
   updateHUD();saveGame();toast("Venda concluída: "+label+" por "+price+" moedas.");
@@ -2034,7 +2046,7 @@ function craftDoorPanel(){
  }
  function storeResources(){
  if(!state.storageChest||Math.hypot(player.position.x-state.storageChestX,player.position.z-state.storageChestZ)>=3.5){toast("Aproxime-se do baú.");return;}
- const keys=["wood","stone","fiber","berries","herbs","meat","cookedMeat","smokedMeat","healingSalve","hide","bandages","honey","wool"];
+ const keys=["wood","stone","fiber","berries","herbs","meat","cookedMeat","smokedMeat","healingSalve","hide","leather","bandages","honey","wool"];
  let total=0;
  for(const key of keys){const amount=Math.max(0,Math.floor(state[key]));state.storage[key]+=amount;state[key]=0;total+=amount;}
  if(!total){toast("Sua mochila está vazia.");return;}
@@ -2042,7 +2054,7 @@ function craftDoorPanel(){
 }
 function takeResources(){
  if(!state.storageChest||Math.hypot(player.position.x-state.storageChestX,player.position.z-state.storageChestZ)>=3.5){toast("Aproxime-se do baú.");return;}
- const keys=["wood","stone","fiber","berries","herbs","meat","cookedMeat","smokedMeat","healingSalve","hide","bandages","honey","wool"];
+ const keys=["wood","stone","fiber","berries","herbs","meat","cookedMeat","smokedMeat","healingSalve","hide","leather","bandages","honey","wool"];
  let total=0;
  for(const key of keys){const amount=Math.max(0,Math.floor(state.storage[key]));state[key]+=amount;state.storage[key]=0;total+=amount;}
  if(!total){toast("O baú está vazio.");return;}
@@ -2150,6 +2162,34 @@ function herbGardenAction(){
  if(bed.plantedAt>0){if(Date.now()-bed.plantedAt<90000){toast("As ervas ainda estão crescendo.");return;}state.herbs+=4;bed.plantedAt=0;toast("Colheita concluída: +4 ervas medicinais.");}
  else{if(state.berries<2){toast("Você precisa de 2 frutas silvestres para plantar.");return;}state.berries-=2;bed.plantedAt=Date.now();toast("Ervas plantadas. A colheita ficará pronta em 90 segundos.");}
  updateHUD();saveGame();
+}
+function craftTannery(){
+ if(state.tannery){toast("O curtume comunitário já foi construído.");return;}
+ if(state.wood<10||state.stone<5){toast("Faltam 10 madeiras e 5 pedras.");return;}
+ const yaw=Math.round(state.cameraYaw/(Math.PI/2))*(Math.PI/2),x=Math.round((player.position.x+Math.sin(yaw)*7)/3)*3,z=Math.round((player.position.z+Math.cos(yaw)*7)/3)*3;
+ state.wood-=10;state.stone-=5;state.tannery={x,z,yaw,startedAt:0};createTannery(state.tannery);updateHUD();saveGame();toast("Curtume construído! Use couro cru para iniciar o curtimento.");
+}
+function createTannery(data){
+ const g=new THREE.Group(),wood=new THREE.MeshStandardMaterial({color:0x68452c,roughness:1}),dark=new THREE.MeshStandardMaterial({color:0x35271e,roughness:1}),hideMat=new THREE.MeshStandardMaterial({color:0x987348,roughness:1}),stone=new THREE.MeshStandardMaterial({color:0x77746b,roughness:1});
+ for(const x of [-1.35,1.35])for(const z of [-1.05,1.05]){const p=new THREE.Mesh(new THREE.BoxGeometry(.16,2.2,.16),wood);p.position.set(x,1.1,z);g.add(p);}
+ for(const z of [-1.05,1.05]){const beam=new THREE.Mesh(new THREE.BoxGeometry(2.8,.16,.16),wood);beam.position.set(0,2.05,z);g.add(beam);}
+ const roof=new THREE.Mesh(new THREE.BoxGeometry(3.1,.18,2.5),wood);roof.position.y=2.25;g.add(roof);
+ const vat=new THREE.Mesh(new THREE.CylinderGeometry(.72,.62,.7,10),dark);vat.position.set(0,.38,.05);g.add(vat);
+ const liquid=new THREE.Mesh(new THREE.CircleGeometry(.58,16),new THREE.MeshStandardMaterial({color:0x75613d,roughness:1}));liquid.rotation.x=-Math.PI/2;liquid.position.set(0,.74,.05);g.add(liquid);
+ for(let i=0;i<3;i++){const rack=new THREE.Mesh(new THREE.BoxGeometry(.1,1.35,.1),wood);rack.position.set(-1.05+i*1.05,1.0,1.38);g.add(rack);const stretched=new THREE.Mesh(new THREE.BoxGeometry(.78,.62,.07),hideMat);stretched.position.set(-1.05+i*1.05,1.05,1.35);g.add(stretched);}
+ for(let i=0;i<4;i++){const block=new THREE.Mesh(new THREE.BoxGeometry(.38,.25,.34),stone);block.position.set(-.65+i*.43,.13,-1.45);g.add(block);}
+ g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});g.position.set(data.x,terrainHeight(data.x,data.z),data.z);g.rotation.y=data.yaw;scene.add(g);state.tanneryObject=g;
+}
+function startTanning(){
+ if(!state.nearTannery||!state.tannery)return;
+ if(state.tannery.startedAt>0){toast("Já existe uma pele no processo de curtimento.");return;}
+ if(state.hide<1){toast("Você precisa de 1 couro cru.");return;}
+ state.hide--;state.tannery.startedAt=Date.now();updateHUD();saveGame();toast("Curtimento iniciado. O couro ficará pronto em 2 minutos.");
+}
+function collectLeather(){
+ if(!state.nearTannery||!state.tannery||state.tannery.startedAt<=0)return;
+ if(Date.now()-state.tannery.startedAt<120000){toast("O couro ainda está curtindo.");return;}
+ state.tannery.startedAt=0;state.leather++;updateHUD();saveGame();toast("Couro curtido recolhido! +1 couro resistente.");
 }
 function craftHerbalistHut(){
  if(state.herbalistHut){toast("A cabana do herbalista já foi construída.");return;}
@@ -2475,6 +2515,7 @@ function update(dt){
   state.nearLoom=!!state.loom&&Math.hypot(player.position.x-state.loom.x,player.position.z-state.loom.z)<4.5;
   state.nearSmokehouse=!!state.smokehouse&&Math.hypot(player.position.x-state.smokehouse.x,player.position.z-state.smokehouse.z)<4.8;
   state.nearHerbalist=!!state.herbalistHut&&Math.hypot(player.position.x-state.herbalistHut.x,player.position.z-state.herbalistHut.z)<4.8;
+  state.nearTannery=!!state.tannery&&Math.hypot(player.position.x-state.tannery.x,player.position.z-state.tannery.z)<4.8;
   let nearHerbBed=-1,herbBedDistance=4.2;for(let i=0;i<state.herbBeds.length;i++){const bed=state.herbBeds[i],d=Math.hypot(player.position.x-bed.x,player.position.z-bed.z);if(d<herbBedDistance){herbBedDistance=d;nearHerbBed=i;}}state.nearHerbBedIndex=nearHerbBed;
   const gardenActionButton=$("gardenAction");
   gardenActionButton.hidden=nearGarden<0;
@@ -2519,6 +2560,7 @@ async function start(){
  if(state.loom)createLoom(state.loom);
  if(state.smokehouse)createSmokehouse(state.smokehouse);
  if(state.herbalistHut)createHerbalistHut(state.herbalistHut);
+ if(state.tannery)createTannery(state.tannery);
  for(const bed of state.herbBeds)createHerbBed(bed);
  for(const door of state.doorPanels)createDoorPanel(door);
  for(const shutters of state.windowShutters)createWindowShutters(shutters);
