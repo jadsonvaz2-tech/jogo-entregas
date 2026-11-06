@@ -377,12 +377,12 @@ async function buildForest(){
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,smokedMeat:0,healingSalve:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,smokedMeat:0,healingSalve:0,hide:0,bandages:0,honey:0,wool:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],pathTiles:[],lanternPosts:[],wells:[],gardenPlots:[],gardenObjects:[],nearGardenIndex:-1,marketStalls:[],nearMarketIndex:-1,coins:0,chickenCoops:[],nearCoopIndex:-1,eggs:0,apiaries:[],nearApiaryIndex:-1,honey:0,sheepPens:[],nearSheepPenIndex:-1,wool:0,loom:null,nearLoom:false,woolGarment:false,smokehouse:null,nearSmokehouse:false,herbalistHut:null,nearHerbalist:false,watchtowers:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
+const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,herbs:0,herbBeds:[],herbObjects:[],nearHerbBedIndex:-1,meat:0,cookedMeat:0,smokedMeat:0,healingSalve:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,herbs:0,meat:0,cookedMeat:0,smokedMeat:0,healingSalve:0,hide:0,bandages:0,honey:0,wool:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],pathTiles:[],lanternPosts:[],wells:[],gardenPlots:[],gardenObjects:[],nearGardenIndex:-1,marketStalls:[],nearMarketIndex:-1,coins:0,chickenCoops:[],nearCoopIndex:-1,eggs:0,apiaries:[],nearApiaryIndex:-1,honey:0,sheepPens:[],nearSheepPenIndex:-1,wool:0,loom:null,nearLoom:false,woolGarment:false,smokehouse:null,nearSmokehouse:false,herbalistHut:null,nearHerbalist:false,watchtowers:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
   if(!saved)return;
-  for(const key of ["health","hunger","thirst","temperature","energy","wood","stone","day","timeOfDay","berries","fiber","meat","cookedMeat","smokedMeat","healingSalve","hide","bandages","waterCharges","arrows","coins","eggs","honey","wool"])if(Number.isFinite(saved[key]))state[key]=saved[key];
+  for(const key of ["health","hunger","thirst","temperature","energy","wood","stone","day","timeOfDay","berries","fiber","herbs","meat","cookedMeat","smokedMeat","healingSalve","hide","bandages","waterCharges","arrows","coins","eggs","honey","wool"])if(Number.isFinite(saved[key]))state[key]=saved[key];
   state.axe=saved.axe===true;state.pickaxe=saved.pickaxe===true;
   state.starterKitGranted=saved.starterKitGranted===true;
   state.campfire=saved.campfire===true;
@@ -392,13 +392,14 @@ function loadGame(){
   state.waterSkin=saved.waterSkin===true;
   state.bow=saved.bow===true;
   state.waterCharges=Math.max(0,Math.min(3,state.waterCharges));
-  if(saved.storage&&typeof saved.storage==="object")for(const key of ["wood","stone","fiber","berries","meat","cookedMeat","smokedMeat","healingSalve","hide","bandages","honey","wool"])if(Number.isFinite(saved.storage[key]))state.storage[key]=Math.max(0,saved.storage[key]);
+  if(saved.storage&&typeof saved.storage==="object")for(const key of ["wood","stone","fiber","berries","herbs","meat","cookedMeat","smokedMeat","healingSalve","hide","bandages","honey","wool"])if(Number.isFinite(saved.storage[key]))state.storage[key]=Math.max(0,saved.storage[key]);
   state.coldCloak=saved.coldCloak===true;
   state.leatherBoots=saved.leatherBoots===true;
   state.woolGarment=saved.woolGarment===true;
   if(saved.loom&&Number.isFinite(saved.loom.x)&&Number.isFinite(saved.loom.z)&&Number.isFinite(saved.loom.yaw))state.loom=saved.loom;
   if(saved.smokehouse&&Number.isFinite(saved.smokehouse.x)&&Number.isFinite(saved.smokehouse.z)&&Number.isFinite(saved.smokehouse.yaw))state.smokehouse=saved.smokehouse;
   if(saved.herbalistHut&&Number.isFinite(saved.herbalistHut.x)&&Number.isFinite(saved.herbalistHut.z)&&Number.isFinite(saved.herbalistHut.yaw))state.herbalistHut=saved.herbalistHut;
+  if(Array.isArray(saved.herbBeds))state.herbBeds=saved.herbBeds.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)&&Number.isFinite(v.plantedAt)).slice(0,6);
   if(Array.isArray(saved.collectedResources))state.collectedResources=saved.collectedResources.filter(v=>typeof v==="string");
   if(Array.isArray(saved.huntedAnimals))state.huntedAnimals=saved.huntedAnimals.filter(v=>typeof v==="string");
    if(Array.isArray(saved.fenceSections))state.fenceSections=saved.fenceSections.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,200);
@@ -435,7 +436,7 @@ function loadGame(){
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,smokedMeat:state.smokedMeat,smokehouse:state.smokehouse,healingSalve:state.healingSalve,herbalistHut:state.herbalistHut,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,wells:state.wells,gardenPlots:state.gardenPlots,watchtowers:state.watchtowers,marketStalls:state.marketStalls,coins:state.coins,chickenCoops:state.chickenCoops,apiaries:state.apiaries,honey:state.honey,sheepPens:state.sheepPens,wool:state.wool,loom:state.loom,woolGarment:state.woolGarment,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,herbs:state.herbs,herbBeds:state.herbBeds,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,smokedMeat:state.smokedMeat,smokehouse:state.smokehouse,healingSalve:state.healingSalve,herbalistHut:state.herbalistHut,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,wells:state.wells,gardenPlots:state.gardenPlots,watchtowers:state.watchtowers,marketStalls:state.marketStalls,coins:state.coins,chickenCoops:state.chickenCoops,apiaries:state.apiaries,honey:state.honey,sheepPens:state.sheepPens,wool:state.wool,loom:state.loom,woolGarment:state.woolGarment,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -540,10 +541,14 @@ function updateHUD(){
   $("coopStatus").textContent="Galinheiros: "+state.chickenCoops.length+"/4 · Ovos: "+state.eggs;
   $("apiaryStatus").textContent="Colmeias: "+state.apiaries.length+"/4 · Mel: "+state.honey;
   $("sheepPenStatus").textContent="Apriscos: "+state.sheepPens.length+"/3 · Lã: "+state.wool;
+  $("herbGardenStatus").textContent="Canteiros medicinais: "+state.herbBeds.length+"/6 · Ervas: "+state.herbs;
+  $("craftHerbBed").disabled=state.herbBeds.length>=6||state.wood<3||state.fiber<2;
+  $("herbGardenAction").hidden=state.nearHerbBedIndex<0;
+  if(state.nearHerbBedIndex>=0){const bed=state.herbBeds[state.nearHerbBedIndex],ready=bed.plantedAt>0&&Date.now()-bed.plantedAt>=90000;$("herbGardenAction").textContent=ready?"COLHER ERVAS (+4)":bed.plantedAt>0?"ERVAS CRESCENDO":"PLANTAR 2 FRUTAS";$("herbGardenAction").disabled=!ready&&(bed.plantedAt>0||state.berries<2);}
   $("herbalistStatus").textContent=state.herbalistHut?"Cabana do herbalista construída · Bálsamos: "+state.healingSalve:"Cabana do herbalista: não construída";
   $("craftHerbalistHut").disabled=!!state.herbalistHut||state.wood<8||state.stone<4;
   $("craftSalve").hidden=!state.nearHerbalist;
-  $("craftSalve").disabled=!state.nearHerbalist||state.berries<3||state.fiber<2;
+  $("craftSalve").disabled=!state.nearHerbalist||state.herbs<2||state.fiber<1;
   $("useSalve").disabled=state.healingSalve<1||state.health>=100;
   $("smokehouseStatus").textContent=state.smokehouse?"Defumador construído · Carne defumada: "+state.smokedMeat:"Defumador comunitário: não construído";
   $("craftSmokehouse").disabled=!!state.smokehouse||state.wood<10||state.stone<4;
@@ -614,7 +619,7 @@ function updateHUD(){
   if(nearestShutter>=0)$("shutterToggle").textContent=state.windowShutters[nearestShutter].open?"FECHAR PERSIANAS":"ABRIR PERSIANAS";
  $("craftStorageChest").disabled=state.storageChest||state.wood<6||state.stone<2;
  const nearChest=state.storageChest&&Math.hypot(player.position.x-state.storageChestX,player.position.z-state.storageChestZ)<3.5;
- const carried=["wood","stone","fiber","berries","meat","cookedMeat","smokedMeat","healingSalve","hide","bandages"].some(k=>state[k]>0);
+ const carried=["wood","stone","fiber","berries","herbs","meat","cookedMeat","smokedMeat","healingSalve","hide","bandages"].some(k=>state[k]>0);
  const stored=Object.values(state.storage).some(v=>v>0);
  $("storeResources").disabled=!nearChest||!carried;
  $("takeResources").disabled=!nearChest||!stored;
@@ -743,6 +748,8 @@ $("craftStorageChest").addEventListener("click",craftStorageChest);
  $("craftLoom").addEventListener("click",craftLoom);
  $("craftSmokehouse").addEventListener("click",craftSmokehouse);
  $("craftHerbalistHut").addEventListener("click",craftHerbalistHut);
+ $("craftHerbBed").addEventListener("click",craftHerbBed);
+ $("herbGardenAction").addEventListener("click",herbGardenAction);
  $("craftSalve").addEventListener("click",craftSalve);
  $("useSalve").addEventListener("click",useSalve);
  $("smokeMeat").addEventListener("click",smokeMeat);
@@ -2027,7 +2034,7 @@ function craftDoorPanel(){
  }
  function storeResources(){
  if(!state.storageChest||Math.hypot(player.position.x-state.storageChestX,player.position.z-state.storageChestZ)>=3.5){toast("Aproxime-se do baú.");return;}
- const keys=["wood","stone","fiber","berries","meat","cookedMeat","smokedMeat","healingSalve","hide","bandages","honey","wool"];
+ const keys=["wood","stone","fiber","berries","herbs","meat","cookedMeat","smokedMeat","healingSalve","hide","bandages","honey","wool"];
  let total=0;
  for(const key of keys){const amount=Math.max(0,Math.floor(state[key]));state.storage[key]+=amount;state[key]=0;total+=amount;}
  if(!total){toast("Sua mochila está vazia.");return;}
@@ -2035,7 +2042,7 @@ function craftDoorPanel(){
 }
 function takeResources(){
  if(!state.storageChest||Math.hypot(player.position.x-state.storageChestX,player.position.z-state.storageChestZ)>=3.5){toast("Aproxime-se do baú.");return;}
- const keys=["wood","stone","fiber","berries","meat","cookedMeat","smokedMeat","healingSalve","hide","bandages","honey","wool"];
+ const keys=["wood","stone","fiber","berries","herbs","meat","cookedMeat","smokedMeat","healingSalve","hide","bandages","honey","wool"];
  let total=0;
  for(const key of keys){const amount=Math.max(0,Math.floor(state.storage[key]));state[key]+=amount;state.storage[key]=0;total+=amount;}
  if(!total){toast("O baú está vazio.");return;}
@@ -2123,6 +2130,27 @@ function drinkWaterSkin(){
  state.waterCharges--;state.thirst=Math.min(100,state.thirst+35);
  updateHUD();saveGame();toast("Você bebeu do cantil e recuperou 35 pontos de sede.");
 }
+function craftHerbBed(){
+ if(state.herbBeds.length>=6){toast("Limite de 6 canteiros medicinais atingido.");return;}
+ if(state.wood<3||state.fiber<2){toast("Faltam 3 madeiras e 2 fibras.");return;}
+ const yaw=Math.round(state.cameraYaw/(Math.PI/2))*(Math.PI/2),x=Math.round((player.position.x+Math.sin(yaw)*5)/3)*3,z=Math.round((player.position.z+Math.cos(yaw)*5)/3)*3;
+ if(state.herbBeds.some(b=>Math.hypot(b.x-x,b.z-z)<3.5)){toast("Escolha um local mais distante de outro canteiro.");return;}
+ state.wood-=3;state.fiber-=2;const bed={x,z,yaw,plantedAt:0};state.herbBeds.push(bed);createHerbBed(bed);updateHUD();saveGame();toast("Canteiro medicinal construído. Plante frutas para cultivar ervas.");
+}
+function createHerbBed(data){
+ const g=new THREE.Group(),wood=new THREE.MeshStandardMaterial({color:0x765033,roughness:1}),soil=new THREE.MeshStandardMaterial({color:0x493322,roughness:1}),leaf=new THREE.MeshStandardMaterial({color:0x527d3d,roughness:1}),flower=new THREE.MeshStandardMaterial({color:0xc5a5d5,roughness:1});
+ const earth=new THREE.Mesh(new THREE.BoxGeometry(2.5,.22,1.8),soil);earth.position.y=.2;g.add(earth);
+ for(const x of [-1.3,1.3]){const b=new THREE.Mesh(new THREE.BoxGeometry(.12,.32,1.95),wood);b.position.set(x,.3,0);g.add(b);}
+ for(const z of [-.92,.92]){const b=new THREE.Mesh(new THREE.BoxGeometry(2.65,.32,.12),wood);b.position.set(0,.3,z);g.add(b);}
+ for(let i=0;i<8;i++){const x=-.9+(i%4)*.6,z=-.45+Math.floor(i/4)*.9;const stem=new THREE.Mesh(new THREE.CylinderGeometry(.025,.035,.35,5),leaf);stem.position.set(x,.48,z);g.add(stem);const leaves=new THREE.Mesh(new THREE.SphereGeometry(.16,6,5),leaf);leaves.scale.set(.7,1,.7);leaves.position.set(x,.65,z);g.add(leaves);const bloom=new THREE.Mesh(new THREE.SphereGeometry(.07,5,4),flower);bloom.position.set(x,.79,z);g.add(bloom);}
+ g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});g.position.set(data.x,terrainHeight(data.x,data.z),data.z);g.rotation.y=data.yaw;scene.add(g);state.herbObjects.push(g);
+}
+function herbGardenAction(){
+ const i=state.nearHerbBedIndex;if(i<0)return;const bed=state.herbBeds[i];
+ if(bed.plantedAt>0){if(Date.now()-bed.plantedAt<90000){toast("As ervas ainda estão crescendo.");return;}state.herbs+=4;bed.plantedAt=0;toast("Colheita concluída: +4 ervas medicinais.");}
+ else{if(state.berries<2){toast("Você precisa de 2 frutas silvestres para plantar.");return;}state.berries-=2;bed.plantedAt=Date.now();toast("Ervas plantadas. A colheita ficará pronta em 90 segundos.");}
+ updateHUD();saveGame();
+}
 function craftHerbalistHut(){
  if(state.herbalistHut){toast("A cabana do herbalista já foi construída.");return;}
  if(state.wood<8||state.stone<4){toast("Faltam materiais: 8 madeiras e 4 pedras.");return;}
@@ -2151,8 +2179,8 @@ function createHerbalistHut(data){
 }
 function craftSalve(){
  if(!state.nearHerbalist){toast("Aproxime-se da cabana do herbalista.");return;}
- if(state.berries<3||state.fiber<2){toast("Você precisa de 3 frutas silvestres e 2 fibras por bálsamo.");return;}
- state.berries-=3;state.fiber-=2;state.healingSalve++;
+ if(state.herbs<2||state.fiber<1){toast("Você precisa de 2 ervas medicinais e 1 fibra por bálsamo.");return;}
+ state.herbs-=2;state.fiber-=1;state.healingSalve++;
  updateHUD();saveGame();toast("Bálsamo medicinal preparado! Ele recupera até 45 pontos de vida.");
 }
 function useSalve(){
@@ -2447,6 +2475,7 @@ function update(dt){
   state.nearLoom=!!state.loom&&Math.hypot(player.position.x-state.loom.x,player.position.z-state.loom.z)<4.5;
   state.nearSmokehouse=!!state.smokehouse&&Math.hypot(player.position.x-state.smokehouse.x,player.position.z-state.smokehouse.z)<4.8;
   state.nearHerbalist=!!state.herbalistHut&&Math.hypot(player.position.x-state.herbalistHut.x,player.position.z-state.herbalistHut.z)<4.8;
+  let nearHerbBed=-1,herbBedDistance=4.2;for(let i=0;i<state.herbBeds.length;i++){const bed=state.herbBeds[i],d=Math.hypot(player.position.x-bed.x,player.position.z-bed.z);if(d<herbBedDistance){herbBedDistance=d;nearHerbBed=i;}}state.nearHerbBedIndex=nearHerbBed;
   const gardenActionButton=$("gardenAction");
   gardenActionButton.hidden=nearGarden<0;
   if(nearGarden>=0){
@@ -2490,6 +2519,7 @@ async function start(){
  if(state.loom)createLoom(state.loom);
  if(state.smokehouse)createSmokehouse(state.smokehouse);
  if(state.herbalistHut)createHerbalistHut(state.herbalistHut);
+ for(const bed of state.herbBeds)createHerbBed(bed);
  for(const door of state.doorPanels)createDoorPanel(door);
  for(const shutters of state.windowShutters)createWindowShutters(shutters);
  for(const gate of state.gates)createGate(gate);
