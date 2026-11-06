@@ -6,7 +6,8 @@
  position:fixed;
  z-index:18;
  right:16px;
- bottom:14px;
+ top:calc(150px + env(safe-area-inset-top,0px));
+ bottom:auto;
  min-height:42px;
  padding:10px 14px;
  font-size:11px;
@@ -21,7 +22,7 @@
  padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));
 }
 @media(min-width:800px){
- #craftToggle{right:28px;bottom:18px}
+ #craftToggle{right:28px;top:auto;bottom:18px}
  #craftPanel{left:20px;right:auto;bottom:70px;max-height:75vh}
 }
 
