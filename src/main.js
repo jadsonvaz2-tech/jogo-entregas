@@ -2059,6 +2059,17 @@ function buildPlacementTerrainCheck(type,c,yaw){
  const limit=type==="floor"?.7:type==="fence"?.55:Infinity;
  return {average,difference:max-min,level:max-min<=limit};
 }
+function buildFloorPlacementContinuity(c,terrainCheck){
+ let neighbor=null,nearest=3.35;
+ for(const tile of state.floorTiles){
+  const distance=Math.hypot(tile.x-c.x,tile.z-c.z);
+  if(distance>2.3&&distance<nearest){nearest=distance;neighbor=tile;}
+ }
+ if(!neighbor)return {ok:true,ground:terrainCheck.average,step:0};
+ const existingGround=Number.isFinite(neighbor.ground)?neighbor.ground:terrainHeight(neighbor.x,neighbor.z);
+ const step=Math.abs(terrainCheck.average-existingGround);
+ return {ok:step<=.35,ground:existingGround,step};
+}
 function updateBuildPreview(){
  if(!activeBuildPlacement||!buildPreviewGroup)return;
  const p=activeBuildPlacement,type=p.type,spec=buildPlacementSpec(type),c=buildPreviewCandidate();
@@ -2070,8 +2081,9 @@ function updateBuildPreview(){
  const limits={floor:state.floorTiles.length<100,wall:state.wallPanels.length<100,window:state.windowPanels.length<100,door:state.doorPanels.length<100,roof:state.roofTiles.length<100,fence:state.fenceSections.length<200};
  const missingMaterials=state.wood<spec.wood||state.fiber<spec.fiber;
  const terrainCheck=buildPlacementTerrainCheck(type,c,c.yaw);
- let valid=hasFloor&&!missingMaterials&&!floorOccupied&&!occupiedPanelSlot&&!roofOccupied&&!fenceOccupied&&limits[type]&&terrainCheck.level;
- const ground=terrainCheck.average;
+ const floorContinuity=type==="floor"?buildFloorPlacementContinuity(c,terrainCheck):{ok:true,ground:terrainCheck.average,step:0};
+ let valid=hasFloor&&!missingMaterials&&!floorOccupied&&!occupiedPanelSlot&&!roofOccupied&&!fenceOccupied&&limits[type]&&terrainCheck.level&&floorContinuity.ok;
+ const ground=type==="floor"?floorContinuity.ground:terrainCheck.average;
  const y=ground+spec.height;
  buildPreviewGroup.position.set(c.x,y,c.z);buildPreviewGroup.rotation.y=c.yaw;
  buildPreviewMaterial.color.setHex(valid?0x55e58a:0xff514d);
@@ -2080,7 +2092,7 @@ function updateBuildPreview(){
  if(confirm){confirm.disabled=!valid;confirm.style.opacity=valid?"1":".45";}
  const label=$("buildPlacementLabel");
  if(label){
-  const status=!hasFloor?"PRECISA DE UM PISO":missingMaterials?"FALTAM MATERIAIS":floorOccupied?"ESTE LOCAL JÁ TEM UM PISO":occupiedPanelSlot?"ESTE LADO JÁ TEM UMA PAREDE":roofOccupied?"ESTE PISO JÁ TEM TELHADO":fenceOccupied?"CERCA MUITO PRÓXIMA":!limits[type]?"LIMITE DE CONSTRUÇÃO ATINGIDO":!terrainCheck.level?"TERRENO MUITO INCLINADO":valid?"ENCAIXE LIVRE · PODE CONFIRMAR":"POSIÇÃO INVÁLIDA";
+  const status=!hasFloor?"PRECISA DE UM PISO":missingMaterials?"FALTAM MATERIAIS":floorOccupied?"ESTE LOCAL JÁ TEM UM PISO":occupiedPanelSlot?"ESTE LADO JÁ TEM UMA PAREDE":roofOccupied?"ESTE PISO JÁ TEM TELHADO":fenceOccupied?"CERCA MUITO PRÓXIMA":!limits[type]?"LIMITE DE CONSTRUÇÃO ATINGIDO":!terrainCheck.level?"TERRENO MUITO INCLINADO":!floorContinuity.ok?"DESNÍVEL ENTRE PISOS":valid?"ENCAIXE LIVRE · PODE CONFIRMAR":"POSIÇÃO INVÁLIDA";
   label.textContent="POSICIONAR: "+spec.label+" · "+status;
  }
 }
@@ -2097,7 +2109,7 @@ function confirmBuildPlacement(){
  const c=p.placement,type=p.type,spec=buildPlacementSpec(type);
  if(state.wood<spec.wood||state.fiber<spec.fiber){toast("Materiais insuficientes.");return;}
  if(type==="floor"){
-  const item={x:c.x,z:c.z,yaw:c.yaw};createFloorTile(item);state.floorTiles.push(item);
+  const item={x:c.x,z:c.z,yaw:c.yaw,ground:c.ground};createFloorTile(item);state.floorTiles.push(item);
  }else if(type==="wall"){
   const item={x:c.x,z:c.z,yaw:c.yaw};createWallPanel(item);state.wallPanels.push(item);
  }else if(type==="window"){
@@ -2165,7 +2177,7 @@ function craftFloorTile(){
    const beam=new THREE.Mesh(new THREE.BoxGeometry(.18,.2,2.55),edge);
    beam.position.set(x,.08,0);beam.castShadow=true;group.add(beam);
   }
-  group.position.set(tile.x,terrainHeight(tile.x,tile.z),tile.z);
+  group.position.set(tile.x,Number.isFinite(tile.ground)?tile.ground:terrainHeight(tile.x,tile.z),tile.z);
   group.rotation.y=tile.yaw;scene.add(group);
   return group;
  }
