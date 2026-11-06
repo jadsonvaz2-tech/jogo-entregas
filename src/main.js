@@ -65,6 +65,7 @@ ground.receiveShadow=true; scene.add(ground);
 const player = new THREE.Group(); scene.add(player);
 player.position.y=terrainHeight(0,0);
 const fallback = new THREE.Group(); player.add(fallback);
+let characterVisual=fallback;
 const body = new THREE.Mesh(new THREE.CapsuleGeometry(.34,.9,5,8),new THREE.MeshStandardMaterial({color:0x59402b}));
 body.position.y=.85; body.castShadow=true; fallback.add(body);
 const head = new THREE.Mesh(new THREE.SphereGeometry(.23,12,10),new THREE.MeshStandardMaterial({color:0xc49a75}));
@@ -266,7 +267,7 @@ function loadCharacter(){
    model.scale.setScalar(scale);
    model.position.set(-center.x*scale,-box.min.y*scale,-center.z*scale);
    model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.side=THREE.DoubleSide;}}});
-   player.remove(fallback); player.add(model);state.characterModel=model;
+   player.remove(fallback); player.add(model);characterVisual=model;state.characterModel=model;
    // Reposiciona as ferramentas depois que o esqueleto do personagem estiver carregado.
    if(state.axe)createToolVisual("axe");
    if(state.pickaxe)createToolVisual("pickaxe");
@@ -830,6 +831,21 @@ async function buildForest(){
 }
 
 const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,ironOre:0,coal:0,ironIngots:0,steelIngots:0,steelSword:false,steelHelmet:false,steelChestplate:false,steelAxe:false,steelPickaxe:false,steelShield:false,steelShieldGuarding:false,steelSpear:false,steelSpearObject:null,steelShieldObject:null,steelFurnace:null,steelFurnaceObject:null,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,herbs:0,herbBeds:[],herbObjects:[],nearHerbBedIndex:-1,meat:0,cookedMeat:0,smokedMeat:0,healingSalve:0,hide:0,leather:0,leatherArmor:false,armorObject:null,reinforcedAxe:false,reinforcedPickaxe:false,ironAxe:false,ironPickaxe:false,ironSword:false,swordObject:null,swordHand:null,ironHelmet:false,helmetObject:null,helmetHead:null,ironChestplate:false,ironChestObject:null,smithy:null,smithyObject:null,nearSmithy:false,tannery:null,nearTannery:false,huntedAnimals:[],huntedWolves:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,ironOre:0,coal:0,ironIngots:0,steelIngots:0,fiber:0,berries:0,herbs:0,meat:0,cookedMeat:0,smokedMeat:0,healingSalve:0,hide:0,leather:0,bandages:0,honey:0,wool:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],pathTiles:[],lanternPosts:[],wells:[],gardenPlots:[],gardenObjects:[],nearGardenIndex:-1,marketStalls:[],nearMarketIndex:-1,coins:0,chickenCoops:[],nearCoopIndex:-1,eggs:0,apiaries:[],nearApiaryIndex:-1,honey:0,sheepPens:[],nearSheepPenIndex:-1,wool:0,loom:null,nearLoom:false,woolGarment:false,smokehouse:null,nearSmokehouse:false,herbalistHut:null,nearHerbalist:false,watchtowers:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
+const slopeWorldUp=new THREE.Vector3(0,1,0);
+const slopeWorldNormal=new THREE.Vector3();
+const slopeLocalNormal=new THREE.Vector3();
+const slopeInverseYaw=new THREE.Quaternion();
+const slopeTilt=new THREE.Quaternion();
+function updateCharacterTerrainTilt(){
+ const sample=.85,x=player.position.x,z=player.position.z;
+ const gradientX=(terrainHeight(x+sample,z)-terrainHeight(x-sample,z))/(sample*2);
+ const gradientZ=(terrainHeight(x,z+sample)-terrainHeight(x,z-sample))/(sample*2);
+ slopeWorldNormal.set(-gradientX,1,-gradientZ).normalize();
+ slopeInverseYaw.setFromAxisAngle(slopeWorldUp,-state.yaw);
+ slopeLocalNormal.copy(slopeWorldNormal).applyQuaternion(slopeInverseYaw);
+ slopeTilt.setFromUnitVectors(slopeWorldUp,slopeLocalNormal);
+ characterVisual.quaternion.copy(slopeTilt);
+}
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
@@ -3713,6 +3729,7 @@ function update(dt){
   player.position.y+=verticalVelocity*dt;
   if(player.position.y<=floorY){player.position.y=floorY;verticalVelocity=0;isJumping=false;lockedAnimation=null;}
  }else{player.position.y=floorY;}
+ updateCharacterTerrainTilt();
  if(characterReady && !lockedAnimation && !isJumping){
   const desired=moving?(fast?"run":"walk"):"idle";
   if(currentAnimation!==animationActions[desired])playCharacterAnimation(desired);
