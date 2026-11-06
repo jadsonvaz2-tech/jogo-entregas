@@ -355,7 +355,7 @@ async function buildForest(){
   const tree=scatterModel(choices[i%choices.length],p.x,p.z,.8+worldRandom()*.55);
   createResource(p.x,p.z,"wood",tree);
  });
- for(let i=0;i<35;i++){const a=worldRandom()*6.28,r=9+worldRandom()*85;addRock(Math.cos(a)*r,Math.sin(a)*r,.45+worldRandom()*.9,i%4===0);}
+ for(let i=0;i<35;i++){const a=worldRandom()*6.28,r=9+worldRandom()*85;addRock(Math.cos(a)*r,Math.sin(a)*r,.45+worldRandom()*.9,true);}
  // Materiais iniciais são posicionados ao redor da posição salva do jogador.
  const startX=0,startZ=0;
  for(let i=0;i<8;i++){
@@ -540,7 +540,8 @@ function collect(){
  else if(resource.type==="stone"){state.stone+=2;toast("Você minerou 2 pedras.");}
  else{state.wood+=3;toast("Você cortou e recolheu 3 madeiras.");}
  resource.object.visible=false;if(resource.target)resource.target.visible=false;resource.active=false;
- if(resource.id&&!state.collectedResources.includes(resource.id))state.collectedResources.push(resource.id);
+ if(resource.type==="fiber"){resource.respawnAt=Date.now()+90000;toast("Fibras coletadas. A planta vai crescer novamente em 90 segundos.");}
+ else if(resource.id&&!state.collectedResources.includes(resource.id))state.collectedResources.push(resource.id);
  state.near=null;updateHUD();saveGame();
 }
 function craftTool(type){
@@ -1090,6 +1091,8 @@ function updateWorldLighting(dt){
  $("period").textContent=period;$("day").textContent=state.day;
 }
 function update(dt){
+ const nowMs=Date.now();
+ for(const r of resources){if(r.type==="fiber"&&!r.active&&r.respawnAt&&nowMs>=r.respawnAt){r.active=true;r.respawnAt=0;r.object.visible=true;toast("Uma planta fibrosa cresceu novamente.");}}
  updateWorldLighting(dt);
  updateWildlife(dt);
  updateFlyingArrows(dt);
