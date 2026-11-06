@@ -190,6 +190,48 @@ function attackCharacter(){
  }
 }
 const loader = new GLTFLoader();
+const wildlifeModelCache=new Map();
+function applyWildlifeModel(target,path,targetHeight,protectedObjects=[]){
+ let pending=wildlifeModelCache.get(path);
+ if(!pending){
+  pending=new Promise(resolve=>{
+   let finished=false;
+   const timer=setTimeout(()=>{if(!finished){finished=true;resolve(null);}},18000);
+   loader.load(new URL("../"+path,import.meta.url).href,g=>{
+    if(finished)return;
+    finished=true;clearTimeout(timer);resolve(g);
+   },undefined,()=>{
+    if(finished)return;
+    finished=true;clearTimeout(timer);resolve(null);
+   });
+  });
+  wildlifeModelCache.set(path,pending);
+ }
+ pending.then(asset=>{
+  if(!asset||!target.parent)return;
+  const model=cloneSkeleton(asset.scene);
+  const bounds=new THREE.Box3().setFromObject(model);
+  const size=bounds.getSize(new THREE.Vector3());
+  const center=bounds.getCenter(new THREE.Vector3());
+  if(!Number.isFinite(size.y)||size.y<.001)return;
+  const scale=targetHeight/size.y;
+  model.scale.setScalar(scale);
+  model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
+  model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+  target.traverse(o=>{if(o.isMesh)o.visible=false;});
+  for(const keep of protectedObjects)keep.traverse(o=>{o.visible=true;});
+  target.add(model);
+  const clip=asset.animations?.find(c=>/walk|run|move/i.test(c.name))||asset.animations?.[0];
+  if(clip){
+   const mixer=new THREE.AnimationMixer(model);
+   const action=mixer.clipAction(clip);
+   action.setEffectiveTimeScale(1);
+   action.play();
+   target.userData.modelMixer=mixer;
+  }
+  target.userData.modelRoot=model;
+ });
+}
 function loadCharacter(){
  return new Promise(resolve=>{
   let finished=false;
@@ -363,6 +405,7 @@ function createDeer(x,z,index){
  healthBar.position.set(0,2.02,0);healthBar.visible=false;healthBar.renderOrder=5;deer.add(healthBar);
  deer.position.set(x,terrainHeight(x,z),z);scene.add(deer);
  wildAnimals.push({id,object:deer,body,x,z,heading:worldRandom()*Math.PI*2,moveSpeed:.45,health:2,alive:true,wander:1+worldRandom()*2,healthBar,healthFill,legs,tail,head,neck,ears,eyes,blinkTimer:2+worldRandom()*3,blinkTime:0,breathPhase:worldRandom()*Math.PI*2,grazeTimer:2+worldRandom()*4,grazeBlend:0,alarmBlend:0,grazing:false});
+ applyWildlifeModel(deer,"Stag.gltf",1.95,[healthBar]);
 }
 function createWolf(x,z,index){
  const id="wolf-"+index;
@@ -406,6 +449,7 @@ function createWolf(x,z,index){
  warningRing.rotation.x=-Math.PI/2;warningRing.position.y=.045;warningRing.visible=false;wolf.add(warningRing);
  wolf.position.set(x,terrainHeight(x,z),z);scene.add(wolf);
  hostileWolves.push({id,object:wolf,body,chest,x,z,heading:worldRandom()*Math.PI*2,health:3,alive:true,wander:1+worldRandom()*2,moveSpeed:.35,attackCooldown:1+index*.7,attackWindup:0,staggerTime:0,staggerHeading:0,hitStunTime:0,hitHeading:0,warningRing,healthBar,healthFill,legs,tail,head,jaw,ears,eyes,blinkTimer:1.5+worldRandom()*3,blinkTime:0,breathPhase:worldRandom()*Math.PI*2,sniffCooldown:5+worldRandom()*7,sniffTime:0,howlCooldown:(state.timeOfDay>=19||state.timeOfDay<6)?10+worldRandom()*12:32+worldRandom()*28,howlTime:0});
+ applyWildlifeModel(wolf,"Wolf.gltf",1.5,[healthBar,warningRing]);
 }
 let foxAssetPromise=null;
 function loadFoxAsset(){
@@ -639,6 +683,8 @@ function updateWildlife(dt){
    if(fox.tail)fox.tail.rotation.z=Math.sin(performance.now()*.004+fox.phase)*.13;
   }
  }
+ for(const animal of wildAnimals){const mixer=animal.object.userData.modelMixer;if(mixer)mixer.update(dt);}
+ for(const wolf of hostileWolves){const mixer=wolf.object.userData.modelMixer;if(mixer)mixer.update(dt);}
 }
 function createFiberPlant(x,z){
  const plant=new THREE.Group();
