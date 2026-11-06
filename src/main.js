@@ -2006,9 +2006,8 @@ function updateBuildPreview(){
  const hasFloor=type==="floor"||type==="fence"||!!c.anchor;
  let valid=hasFloor&&state.wood>=spec.wood&&state.fiber>=spec.fiber;
  if(type==="floor")valid=valid&&!state.floorTiles.some(t=>Math.hypot(t.x-c.x,t.z-c.z)<2.3);
- if(type==="wall")valid=valid&&!state.wallPanels.some(t=>Math.hypot(t.x-c.x,t.z-c.z)<2.35);
- if(type==="window")valid=valid&&![...state.wallPanels,...state.windowPanels,...state.doorPanels].some(t=>Math.hypot(t.x-c.x,t.z-c.z)<2.35);
- if(type==="door")valid=valid&&![...state.wallPanels,...state.windowPanels,...state.doorPanels].some(t=>Math.hypot(t.x-c.x,t.z-c.z)<2.35);
+ const occupiedPanelSlot=[...state.wallPanels,...state.windowPanels,...state.doorPanels].some(t=>Math.hypot(t.x-c.x,t.z-c.z)<2.35);
+ if(type==="wall"||type==="window"||type==="door")valid=valid&&!occupiedPanelSlot;
  if(type==="roof")valid=valid&&!state.roofTiles.some(t=>Math.hypot(t.x-c.x,t.z-c.z)<2.3);
  if(type==="fence")valid=valid&&!state.fenceSections.some(t=>Math.hypot(t.x-c.x,t.z-c.z)<5.8);
  const limits={floor:state.floorTiles.length<100,wall:state.wallPanels.length<100,window:state.windowPanels.length<100,door:state.doorPanels.length<100,roof:state.roofTiles.length<100,fence:state.fenceSections.length<200};
@@ -2020,6 +2019,12 @@ function updateBuildPreview(){
  activeBuildPlacement.valid=valid;activeBuildPlacement.placement={x:c.x,z:c.z,yaw:c.yaw,ground};
  const confirm=$("buildConfirmButton");
  if(confirm){confirm.disabled=!valid;confirm.style.opacity=valid?"1":".45";}
+ const label=$("buildPlacementLabel");
+ if(label){
+  const missingMaterials=state.wood<spec.wood||state.fiber<spec.fiber;
+  const status=!hasFloor?"PRECISA DE UM PISO":missingMaterials?"FALTAM MATERIAIS":valid?"ENCAIXE LIVRE · PODE CONFIRMAR":"LOCAL OCUPADO OU LIMITE ATINGIDO";
+  label.textContent="POSICIONAR: "+spec.label+" · "+status;
+ }
 }
 function cancelBuildPlacement(showMessage=true){
  if(buildPreviewGroup){scene.remove(buildPreviewGroup);buildPreviewGroup.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose();}});}
