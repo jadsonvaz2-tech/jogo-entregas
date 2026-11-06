@@ -403,7 +403,7 @@ function createWolf(x,z,index){
  const warningRing=new THREE.Mesh(new THREE.RingGeometry(.72,.94,32),new THREE.MeshBasicMaterial({color:0xff3328,transparent:true,opacity:.72,side:THREE.DoubleSide,depthWrite:false}));
  warningRing.rotation.x=-Math.PI/2;warningRing.position.y=.045;warningRing.visible=false;wolf.add(warningRing);
  wolf.position.set(x,terrainHeight(x,z),z);scene.add(wolf);
- hostileWolves.push({id,object:wolf,body,chest,x,z,heading:worldRandom()*Math.PI*2,health:3,alive:true,wander:1+worldRandom()*2,attackCooldown:1+index*.7,attackWindup:0,staggerTime:0,staggerHeading:0,hitStunTime:0,hitHeading:0,warningRing,healthBar,healthFill,legs,tail,head,jaw,ears,eyes,blinkTimer:1.5+worldRandom()*3,blinkTime:0,breathPhase:worldRandom()*Math.PI*2});
+ hostileWolves.push({id,object:wolf,body,chest,x,z,heading:worldRandom()*Math.PI*2,health:3,alive:true,wander:1+worldRandom()*2,moveSpeed:.35,attackCooldown:1+index*.7,attackWindup:0,staggerTime:0,staggerHeading:0,hitStunTime:0,hitHeading:0,warningRing,healthBar,healthFill,legs,tail,head,jaw,ears,eyes,blinkTimer:1.5+worldRandom()*3,blinkTime:0,breathPhase:worldRandom()*Math.PI*2});
 }
 function nearestWolf(maxDistance){
  let nearest=null,dist=maxDistance;
@@ -458,15 +458,21 @@ function updateWildlife(dt){
     }else wolf.attackCooldown=.35;
    }
   }else{wolf.object.scale.y=1;wolf.warningRing.visible=false;}
-  wolf.x+=Math.sin(wolf.heading)*speed*dt;
-  wolf.z+=Math.cos(wolf.heading)*speed*dt;
+  const targetWolfSpeed=speed;
+  wolf.moveSpeed+=(targetWolfSpeed-wolf.moveSpeed)*Math.min(1,dt*(targetWolfSpeed>wolf.moveSpeed?4.8:9));
+  const gaitSpeed=wolf.moveSpeed;
+  wolf.x+=Math.sin(wolf.heading)*gaitSpeed*dt;
+  wolf.z+=Math.cos(wolf.heading)*gaitSpeed*dt;
   wolf.object.position.set(wolf.x,terrainHeight(wolf.x,wolf.z),wolf.z);
   wolf.object.rotation.y=wolf.heading;
   if(wolf.healthBar){wolf.healthBar.quaternion.copy(wolf.object.quaternion).invert().multiply(camera.quaternion);}
 
   if(wolf.hitStunTime<=0&&wolf.staggerTime<=0)wolf.object.rotation.x=0;
-  const gait=Math.sin(Date.now()*.012+wolf.x)*.22*(speed>0?1:0);
-  wolf.legs.forEach((leg,i)=>{leg.rotation.x=(i===0||i===3?1:-1)*gait;});
+  const runBlend=THREE.MathUtils.clamp((gaitSpeed-.35)/2.35,0,1);
+  const gait=Math.sin(performance.now()*(.009+runBlend*.009)+wolf.x*1.4)*(.045+runBlend*.19);
+  wolf.legs.forEach((leg,i)=>{const phase=(i===0||i===3)?1:-1;leg.rotation.x=phase*gait*(.65+runBlend*.8);leg.rotation.z=(i<2?1:-1)*runBlend*.035;});
+  if(wolf.body){wolf.body.rotation.x=-.025-runBlend*.055+Math.sin(performance.now()*.014+wolf.breathPhase)*.012;wolf.body.rotation.z=Math.sin(performance.now()*.009+wolf.x)*.025*runBlend;}
+  if(wolf.chest)wolf.chest.rotation.x=Math.sin(performance.now()*.012+wolf.breathPhase)*.025*runBlend;
   if(wolf.tail)wolf.tail.rotation.z=Math.sin(performance.now()*.003+wolf.x)*.16;
   if(wolf.head)wolf.head.rotation.x=(wolf.attackWindup>0?-.12:0)+Math.sin(performance.now()*.0018+wolf.z)*.025;
   if(wolf.jaw)wolf.jaw.rotation.x=wolf.attackWindup>0?-.28+Math.sin((.75-wolf.attackWindup)*18)*.07:0;
