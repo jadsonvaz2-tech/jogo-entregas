@@ -332,7 +332,7 @@ function createWolf(x,z,index){
  const tail=new THREE.Mesh(new THREE.CylinderGeometry(.08,.13,.62,7),coat);
  tail.position.set(0,.78,-.86);tail.rotation.x=-1.05;wolf.add(tail);
  wolf.position.set(x,terrainHeight(x,z),z);scene.add(wolf);
- hostileWolves.push({id,object:wolf,x,z,heading:worldRandom()*Math.PI*2,health:3,alive:true,wander:1+worldRandom()*2,attackCooldown:1+index*.7,legs});
+ hostileWolves.push({id,object:wolf,x,z,heading:worldRandom()*Math.PI*2,health:3,alive:true,wander:1+worldRandom()*2,attackCooldown:1+index*.7,attackWindup:0,legs});
 }
 function nearestWolf(maxDistance){
  let nearest=null,dist=maxDistance;
@@ -352,20 +352,32 @@ function updateWildlife(dt){
   let speed=.35;
   if(d<14){wolf.heading=Math.atan2(dx,dz);speed=d>1.55?2.65:0;}
   else{wolf.wander-=dt;if(wolf.wander<=0){wolf.heading+=(worldRandom()-.5)*1.4;wolf.wander=2+worldRandom()*3;}}
+  if(d<1.9&&wolf.attackCooldown<=0&&!(wolf.attackWindup>0))wolf.attackWindup=.75;
+  if(wolf.attackWindup>0){
+   speed=0;
+   wolf.attackWindup=Math.max(0,wolf.attackWindup-dt);
+   wolf.object.scale.y=.9;
+   if(Math.hypot(player.position.x-wolf.x,player.position.z-wolf.z)>2.2){
+    wolf.attackWindup=0;wolf.attackCooldown=.35;wolf.object.scale.y=1;
+   }else if(wolf.attackWindup<=0){
+    wolf.object.scale.y=1;
+    const impactDistance=Math.hypot(player.position.x-wolf.x,player.position.z-wolf.z);
+    if(impactDistance<2.2){
+     const protection=(state.leatherArmor?.65:1)*(state.steelHelmet?.55:state.ironHelmet?.75:1)*(state.steelChestplate?.35:state.ironChestplate?.55:1)*(state.steelShield?(state.steelShieldGuarding?.4:.8):1);
+     state.health=Math.max(0,state.health-9*protection);
+     state.energy=Math.max(0,state.energy-5);
+     wolf.attackCooldown=2.4;
+     toast(state.steelShieldGuarding?"O lobo atacou, mas seu escudo segurou parte do golpe!":"O lobo saltou para atacar! Afaste-se ou erga o escudo.");
+     updateHUD();saveGame();
+    }else wolf.attackCooldown=.35;
+   }
+  }else wolf.object.scale.y=1;
   wolf.x+=Math.sin(wolf.heading)*speed*dt;
   wolf.z+=Math.cos(wolf.heading)*speed*dt;
   wolf.object.position.set(wolf.x,terrainHeight(wolf.x,wolf.z),wolf.z);
   wolf.object.rotation.y=wolf.heading;
   const gait=Math.sin(Date.now()*.012+wolf.x)*.22*(speed>0?1:0);
   wolf.legs.forEach((leg,i)=>{leg.rotation.x=(i===0||i===3?1:-1)*gait;});
-  if(d<1.65&&wolf.attackCooldown<=0){
-   const protection=(state.leatherArmor?.65:1)*(state.steelHelmet?.55:state.ironHelmet?.75:1)*(state.steelChestplate?.35:state.ironChestplate?.55:1)*(state.steelShield?(state.steelShieldGuarding?.4:.8):1);
-   state.health=Math.max(0,state.health-9*protection);
-   state.energy=Math.max(0,state.energy-5);
-   wolf.attackCooldown=2.4;
-   toast(state.steelShieldGuarding?"O lobo atacou, mas seu escudo segurou parte do golpe!":"Um lobo feriu você! Use armas e escudo para se defender.");
-   updateHUD();saveGame();
-  }
  }
  for(const animal of wildAnimals){
   if(!animal.alive)continue;
@@ -601,8 +613,9 @@ function updateHUD(){
    const isWolf=huntTarget.id.startsWith("wolf-");
    const meters=Math.hypot(dx,dz);
    const wolfAlert=isWolf&&meters<14;
-   huntStatus.textContent=(wolfAlert?"🚨 LOBO PERSEGUINDO: ":isWolf?"⚠ LOBO PRÓXIMO: ":"Veado: ")+distance+" m · "+direction+" · Vida "+huntTarget.health+"/"+(isWolf?3:2);
-   huntStatus.style.color=isWolf?(wolfAlert?"#ff3b30":"#e58b35"):"";
+   const wolfAttacking=isWolf&&huntTarget.attackWindup>0;
+   huntStatus.textContent=(wolfAttacking?"🚨 LOBO PREPARANDO O BOTE: ":wolfAlert?"🚨 LOBO PERSEGUINDO: ":isWolf?"⚠ LOBO PRÓXIMO: ":"Veado: ")+distance+" m · "+direction+" · Vida "+huntTarget.health+"/"+(isWolf?3:2);
+   huntStatus.style.color=isWolf?(wolfAttacking||wolfAlert?"#ff3b30":"#e58b35"):"";
    huntStatus.style.fontWeight=isWolf?"800":"";
   }else{
    huntStatus.textContent="Caça: nenhum animal próximo (lobos até 24 m)";
