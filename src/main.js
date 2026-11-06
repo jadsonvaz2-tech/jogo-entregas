@@ -470,7 +470,7 @@ function updateWildlife(dt){
    animal.grazeTimer-=dt;
    if(animal.grazeTimer<=0){animal.grazing=!animal.grazing;animal.grazeTimer=animal.grazing?2.4+worldRandom()*1.8:4+worldRandom()*4;}
   }else animal.grazing=false;
-  animal.grazeBlend+=(animal.grazing?1:0-animal.grazeBlend)*Math.min(1,dt*2.2);
+  animal.grazeBlend+=((animal.grazing?1:0)-animal.grazeBlend)*Math.min(1,dt*2.2);
   if(animal.head){const alert=d<9?-.08:0;animal.head.rotation.x=alert+animal.grazeBlend*.58+Math.sin(performance.now()*.0011+animal.x*.7)*.035;}
   if(animal.neck)animal.neck.rotation.x=.48+animal.grazeBlend*.16;
   if(animal.healthBar){animal.healthBar.quaternion.copy(animal.object.quaternion).invert().multiply(camera.quaternion); }
