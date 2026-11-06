@@ -73,3 +73,8 @@
  white-space:normal;
  overflow-wrap:anywhere;
 }
+
+/* O atalho móvel da prévia fica na lateral, fora dos botões de confirmação e da área central de construção. */
+@media(max-width:520px){
+ #buildPlacementToggle{left:auto!important;right:12px!important;top:50%!important;bottom:auto!important;transform:translateY(-50%)!important;max-width:132px;white-space:normal;line-height:1.25}
+}
