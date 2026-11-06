@@ -104,13 +104,14 @@ function shootArrow(){
  if(!animal){toast("Nenhum veado no alcance do arco.");return;}
  if(!characterReady||isJumping||lockedAnimation)return;
  state.arrows--;
+ const arrow=new THREE.Group();
  const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,.58,5),new THREE.MeshStandardMaterial({color:0x9b7544,roughness:1}));
- shaft.rotation.x=Math.PI/2;
+ shaft.rotation.x=Math.PI/2;arrow.add(shaft);
  const tip=new THREE.Mesh(new THREE.ConeGeometry(.055,.15,5),new THREE.MeshStandardMaterial({color:0x777b80,metalness:.35,roughness:.65}));
- tip.rotation.x=-Math.PI/2;tip.position.z=.34;shaft.add(tip);
+ tip.rotation.x=Math.PI/2;tip.position.z=.34;arrow.add(tip);
  const start=new THREE.Vector3(player.position.x,player.position.y+1.35,player.position.z);
- shaft.position.copy(start);scene.add(shaft);
- flyingArrows.push({object:shaft,start,target:animal,elapsed:0,duration:.38});
+ arrow.position.copy(start);scene.add(arrow);
+ flyingArrows.push({object:arrow,start,target:animal,elapsed:0,duration:.38});
  playOneShot("swordslash");updateHUD();saveGame();
 }
 function updateFlyingArrows(dt){
