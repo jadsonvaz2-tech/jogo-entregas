@@ -3733,6 +3733,8 @@ function update(dt){
  }else{state.energy=Math.min(100,state.energy+dt*4);}
  const nearFire=state.campfire&&Math.hypot(player.position.x-state.campfireX,player.position.z-state.campfireZ)<6;
  const nearShelter=state.shelter&&Math.hypot(player.position.x-state.shelterX,player.position.z-state.shelterZ)<5;
+ // Descansar dentro do abrigo recupera energia mais rápido, sem alterar o salvamento.
+ if(nearShelter&&!moving)state.energy=Math.min(100,state.energy+dt*5);
  if(nearFire){state.energy=Math.min(100,state.energy+dt*5);state.temperature=Math.min(100,state.temperature+dt*9);}
  else{const daylight=THREE.MathUtils.clamp(Math.sin((state.timeOfDay-6)/12*Math.PI),0,1);let coldRate=state.timeOfDay<6||state.timeOfDay>=19?.42:.10;if(nearShelter)coldRate*=.2;if(state.coldCloak)coldRate*=.45;if(state.leatherBoots)coldRate*=.7;if(state.woolGarment)coldRate*=.72;state.temperature=THREE.MathUtils.clamp(state.temperature+dt*(daylight*.32-coldRate),0,100);}
  const floorY=terrainHeight(player.position.x,player.position.z);
