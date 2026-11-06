@@ -50,3 +50,15 @@
  #buildPlacementUI>div:nth-child(3) button{min-height:40px!important}
  #craftPanel{width:min(92vw,340px);max-height:72dvh}
 }
+
+/* Ajustes de leitura e toque para categorias da oficina no celular. */
+#craftPanel>.craft-category>summary{display:block;min-height:40px;line-height:18px;font-size:12px}
+#craftPanel>.craft-category[open]{padding-bottom:5px}
+#craftPanel>.craft-category>button{min-height:38px;line-height:1.25;white-space:normal}
+#craftPanel>.craft-category>span{display:block;line-height:1.35;padding:5px 8px 2px}
+#craftPanel>.craft-category>div{display:grid;grid-template-columns:1fr;gap:5px;padding:4px}
+@media(max-width:520px){
+ #craftPanel{width:min(92vw,360px);max-height:72dvh}
+ #craftPanel>.craft-category>summary{padding:10px 9px}
+ #buildPlacementUI{top:auto!important;bottom:calc(12px + env(safe-area-inset-bottom))!important;transform:translateX(-50%)!important;max-height:38vh!important}
+}
