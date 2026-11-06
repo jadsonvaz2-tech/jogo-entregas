@@ -596,7 +596,9 @@ function createToolVisual(type){
 }
 function updateToolAttachments(){
  const right=new THREE.Vector3(1,0,0).applyAxisAngle(new THREE.Vector3(0,1,0),player.rotation.y);
- const forward=new THREE.Vector3(0,0,1).applyAxisAngle(new THREE.Vector3(0,1,0),player.rotation.y);
+ // Vetor horizontal da câmera em direção ao personagem: acompanha a rotação
+ // livre da visão e mantém as ferramentas no lado visível da mão.
+ const towardCamera=new THREE.Vector3(-Math.sin(state.cameraYaw),0,-Math.cos(state.cameraYaw));
  for(const type of ["axe","pickaxe"]){
   const group=state[type==="axe"?"axeObject":"pickaxeObject"];
   const hand=state[type==="axe"?"axeHand":"pickaxeHand"];
@@ -605,10 +607,10 @@ function updateToolAttachments(){
    const handPosition=hand.getWorldPosition(new THREE.Vector3());
    const side=type==="axe"?1:-1;
    handPosition.addScaledVector(right,side*.12);
-   // A câmera padrão fica atrás do personagem (lado -Z); trazemos a ferramenta
-   // para o lado visível do corpo, sem deixá-la escondida atrás do tronco.
-   handPosition.addScaledVector(forward,-.20);
-   handPosition.y+=.04;
+   // Deslocamento curto para fora da palma, em direção à câmera,
+   // para que o cabo e a cabeça não fiquem encobertos pelo tronco.
+   handPosition.addScaledVector(towardCamera,.24);
+   handPosition.y+=.025;
    group.position.copy(handPosition);
    group.rotation.set(0,player.rotation.y,type==="axe"?-.10:.10);
    if(group.parent!==scene)scene.add(group);
