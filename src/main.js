@@ -570,7 +570,8 @@ function createToolVisual(type){
   const tipB=new THREE.Mesh(new THREE.ConeGeometry(.105,.24,10),metalMat);
   tipB.rotation.z=-Math.PI/2;tipB.position.set(-.45,.14,0);group.add(tipB);
  }
- group.scale.setScalar(1.0);
+ // Aumenta a leitura visual em tela pequena; o cabo não fica escondido dentro do punho.
+ group.scale.setScalar(1.25);
  group.visible=true;
  group.traverse(o=>{if(o.isMesh){
   o.castShadow=true;o.frustumCulled=false;o.renderOrder=100;
@@ -585,12 +586,13 @@ function createToolVisual(type){
  if(hand){
   // Filho direto do osso correto: herda a pose e a rotação da mão em cada animação.
   hand.add(group);
-  group.position.set(0,.055,.035);
-  group.rotation.set(0,0,0);
+  // Desloca a empunhadura para fora da palma e à frente do corpo, sem perder o vínculo com o osso.
+  group.position.set(side==="right"?.10:-.10,-.02,.13);
+  group.rotation.set(0,0,side==="right"?-.18:.18);
  }else{
   // Fallback temporário até o modelo terminar de carregar.
   player.add(group);
-  group.position.set(side==="right"?.48:-.48,1.02,.28);
+  group.position.set(side==="right"?.62:-.62,1.02,.42);
  }
  state[key]=group;
 }
@@ -604,8 +606,8 @@ function updateToolAttachments(){
    continue;
   }
   if(group.parent!==player)player.add(group);
-  group.position.set(type==="axe"?.48:-.48,1.02,.28);
-  group.rotation.set(0,0,0);
+  group.position.set(type==="axe"?.62:-.62,1.02,.42);
+  group.rotation.set(0,0,type==="axe"?-.18:.18);
   group.visible=true;
  }
 }
