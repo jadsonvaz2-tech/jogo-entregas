@@ -431,6 +431,23 @@ let last=performance.now(),toastTimer=0,lastSave=0;
 const flyingArrows=[];
 function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>$("toast").classList.remove("show"),1900);}
 function updateHUD(){
+  const milestones=[
+   {done:state.axe,title:"Fabricar um machado",detail:"Reúna 3 madeiras e 2 pedras na floresta."},
+   {done:state.pickaxe,title:"Fabricar uma picareta",detail:"Prepare 3 madeiras e 3 pedras para minerar."},
+   {done:state.campfire,title:"Construir uma fogueira",detail:"Junte 5 madeiras e 3 pedras para se aquecer."},
+   {done:state.shelter,title:"Construir um abrigo",detail:"Use 10 madeiras e 4 pedras para se proteger do frio."},
+   {done:state.bed,title:"Preparar uma cama",detail:"Reúna 3 madeiras e 6 fibras para descansar à noite."},
+   {done:state.bow,title:"Fabricar um arco",detail:"Use 2 madeiras e 2 fibras para caçar à distância."},
+   {done:state.storageChest,title:"Construir um baú",detail:"Guarde seus materiais: 6 madeiras e 2 pedras."},
+   {done:state.waterSkin,title:"Fabricar um cantil",detail:"Consiga 2 couros e 3 fibras para levar água."},
+   {done:state.coldCloak,title:"Fabricar um manto térmico",detail:"Prepare 5 fibras e 2 madeiras para resistir ao frio."},
+   {done:state.leatherBoots,title:"Fabricar botas de couro",detail:"Use 2 couros e 3 fibras para se proteger."}
+  ];
+  const completed=milestones.filter(item=>item.done).length;
+  const current=milestones.find(item=>!item.done);
+  $("objectiveStep").textContent=current?"JORNADA · ETAPA "+(completed+1)+"/"+milestones.length:"JORNADA CONCLUÍDA";
+  $("objectiveTitle").textContent=current?current.title:"Você está pronto para explorar e expandir seu assentamento.";
+  $("objectiveDetail").textContent=current?current.detail:"Continue sobrevivendo, explorando e construindo sua aldeia.";
  $("bowStatus").textContent=state.bow?"Arco: fabricado · Flechas: "+state.arrows:"Arco: não fabricado · Madeira: "+state.wood+"/2 · Fibras: "+state.fiber+"/2";
   const huntTarget=nearestWildAnimal(16);
   if(huntTarget){
