@@ -377,7 +377,7 @@ async function buildForest(){
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],pathTiles:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
+const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],pathTiles:[],lanternPosts:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
@@ -407,6 +407,7 @@ function loadGame(){
   if(Array.isArray(saved.ridgeCaps))state.ridgeCaps=saved.ridgeCaps.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100);
   if(Array.isArray(saved.chimneys))state.chimneys=saved.chimneys.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100);
   if(Array.isArray(saved.pathTiles))state.pathTiles=saved.pathTiles.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,200);
+  if(Array.isArray(saved.lanternPosts))state.lanternPosts=saved.lanternPosts.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,24);
   if(Array.isArray(saved.doorPanels))state.doorPanels=saved.doorPanels.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100).map(v=>({...v,open:v.open===true}));
   if(Array.isArray(saved.windowShutters))state.windowShutters=saved.windowShutters.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100).map(v=>({...v,open:v.open===true}));
   if(Number.isFinite(saved.campfireX))state.campfireX=saved.campfireX;
@@ -423,7 +424,7 @@ function loadGame(){
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -517,6 +518,8 @@ function updateHUD(){
   $("ridgeCapStatus").textContent="Cumeeiras reforçadas: "+state.ridgeCaps.length+" telhados";
   $("chimneyStatus").textContent="Chaminés de pedra: "+state.chimneys.length;
   $("pathTileStatus").textContent="Caminhos de pedra: "+state.pathTiles.length+" trechos";
+  $("lanternPostStatus").textContent="Postes de iluminação: "+state.lanternPosts.length+"/24";
+  $("craftLanternPost").disabled=state.wood<3||state.fiber<2||state.lanternPosts.length>=24||state.pathTiles.length===0;
   $("craftPathTile").disabled=state.stone<5||state.wood<1||state.pathTiles.length>=200;
   $("craftChimney").disabled=state.stone<6||state.wood<2||state.chimneys.length>=100||state.roofTiles.length===0;
   $("craftRidgeCap").disabled=state.wood<3||state.fiber<1||state.ridgeCaps.length>=100||state.roofTiles.length===0;
@@ -665,6 +668,7 @@ $("craftStorageChest").addEventListener("click",craftStorageChest);
  $("craftRidgeCap").addEventListener("click",craftRidgeCap);
  $("craftChimney").addEventListener("click",craftChimney);
  $("craftPathTile").addEventListener("click",craftPathTile);
+ $("craftLanternPost").addEventListener("click",craftLanternPost);
  $("craftDoorPanel").addEventListener("click",craftDoorPanel);
  $("doorToggle").addEventListener("click",toggleNearbyDoor);
  $("craftShutters").addEventListener("click",craftWindowShutters);
@@ -750,6 +754,57 @@ function findFenceConnection(targetX,targetZ,extension){
   state.stone-=5;state.wood-=1;
   createPathTile(tile);state.pathTiles.push(tile);
   updateHUD();saveGame();toast("Trecho de caminho de pedras assentado!");
+ }
+ function craftLanternPost(){
+  if(state.lanternPosts.length>=24){toast("Limite de 24 postes de iluminação atingido.");return;}
+  if(state.wood<3||state.fiber<2){toast("Faltam materiais: 3 madeiras e 2 fibras.");return;}
+  if(!state.pathTiles.length){toast("Assente primeiro um caminho de pedras.");return;}
+  let nearest=null,nearestDistance=5.5;
+  for(const tile of state.pathTiles){
+   const distance=Math.hypot(player.position.x-tile.x,player.position.z-tile.z);
+   if(distance<nearestDistance){nearestDistance=distance;nearest=tile;}
+  }
+  if(!nearest){toast("Aproxime-se de um caminho de pedras para instalar a iluminação.");return;}
+  const x=nearest.x+Math.cos(nearest.yaw)*1.85;
+  const z=nearest.z-Math.sin(nearest.yaw)*1.85;
+  if(state.lanternPosts.some(post=>Math.hypot(post.x-x,post.z-z)<2.7)){
+   toast("Já existe um poste muito próximo deste trecho.");return;
+  }
+  const post={x,z,yaw:nearest.yaw};
+  state.wood-=3;state.fiber-=2;
+  createLanternPost(post);state.lanternPosts.push(post);
+  updateHUD();saveGame();toast("Poste de iluminação instalado ao lado do caminho!");
+ }
+ function createLanternPost(post){
+  const group=new THREE.Group();
+  const timber=new THREE.MeshStandardMaterial({color:0x57351f,roughness:1});
+  const darkWood=new THREE.MeshStandardMaterial({color:0x352318,roughness:1});
+  const iron=new THREE.MeshStandardMaterial({color:0x292b2b,metalness:.65,roughness:.65});
+  const glow=new THREE.MeshStandardMaterial({color:0xffa83d,emissive:0xff6a12,emissiveIntensity:1.8,roughness:.45});
+  const pole=new THREE.Mesh(new THREE.CylinderGeometry(.11,.16,3.25,8),timber);
+  pole.position.y=1.62;group.add(pole);
+  const foot=new THREE.Mesh(new THREE.BoxGeometry(.62,.18,.62),darkWood);
+  foot.position.y=.12;group.add(foot);
+  const arm=new THREE.Mesh(new THREE.BoxGeometry(1.05,.13,.14),timber);
+  arm.position.set(.42,3.02,0);group.add(arm);
+  const cap=new THREE.Mesh(new THREE.BoxGeometry(.62,.12,.62),darkWood);
+  cap.position.set(.78,2.78,0);group.add(cap);
+  const lamp=new THREE.Group();lamp.position.set(.78,2.48,0);group.add(lamp);
+  const body=new THREE.Mesh(new THREE.BoxGeometry(.42,.48,.42),glow);lamp.add(body);
+  for(const x of [-.24,.24])for(const z of [-.24,.24]){
+   const bar=new THREE.Mesh(new THREE.BoxGeometry(.045,.62,.045),iron);
+   bar.position.set(x,0,z);lamp.add(bar);
+  }
+  const top=new THREE.Mesh(new THREE.ConeGeometry(.36,.22,4),iron);
+  top.position.y=.36;top.rotation.y=Math.PI/4;lamp.add(top);
+  const base=new THREE.Mesh(new THREE.BoxGeometry(.52,.08,.52),iron);
+  base.position.y=-.29;lamp.add(base);
+  const light=new THREE.PointLight(0xffa34a,1.15,9,2);
+  light.position.set(.78,2.45,0);group.add(light);
+  group.traverse(obj=>{if(obj.isMesh){obj.castShadow=true;obj.receiveShadow=true;}});
+  group.position.set(post.x,terrainHeight(post.x,post.z),post.z);
+  group.rotation.y=post.yaw;scene.add(group);
+  return group;
  }
  function createPathTile(tile){
   const group=new THREE.Group();
@@ -1689,6 +1744,7 @@ async function start(){
  for(const gable of state.gablePanels)createGablePanel(gable);
  for(const ridge of state.ridgeCaps)createRidgeCap(ridge);
  for(const chimney of state.chimneys)createChimney(chimney);
+ for(const lantern of state.lanternPosts)createLanternPost(lantern);
  for(const door of state.doorPanels)createDoorPanel(door);
  for(const shutters of state.windowShutters)createWindowShutters(shutters);
  for(const gate of state.gates)createGate(gate);
