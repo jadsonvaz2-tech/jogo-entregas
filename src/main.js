@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
 
 const $ = (id) => document.getElementById(id);
 const raw = new URL("../assets/3d/", import.meta.url).href;
@@ -283,6 +284,7 @@ function addGrass(){
 let resources=[];
 const wildAnimals=[];
 const hostileWolves=[];
+const wildFoxes=[];
 function resourceId(type,x,z){return `${type}:${x.toFixed(3)}:${z.toFixed(3)}`;}
 function registerResource(resource){
  resource.id=resourceId(resource.type,resource.x,resource.z);
@@ -404,6 +406,79 @@ function createWolf(x,z,index){
  warningRing.rotation.x=-Math.PI/2;warningRing.position.y=.045;warningRing.visible=false;wolf.add(warningRing);
  wolf.position.set(x,terrainHeight(x,z),z);scene.add(wolf);
  hostileWolves.push({id,object:wolf,body,chest,x,z,heading:worldRandom()*Math.PI*2,health:3,alive:true,wander:1+worldRandom()*2,moveSpeed:.35,attackCooldown:1+index*.7,attackWindup:0,staggerTime:0,staggerHeading:0,hitStunTime:0,hitHeading:0,warningRing,healthBar,healthFill,legs,tail,head,jaw,ears,eyes,blinkTimer:1.5+worldRandom()*3,blinkTime:0,breathPhase:worldRandom()*Math.PI*2,sniffCooldown:5+worldRandom()*7,sniffTime:0,howlCooldown:(state.timeOfDay>=19||state.timeOfDay<6)?10+worldRandom()*12:32+worldRandom()*28,howlTime:0});
+}
+let foxAssetPromise=null;
+function loadFoxAsset(){
+ if(!foxAssetPromise)foxAssetPromise=new Promise(resolve=>{
+  let finished=false;
+  const timer=setTimeout(()=>{if(!finished){finished=true;resolve(null);}},18000);
+  loader.load(new URL("../Fox.gltf",import.meta.url).href,g=>{
+   if(finished)return;
+   finished=true;clearTimeout(timer);resolve(g);
+  },undefined,()=>{
+   if(finished)return;
+   finished=true;clearTimeout(timer);resolve(null);
+  });
+ });
+ return foxAssetPromise;
+}
+function createProceduralFox(){
+ const root=new THREE.Group();
+ const orange=new THREE.MeshStandardMaterial({color:0xb96732,roughness:1});
+ const cream=new THREE.MeshStandardMaterial({color:0xe6d4b8,roughness:1});
+ const dark=new THREE.MeshStandardMaterial({color:0x38271f,roughness:1});
+ const body=new THREE.Mesh(new THREE.SphereGeometry(.34,10,8),orange);
+ body.scale.set(1,.76,1.48);body.position.set(0,.43,-.04);body.castShadow=true;root.add(body);
+ const chest=new THREE.Mesh(new THREE.SphereGeometry(.19,9,7),cream);
+ chest.position.set(0,.42,.3);root.add(chest);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.19,9,7),orange);
+ head.position.set(0,.66,.43);head.castShadow=true;root.add(head);
+ const muzzle=new THREE.Mesh(new THREE.ConeGeometry(.09,.25,7),cream);
+ muzzle.rotation.x=Math.PI/2;muzzle.position.set(0,.61,.61);root.add(muzzle);
+ for(const side of [-1,1]){
+  const ear=new THREE.Mesh(new THREE.ConeGeometry(.075,.25,6),dark);
+  ear.position.set(side*.12,.88,.4);ear.rotation.z=side*-.16;root.add(ear);
+ }
+ const legs=[];
+ for(const lx of [-.2,.2])for(const lz of [-.27,.27]){
+  const leg=new THREE.Mesh(new THREE.CylinderGeometry(.045,.055,.34,6),dark);
+  leg.position.set(lx,.19,lz);leg.castShadow=true;root.add(leg);legs.push(leg);
+ }
+ const tail=new THREE.Mesh(new THREE.ConeGeometry(.12,.52,8),orange);
+ tail.rotation.x=-Math.PI/2;tail.position.set(0,.55,-.57);tail.castShadow=true;root.add(tail);
+ const tip=new THREE.Mesh(new THREE.SphereGeometry(.105,7,6),cream);
+ tip.position.set(0,.55,-.81);root.add(tip);
+ return {root,legs,tail};
+}
+async function createFox(x,z,index){
+ const id="fox-"+index;
+ const fox=new THREE.Group();
+ let mixer=null,legs=[],tail=null;
+ const asset=await loadFoxAsset();
+ if(asset){
+  const model=cloneSkeleton(asset.scene);
+  const bounds=new THREE.Box3().setFromObject(model);
+  const size=bounds.getSize(new THREE.Vector3());
+  const center=bounds.getCenter(new THREE.Vector3());
+  const scale=.72/Math.max(size.y,.01);
+  model.scale.setScalar(scale);
+  model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
+  model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+  fox.add(model);
+  if(asset.animations?.length){
+   mixer=new THREE.AnimationMixer(model);
+   const clip=asset.animations.find(c=>/walk|run|move/i.test(c.name))||asset.animations[0];
+   const action=mixer.clipAction(clip);
+   action.setEffectiveTimeScale(1.12);
+   action.play();
+  }
+ }else{
+  const fallback=createProceduralFox();
+  fox.add(fallback.root);legs=fallback.legs;tail=fallback.tail;
+ }
+ fox.position.set(x,terrainHeight(x,z),z);
+ scene.add(fox);
+ wildFoxes.push({id,object:fox,x,z,heading:index*2.094,wander:1.4+index*.35,moveSpeed:.42,phase:index*1.7,mixer,legs,tail});
 }
 function nearestWolf(maxDistance){
  let nearest=null,dist=maxDistance;
@@ -531,6 +606,39 @@ function updateWildlife(dt){
   }
   if(animal.healthBar){animal.healthBar.quaternion.copy(animal.object.quaternion).invert().multiply(camera.quaternion); }
  }
+ for(const fox of wildFoxes){
+  const playerDistance=Math.hypot(player.position.x-fox.x,player.position.z-fox.z);
+  let threatDistance=playerDistance,threatX=player.position.x,threatZ=player.position.z;
+  for(const wolf of hostileWolves){
+   if(!wolf.alive)continue;
+   const d=Math.hypot(wolf.x-fox.x,wolf.z-fox.z);
+   if(d<threatDistance){threatDistance=d;threatX=wolf.x;threatZ=wolf.z;}
+  }
+  let targetSpeed=.42;
+  if(threatDistance<10){
+   const fleeHeading=Math.atan2(fox.x-threatX,fox.z-threatZ);
+   const turnDelta=Math.atan2(Math.sin(fleeHeading-fox.heading),Math.cos(fleeHeading-fox.heading));
+   fox.heading+=turnDelta*Math.min(1,dt*(threatDistance<4?6:4.2));
+   targetSpeed=threatDistance<4?3.8:2.8;
+  }else{
+   fox.wander-=dt;
+   if(fox.wander<=0){
+    fox.heading+=(Math.sin(fox.phase+performance.now()*.00017))*.48;
+    fox.wander=2.5+fox.phase%2;
+   }
+  }
+  fox.moveSpeed+=(targetSpeed-fox.moveSpeed)*Math.min(1,dt*(targetSpeed>fox.moveSpeed?4.5:2.5));
+  fox.x+=Math.sin(fox.heading)*fox.moveSpeed*dt;
+  fox.z+=Math.cos(fox.heading)*fox.moveSpeed*dt;
+  fox.object.position.set(fox.x,terrainHeight(fox.x,fox.z)+Math.sin(performance.now()*.006+fox.phase)*.012,fox.z);
+  fox.object.rotation.y=fox.heading;
+  if(fox.mixer)fox.mixer.update(dt);
+  if(fox.legs.length){
+   const gait=Math.sin(performance.now()*.014+fox.phase)*(.08+fox.moveSpeed*.07);
+   fox.legs.forEach((leg,i)=>{leg.rotation.x=(i===0||i===3?1:-1)*gait;});
+   if(fox.tail)fox.tail.rotation.z=Math.sin(performance.now()*.004+fox.phase)*.13;
+  }
+ }
 }
 function createFiberPlant(x,z){
  const plant=new THREE.Group();
@@ -628,6 +736,7 @@ async function buildForest(){
  for(let i=0;i<14;i++){const a=worldRandom()*Math.PI*2,r=14+worldRandom()*62;createBerryBush(Math.cos(a)*r,Math.sin(a)*r);}
  for(let i=0;i<16;i++){const a=worldRandom()*Math.PI*2,r=8+worldRandom()*48;createFiberPlant(Math.cos(a)*r,Math.sin(a)*r);}
  for(let i=0;i<6;i++){const a=worldRandom()*Math.PI*2,r=24+worldRandom()*52;createDeer(Math.cos(a)*r,Math.sin(a)*r,i);}
+ createFox(-34,22,0);createFox(37,31,1);createFox(52,-38,2);
  for(let i=0;i<3;i++){const a=worldRandom()*Math.PI*2,r=42+worldRandom()*24;createWolf(Math.cos(a)*r,Math.sin(a)*r,i);}
  createWaterSource(13,0);
  addGrass();
