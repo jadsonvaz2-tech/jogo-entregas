@@ -329,7 +329,7 @@ function createDeer(x,z,index){
  healthFill.position.set(0,0,.008);healthBar.add(healthFill);
  healthBar.position.set(0,2.02,0);healthBar.visible=false;healthBar.renderOrder=5;deer.add(healthBar);
  deer.position.set(x,terrainHeight(x,z),z);scene.add(deer);
- wildAnimals.push({id,object:deer,x,z,heading:worldRandom()*Math.PI*2,health:2,alive:true,wander:1+worldRandom()*2,healthBar,healthFill,legs});
+ wildAnimals.push({id,object:deer,x,z,heading:worldRandom()*Math.PI*2,health:2,alive:true,wander:1+worldRandom()*2,healthBar,healthFill,legs,tail});
 }
 function createWolf(x,z,index){
  const id="wolf-"+index;
@@ -437,13 +437,13 @@ function updateWildlife(dt){
   if(!animal.alive)continue;
   const dx=animal.x-player.position.x,dz=animal.z-player.position.z,d=Math.hypot(dx,dz);
   let speed=.45;
-  if(d<9){animal.heading=Math.atan2(dx,dz);speed=3.2;}
+  if(d<9){animal.heading=Math.atan2(dx,dz);speed=d<4?4.25:3.2;}
   else{animal.wander-=dt;if(animal.wander<=0){animal.heading+=(worldRandom()-.5)*1.8;animal.wander=2+worldRandom()*3;}}
   animal.x+=Math.sin(animal.heading)*speed*dt;
   animal.z+=Math.cos(animal.heading)*speed*dt;
   animal.object.position.set(animal.x,terrainHeight(animal.x,animal.z),animal.z);
   animal.object.rotation.y=animal.heading;
-  if(animal.healthBar){animal.healthBar.quaternion.copy(animal.object.quaternion).invert().multiply(camera.quaternion);}
+  const gait=Math.sin(performance.now()*.014+animal.x*1.7)*.34*(speed>.8?1:.18);\n  animal.legs.forEach((leg,i)=>{leg.rotation.x=(i===0||i===3?1:-1)*gait;});\n  animal.object.position.y=terrainHeight(animal.x,animal.z)+Math.abs(gait)*.035;\n  if(animal.tail)animal.tail.rotation.x=-.18+Math.sin(performance.now()*.004+animal.z)*.12;\n  if(animal.healthBar){animal.healthBar.quaternion.copy(animal.object.quaternion).invert().multiply(camera.quaternion); }
  }
 }
 function createFiberPlant(x,z){
