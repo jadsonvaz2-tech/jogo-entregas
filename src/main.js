@@ -170,8 +170,8 @@ function attackCharacter(){
   if(wolf.health<=0){
    wolf.alive=false;wolf.object.visible=false;
    if(!state.huntedWolves.includes(wolf.id))state.huntedWolves.push(wolf.id);
-   createCarcass(wolf.x,wolf.z);
-   toast("Lobo derrotado! Recolha a carne e o couro.");
+   createCarcass(wolf.x,wolf.z,wolf.id);
+   toast("Lobo derrotado! Recolha 2 carnes e 2 peles.");
    updateHUD();saveGame();
   }else toast("Você atingiu o lobo! Ele ainda está vivo.");
   return;
@@ -364,7 +364,7 @@ function createDeer(x,z,index){
 }
 function createWolf(x,z,index){
  const id="wolf-"+index;
- if(state.huntedWolves.includes(id)){createCarcass(x,z);return;}
+ if(state.huntedWolves.includes(id)){createCarcass(x,z,id);return;}
  const wolf=new THREE.Group();
  const coat=new THREE.MeshStandardMaterial({color:0x555b5c,roughness:1});
  const dark=new THREE.MeshStandardMaterial({color:0x292d30,roughness:1});
