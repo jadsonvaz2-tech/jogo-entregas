@@ -431,7 +431,9 @@ function createDeer(x,z,index){
 }
 function createWolf(x,z,index){
  const id="wolf-"+index;
- if(state.huntedWolves.includes(id)){createCarcass(x,z,id);return;}
+ // Lobos abatidos em sessões anteriores voltam a aparecer vivos ao iniciar um novo mundo.
+ // A carcaça continua disponível durante a sessão em que o animal foi abatido.
+ if(state.huntedWolves.includes(id))state.huntedWolves=state.huntedWolves.filter(v=>v!==id);
  const wolf=new THREE.Group();
  const coat=new THREE.MeshStandardMaterial({color:0x555b5c,roughness:1});
  const dark=new THREE.MeshStandardMaterial({color:0x292d30,roughness:1});
