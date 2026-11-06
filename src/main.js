@@ -517,7 +517,7 @@ function updateWildlife(dt){
    if(animal.grazeTimer<=0){animal.grazing=!animal.grazing;animal.grazeTimer=animal.grazing?2.4+worldRandom()*1.8:4+worldRandom()*4;}
   }else animal.grazing=false;
   animal.grazeBlend+=((animal.grazing?1:0)-animal.grazeBlend)*Math.min(1,dt*2.2);
-  if(animal.head){const alert=d<9||predatorThreat?-.08:0;animal.head.rotation.x=alert+animal.grazeBlend*.58+Math.sin(performance.now()*.0011+animal.x*.7)*.035;}
+  if(animal.head){const alert=d<9||predatorThreat?-.08:0;const lookX=predatorThreat?predatorX:player.position.x,lookZ=predatorThreat?predatorZ:player.position.z;const lookYaw=(d<9||predatorThreat)?THREE.MathUtils.clamp(Math.atan2(lookX-animal.x,lookZ-animal.z)-animal.heading,-.62,.62):0;animal.head.rotation.y+=(lookYaw-animal.head.rotation.y)*Math.min(1,dt*3.8);animal.head.rotation.x=alert+animal.grazeBlend*.58+Math.sin(performance.now()*.0011+animal.x*.7)*.035;}
   if(animal.neck)animal.neck.rotation.x=.48+animal.grazeBlend*.16;
   if(animal.ears)animal.ears.forEach((ear,i)=>{const side=i===0?-1:1;const alert=d<9||predatorThreat?-.16:0;ear.rotation.z=side*-.22+side*alert+Math.sin(performance.now()*.0024+animal.x+i*1.7)*.09;ear.rotation.x=Math.sin(performance.now()*.0017+animal.z+i)*.07;});
   if(animal.eyes){
