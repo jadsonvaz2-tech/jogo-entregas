@@ -583,39 +583,35 @@ function createToolVisual(type){
  let hand=null;
  if(rig)rig.traverse(o=>{if(!hand&&handPattern.test(o.name||""))hand=o;});
  state[handKey]=hand;
- if(hand){
-  // O objeto fica na cena, mas sua posição é atualizada pela posição mundial do osso.
-  // Isso evita herdar escalas/eixos locais inesperados do esqueleto GLTF.
-  scene.add(group);
- }else{
-  // Personagem provisório: mantém a ferramenta ao lado da mão aproximada.
-  player.add(group);
-  group.position.set(side==="right"?.62:-.62,1.02,.28);
- }
+ // Mantém a ferramenta na hierarquia do jogador. Quando o modelo carregado
+ // possui o osso da mão, a posição local é recalculada a partir dele a cada quadro.
+ // Isso evita dessincronização entre osso, personagem e objeto na cena.
+ player.add(group);
+ if(!hand)group.position.set(side==="right"?.62:-.62,1.02,-.42);
  state[key]=group;
 }
 function updateToolAttachments(){
- const right=new THREE.Vector3(1,0,0).applyAxisAngle(new THREE.Vector3(0,1,0),player.rotation.y);
- // Vetor horizontal da câmera em direção ao personagem: acompanha a rotação
- // livre da visão e mantém as ferramentas no lado visível da mão.
+ const worldUp=new THREE.Vector3(0,1,0);
+ const right=new THREE.Vector3(1,0,0).applyAxisAngle(worldUp,player.rotation.y);
+ // A câmera define apenas um pequeno afastamento para o lado visível da mão.
  const towardCamera=new THREE.Vector3(-Math.sin(state.cameraYaw),0,-Math.cos(state.cameraYaw));
  for(const type of ["axe","pickaxe"]){
   const group=state[type==="axe"?"axeObject":"pickaxeObject"];
   const hand=state[type==="axe"?"axeHand":"pickaxeHand"];
   if(!group)continue;
+  if(group.parent!==player)player.add(group);
   if(hand){
-   const handPosition=hand.getWorldPosition(new THREE.Vector3());
+   // Converte a posição mundial real do osso para o espaço local do jogador.
+   // Assim a ferramenta acompanha animações e deslocamentos sem sair da mão.
+   const targetWorld=hand.getWorldPosition(new THREE.Vector3());
    const side=type==="axe"?1:-1;
-   handPosition.addScaledVector(right,side*.12);
-   // Deslocamento curto para fora da palma, em direção à câmera,
-   // para que o cabo e a cabeça não fiquem encobertos pelo tronco.
-   handPosition.addScaledVector(towardCamera,.24);
-   handPosition.y+=.025;
-   group.position.copy(handPosition);
-   group.rotation.set(0,player.rotation.y,type==="axe"?-.10:.10);
-   if(group.parent!==scene)scene.add(group);
+   targetWorld.addScaledVector(right,side*.10);
+   targetWorld.addScaledVector(towardCamera,.20);
+   targetWorld.y+=.035;
+   player.updateWorldMatrix(true,false);
+   group.position.copy(player.worldToLocal(targetWorld));
+   group.rotation.set(0,0,type==="axe"?-.10:.10);
   }else{
-   if(group.parent!==player)player.add(group);
    group.position.set(type==="axe"?.62:-.62,1.02,-.42);
    group.rotation.set(0,0,type==="axe"?-.10:.10);
   }
