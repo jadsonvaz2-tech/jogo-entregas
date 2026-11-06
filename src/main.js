@@ -2155,7 +2155,7 @@ function confirmBuildPlacement(){
  }else if(type==="roof"){
   const item={x:c.x,z:c.z,yaw:c.yaw,ground:c.ground};createRoofTile(item);state.roofTiles.push(item);
  }else if(type==="fence"){
-  createFenceSection(c.x,c.z,c.yaw);state.fenceSections.push({x:c.x,z:c.z,yaw:c.yaw});
+  createFenceSection(c.x,c.z,c.yaw,c.ground);state.fenceSections.push({x:c.x,z:c.z,yaw:c.yaw,ground:c.ground});
  }
  state.wood-=spec.wood;state.fiber-=spec.fiber;
  cancelBuildPlacement(false);updateHUD();saveGame();
@@ -2639,7 +2639,7 @@ function craftDoorPanel(){
   state.fenceSections.push({x,z,yaw:placedYaw});
   updateHUD();saveGame();toast(snapped?"Cerca conectada à extremidade do perímetro!":"Cerca construída! Continue expandindo seu assentamento.");
  }
- function createFenceSection(x,z,yaw){
+ function createFenceSection(x,z,yaw,ground){
   const group=new THREE.Group();
   const timber=new THREE.MeshStandardMaterial({color:0x795331,roughness:1});
   const dark=new THREE.MeshStandardMaterial({color:0x4b3321,roughness:1});
@@ -2659,7 +2659,7 @@ function craftDoorPanel(){
     slat.position.set(x0-.48+j*.32,.68,0);slat.castShadow=true;group.add(slat);
    }
   }
-  group.position.set(x,terrainHeight(x,z),z);group.rotation.y=yaw;scene.add(group);
+  group.position.set(x,Number.isFinite(ground)?ground:terrainHeight(x,z),z);group.rotation.y=yaw;scene.add(group);
   return group;
  }
  function craftGate(){
