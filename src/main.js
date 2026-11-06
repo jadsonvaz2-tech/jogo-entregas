@@ -474,7 +474,7 @@ function updateWildlife(dt){
   if(wolf.body){wolf.body.rotation.x=-.025-runBlend*.055+Math.sin(performance.now()*.014+wolf.breathPhase)*.012;wolf.body.rotation.z=Math.sin(performance.now()*.009+wolf.x)*.025*runBlend;}
   if(wolf.chest)wolf.chest.rotation.x=Math.sin(performance.now()*.012+wolf.breathPhase)*.025*runBlend;
   if(wolf.tail)wolf.tail.rotation.z=Math.sin(performance.now()*.003+wolf.x)*.16;
-  if(wolf.head)wolf.head.rotation.x=(wolf.attackWindup>0?-.12:0)+Math.sin(performance.now()*.0018+wolf.z)*.025;
+  if(wolf.head){const gazeYaw=d<24?THREE.MathUtils.clamp(Math.atan2(dx,dz)-wolf.heading,-.48,.48):0;wolf.head.rotation.y+=(gazeYaw-wolf.head.rotation.y)*Math.min(1,dt*4.5);wolf.head.rotation.x=(wolf.attackWindup>0?-.12:0)+Math.sin(performance.now()*.0018+wolf.z)*.025;}
   if(wolf.jaw)wolf.jaw.rotation.x=wolf.attackWindup>0?-.28+Math.sin((.75-wolf.attackWindup)*18)*.07:0;
   if(wolf.ears)wolf.ears.forEach((ear,i)=>{const alert=d<24?.12:0;ear.rotation.z=(i===0?.18:-.18)+(i===0?alert:-alert)+Math.sin(performance.now()*.0022+wolf.x+i)*.035;});
   if(wolf.eyes){
