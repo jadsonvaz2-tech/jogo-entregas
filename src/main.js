@@ -132,7 +132,7 @@ function attackCharacter(){
  playOneShot("swordslash");
  const animal=nearestWildAnimal(3.8);
  if(animal){
-  animal.health--;
+  animal.health-=state.ironSword?2:1;
   if(animal.health<=0){
    animal.alive=false;animal.object.visible=false;
    if(!state.huntedAnimals.includes(animal.id))state.huntedAnimals.push(animal.id);
@@ -163,6 +163,7 @@ function loadCharacter(){
    if(state.axe)createToolVisual("axe");
    if(state.pickaxe)createToolVisual("pickaxe");
    if(state.leatherArmor)createLeatherArmorVisual();
+   if(state.ironSword)createIronSwordVisual();
    if(state.reinforcedAxe)createToolVisual("axe");
    if(state.reinforcedPickaxe)createToolVisual("pickaxe");
    if(g.animations?.length){
@@ -391,7 +392,7 @@ async function buildForest(){
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,ironOre:0,coal:0,ironIngots:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,herbs:0,herbBeds:[],herbObjects:[],nearHerbBedIndex:-1,meat:0,cookedMeat:0,smokedMeat:0,healingSalve:0,hide:0,leather:0,leatherArmor:false,armorObject:null,reinforcedAxe:false,reinforcedPickaxe:false,smithy:null,smithyObject:null,nearSmithy:false,tannery:null,nearTannery:false,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,ironOre:0,coal:0,ironIngots:0,fiber:0,berries:0,herbs:0,meat:0,cookedMeat:0,smokedMeat:0,healingSalve:0,hide:0,leather:0,bandages:0,honey:0,wool:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],pathTiles:[],lanternPosts:[],wells:[],gardenPlots:[],gardenObjects:[],nearGardenIndex:-1,marketStalls:[],nearMarketIndex:-1,coins:0,chickenCoops:[],nearCoopIndex:-1,eggs:0,apiaries:[],nearApiaryIndex:-1,honey:0,sheepPens:[],nearSheepPenIndex:-1,wool:0,loom:null,nearLoom:false,woolGarment:false,smokehouse:null,nearSmokehouse:false,herbalistHut:null,nearHerbalist:false,watchtowers:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
+const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,ironOre:0,coal:0,ironIngots:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,herbs:0,herbBeds:[],herbObjects:[],nearHerbBedIndex:-1,meat:0,cookedMeat:0,smokedMeat:0,healingSalve:0,hide:0,leather:0,leatherArmor:false,armorObject:null,reinforcedAxe:false,reinforcedPickaxe:false,ironSword:false,swordObject:null,swordHand:null,smithy:null,smithyObject:null,nearSmithy:false,tannery:null,nearTannery:false,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,ironOre:0,coal:0,ironIngots:0,fiber:0,berries:0,herbs:0,meat:0,cookedMeat:0,smokedMeat:0,healingSalve:0,hide:0,leather:0,bandages:0,honey:0,wool:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],pathTiles:[],lanternPosts:[],wells:[],gardenPlots:[],gardenObjects:[],nearGardenIndex:-1,marketStalls:[],nearMarketIndex:-1,coins:0,chickenCoops:[],nearCoopIndex:-1,eggs:0,apiaries:[],nearApiaryIndex:-1,honey:0,sheepPens:[],nearSheepPenIndex:-1,wool:0,loom:null,nearLoom:false,woolGarment:false,smokehouse:null,nearSmokehouse:false,herbalistHut:null,nearHerbalist:false,watchtowers:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
@@ -410,7 +411,7 @@ function loadGame(){
   state.coldCloak=saved.coldCloak===true;
   state.leatherBoots=saved.leatherBoots===true;
   state.leatherArmor=saved.leatherArmor===true;
-  state.reinforcedAxe=saved.reinforcedAxe===true;state.reinforcedPickaxe=saved.reinforcedPickaxe===true;
+  state.reinforcedAxe=saved.reinforcedAxe===true;state.reinforcedPickaxe=saved.reinforcedPickaxe===true;state.ironSword=saved.ironSword===true;
   if(saved.smithy&&Number.isFinite(saved.smithy.x)&&Number.isFinite(saved.smithy.z)&&Number.isFinite(saved.smithy.yaw))state.smithy=saved.smithy;
   state.woolGarment=saved.woolGarment===true;
   if(saved.loom&&Number.isFinite(saved.loom.x)&&Number.isFinite(saved.loom.z)&&Number.isFinite(saved.loom.yaw))state.loom=saved.loom;
@@ -454,7 +455,7 @@ function loadGame(){
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,ironOre:state.ironOre,coal:state.coal,ironIngots:state.ironIngots,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,herbs:state.herbs,herbBeds:state.herbBeds,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,leatherArmor:state.leatherArmor,reinforcedAxe:state.reinforcedAxe,reinforcedPickaxe:state.reinforcedPickaxe,smithy:state.smithy,meat:state.meat,cookedMeat:state.cookedMeat,smokedMeat:state.smokedMeat,smokehouse:state.smokehouse,healingSalve:state.healingSalve,herbalistHut:state.herbalistHut,leather:state.leather,tannery:state.tannery,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,wells:state.wells,gardenPlots:state.gardenPlots,watchtowers:state.watchtowers,marketStalls:state.marketStalls,coins:state.coins,chickenCoops:state.chickenCoops,apiaries:state.apiaries,honey:state.honey,sheepPens:state.sheepPens,wool:state.wool,loom:state.loom,woolGarment:state.woolGarment,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,ironOre:state.ironOre,coal:state.coal,ironIngots:state.ironIngots,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,herbs:state.herbs,herbBeds:state.herbBeds,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,leatherArmor:state.leatherArmor,reinforcedAxe:state.reinforcedAxe,reinforcedPickaxe:state.reinforcedPickaxe,ironSword:state.ironSword,smithy:state.smithy,meat:state.meat,cookedMeat:state.cookedMeat,smokedMeat:state.smokedMeat,smokehouse:state.smokehouse,healingSalve:state.healingSalve,herbalistHut:state.herbalistHut,leather:state.leather,tannery:state.tannery,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,wells:state.wells,gardenPlots:state.gardenPlots,watchtowers:state.watchtowers,marketStalls:state.marketStalls,coins:state.coins,chickenCoops:state.chickenCoops,apiaries:state.apiaries,honey:state.honey,sheepPens:state.sheepPens,wool:state.wool,loom:state.loom,woolGarment:state.woolGarment,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -570,7 +571,9 @@ function updateHUD(){
   $("collectLeather").hidden=!state.nearTannery;
   $("collectLeather").disabled=!state.nearTannery||!(state.tannery?.startedAt>0&&Date.now()-state.tannery.startedAt>=120000);
   $("smithyStatus").textContent=state.smithy?"Forja comunitária construída · "+(state.reinforcedAxe?"Machado reforçado":"Machado comum")+" · "+(state.reinforcedPickaxe?"Picareta reforçada":"Picareta comum"):"Forja comunitária: não construída";
-  $("metalStatus").textContent="Minério: "+state.ironOre+" · Carvão: "+state.coal+" · Lingotes: "+state.ironIngots;
+  $("metalStatus").textContent="Minério: "+state.ironOre+" · Carvão: "+state.coal+" · Lingotes: "+state.ironIngots+" · Espada: "+(state.ironSword?"fabricada":"não fabricada");
+  $("craftIronSword").hidden=!state.nearSmithy;
+  $("craftIronSword").disabled=!state.nearSmithy||state.ironSword||state.ironIngots<3||state.wood<2||state.leather<1;
   $("smeltIron").hidden=!state.nearSmithy;
   $("smeltIron").disabled=!state.nearSmithy||state.ironOre<2||state.coal<1||state.wood<1;
   $("craftSmithy").disabled=!!state.smithy||state.wood<8||state.stone<12;
@@ -810,6 +813,7 @@ $("craftStorageChest").addEventListener("click",craftStorageChest);
  $("craftLeatherArmor").addEventListener("click",craftLeatherArmor);
  $("craftSmithy").addEventListener("click",craftSmithy);
  $("smeltIron").addEventListener("click",smeltIron);
+ $("craftIronSword").addEventListener("click",craftIronSword);
  $("upgradeAxe").addEventListener("click",()=>upgradeTool("axe"));
  $("upgradePickaxe").addEventListener("click",()=>upgradeTool("pickaxe"));
  $("buyWood").addEventListener("click",()=>buyMarketSupplies("wood"));
@@ -2271,6 +2275,14 @@ function smeltIron(){
  state.ironOre-=2;state.coal-=1;state.wood-=1;state.ironIngots+=1;
  updateHUD();saveGame();toast("Um lingote de ferro foi fundido na forja!");
 }
+function craftIronSword(){
+ if(!state.nearSmithy||!state.smithy){toast("Aproxime-se da forja comunitária.");return;}
+ if(state.ironSword){toast("Você já fabricou uma espada de ferro.");return;}
+ if(state.ironIngots<3||state.wood<2||state.leather<1){toast("A espada exige 3 lingotes, 2 madeiras e 1 couro.");return;}
+ state.ironIngots-=3;state.wood-=2;state.leather-=1;state.ironSword=true;
+ if(characterReady)createIronSwordVisual();
+ updateHUD();saveGame();toast("Espada de ferro fabricada! Seus ataques corpo a corpo agora causam dano dobrado.");
+}
 function upgradeTool(type){
  if(!state.nearSmithy||!state.smithy)return;
  const axe=type==="axe",done=axe?state.reinforcedAxe:state.reinforcedPickaxe;
@@ -2476,6 +2488,28 @@ function createToolVisual(type){
  state[key]=group;
 }
 
+function createIronSwordVisual(){
+ if(state.swordObject?.parent)state.swordObject.parent.remove(state.swordObject);
+ const group=new THREE.Group();
+ const steel=new THREE.MeshStandardMaterial({color:0xc8d2d8,metalness:.82,roughness:.22});
+ const darkSteel=new THREE.MeshStandardMaterial({color:0x59636b,metalness:.72,roughness:.3});
+ const leather=new THREE.MeshStandardMaterial({color:0x4b2d1d,roughness:.92});
+ const blade=new THREE.Mesh(new THREE.BoxGeometry(.13,.92,.045),steel);blade.position.y=.56;group.add(blade);
+ const tip=new THREE.Mesh(new THREE.ConeGeometry(.092,.22,4),steel);tip.rotation.z=Math.PI;tip.position.y=1.12;group.add(tip);
+ const fuller=new THREE.Mesh(new THREE.BoxGeometry(.025,.62,.012),darkSteel);fuller.position.set(0,.58,.027);group.add(fuller);
+ const guard=new THREE.Mesh(new THREE.BoxGeometry(.48,.09,.11),darkSteel);guard.position.y=.08;group.add(guard);
+ const grip=new THREE.Mesh(new THREE.CylinderGeometry(.055,.06,.28,10),leather);grip.position.y=-.1;group.add(grip);
+ const pommel=new THREE.Mesh(new THREE.SphereGeometry(.085,10,8),darkSteel);pommel.position.y=-.27;group.add(pommel);
+ group.position.set(0,0,0);group.rotation.set(0,0,-.16);
+ group.scale.setScalar(.82);
+ group.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false;o.renderOrder=100;o.material.side=THREE.DoubleSide;o.material.depthTest=false;o.material.depthWrite=false;}});
+ let hand=null;const rig=state.characterModel||null;
+ if(rig)rig.traverse(o=>{if(!hand&&/^fist[._ ]?r$/i.test(o.name||""))hand=o;});
+ state.swordHand=hand;
+ if(hand){hand.add(group);group.position.set(0,0,0);}
+ else{player.add(group);group.position.set(.48,1.05,-.30);}
+ state.swordObject=group;
+}
 function updateToolAttachments(){
  for(const type of ["axe","pickaxe"]){
   const group=state[type==="axe"?"axeObject":"pickaxeObject"];
@@ -2498,6 +2532,11 @@ function updateToolAttachments(){
    }
   }
   group.visible=true;
+ }
+ if(state.swordObject){
+  if(state.swordHand&&state.swordObject.parent!==state.swordHand){state.swordHand.add(state.swordObject);state.swordObject.position.set(0,0,0);}
+  else if(!state.swordHand&&state.swordObject.parent!==player){player.add(state.swordObject);state.swordObject.position.set(.48,1.05,-.30);}
+  state.swordObject.visible=true;
  }
 }
 $("collectBtn").addEventListener("click",collect);
