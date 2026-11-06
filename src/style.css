@@ -62,3 +62,13 @@
  #craftPanel>.craft-category>summary{padding:10px 9px}
  #buildPlacementUI{top:auto!important;bottom:calc(12px + env(safe-area-inset-bottom))!important;transform:translateX(-50%)!important;max-height:38vh!important}
 }
+
+/* Texto de estado da prévia de construção, legível em telas estreitas. */
+#buildPlacementLabel{
+ width:100%;
+ max-width:100%;
+ text-align:center;
+ line-height:1.4;
+ white-space:normal;
+ overflow-wrap:anywhere;
+}
