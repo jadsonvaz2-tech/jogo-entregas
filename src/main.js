@@ -79,8 +79,9 @@ function jumpCharacter(){
  if(playCharacterAnimation("jump",true)){isJumping=true;verticalVelocity=5.2;}
 }
 function craftBow(){
- if(state.bow||state.wood<4||state.fiber<4){toast("Para fabricar o arco: 4 madeiras e 4 fibras.");return;}
- state.wood-=4;state.fiber-=4;state.bow=true;
+ if(state.bow){toast("Você já fabricou o arco.");return;}
+ if(state.wood<2||state.fiber<2){toast("Faltam materiais para o arco. Necessário: 2 madeiras e 2 fibras.");return;}
+ state.wood-=2;state.fiber-=2;state.bow=true;
  toast("Arco fabricado! Prepare flechas na oficina.");updateHUD();saveGame();
 }
 function craftArrows(){
@@ -430,8 +431,8 @@ let last=performance.now(),toastTimer=0,lastSave=0;
 const flyingArrows=[];
 function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>$("toast").classList.remove("show"),1900);}
 function updateHUD(){
- $("bowStatus").textContent=state.bow?"Arco: fabricado · Flechas: "+state.arrows:"Arco: não fabricado";
- $("craftBow").disabled=state.bow||state.wood<4||state.fiber<4;
+ $("bowStatus").textContent=state.bow?"Arco: fabricado · Flechas: "+state.arrows:"Arco: não fabricado · Madeira: "+state.wood+"/2 · Fibras: "+state.fiber+"/2";
+ $("craftBow").disabled=state.bow;
  $("craftArrows").disabled=!state.bow||state.wood<1||state.fiber<1;
  $("shootBtn").disabled=!state.bow||state.arrows<1;
  $("shootBtn").textContent="🏹 ATIRAR ("+state.arrows+")";
