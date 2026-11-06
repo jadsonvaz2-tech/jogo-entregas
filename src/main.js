@@ -444,7 +444,10 @@ function updateWildlife(dt){
   animal.object.position.set(animal.x,terrainHeight(animal.x,animal.z),animal.z);
   animal.object.rotation.y=animal.heading;
   const gait=Math.sin(performance.now()*.014+animal.x*1.7)*.34*(speed>.8?1:.18);
-  animal.legs.forEach((leg,i)=>{leg.rotation.x=(i===0||i===3?1:-1)*gait;});\n  animal.object.position.y=terrainHeight(animal.x,animal.z)+Math.abs(gait)*.035;\n  if(animal.tail)animal.tail.rotation.x=-.18+Math.sin(performance.now()*.004+animal.z)*.12;\n  if(animal.healthBar){animal.healthBar.quaternion.copy(animal.object.quaternion).invert().multiply(camera.quaternion); }
+  animal.legs.forEach((leg,i)=>{leg.rotation.x=(i===0||i===3?1:-1)*gait;});
+  animal.object.position.y=terrainHeight(animal.x,animal.z)+Math.abs(gait)*.035;
+  if(animal.tail)animal.tail.rotation.x=-.18+Math.sin(performance.now()*.004+animal.z)*.12;
+  if(animal.healthBar){animal.healthBar.quaternion.copy(animal.object.quaternion).invert().multiply(camera.quaternion); }
  }
 }
 function createFiberPlant(x,z){
