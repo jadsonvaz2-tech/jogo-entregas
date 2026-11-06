@@ -92,7 +92,8 @@ function craftArrows(){
 }
 function updateWolfHealthBar(wolf){
  if(!wolf||!wolf.healthBar)return;
- const ratio=THREE.MathUtils.clamp(wolf.health/3,0,1);
+ const maxHealth=wolf.id&&wolf.id.startsWith("deer-")?2:3;
+ const ratio=THREE.MathUtils.clamp(wolf.health/maxHealth,0,1);
  wolf.healthBar.visible=wolf.alive&&ratio<1;
  wolf.healthFill.scale.x=ratio;
  wolf.healthFill.position.x=-.38*(1-ratio);
@@ -109,7 +110,7 @@ function reactWolfToHit(wolf){
 function damageWildAnimal(animal){
  if(!animal||!animal.alive)return;
  animal.health--;
- if(animal.id.startsWith("wolf-"))updateWolfHealthBar(animal);
+ updateWolfHealthBar(animal);
  if(animal.id.startsWith("wolf-")&&animal.health>0)reactWolfToHit(animal);
  if(animal.health<=0){
   animal.alive=false;animal.object.visible=false;
@@ -177,6 +178,7 @@ function attackCharacter(){
  }
  if(animal){
   animal.health-=state.steelSpear?2:state.steelSword?3:state.ironSword?2:1;
+  updateWolfHealthBar(animal);
   if(animal.health<=0){
    animal.alive=false;animal.object.visible=false;
    if(!state.huntedAnimals.includes(animal.id))state.huntedAnimals.push(animal.id);
@@ -320,8 +322,14 @@ function createDeer(x,z,index){
  }
  const tail=new THREE.Mesh(new THREE.SphereGeometry(.12,6,5),belly);
  tail.position.set(0,1.12,-.82);deer.add(tail);
+ const healthBar=new THREE.Group();
+ const healthBack=new THREE.Mesh(new THREE.PlaneGeometry(.86,.105),new THREE.MeshBasicMaterial({color:0x171512,transparent:true,opacity:.88,depthWrite:false,side:THREE.DoubleSide}));
+ healthBar.add(healthBack);
+ const healthFill=new THREE.Mesh(new THREE.PlaneGeometry(.76,.055),new THREE.MeshBasicMaterial({color:0x76bd55,depthWrite:false,side:THREE.DoubleSide}));
+ healthFill.position.set(0,0,.008);healthBar.add(healthFill);
+ healthBar.position.set(0,2.02,0);healthBar.visible=false;healthBar.renderOrder=5;deer.add(healthBar);
  deer.position.set(x,terrainHeight(x,z),z);scene.add(deer);
- wildAnimals.push({id,object:deer,x,z,heading:worldRandom()*Math.PI*2,health:2,alive:true,wander:1+worldRandom()*2,legs});
+ wildAnimals.push({id,object:deer,x,z,heading:worldRandom()*Math.PI*2,health:2,alive:true,wander:1+worldRandom()*2,healthBar,healthFill,legs});
 }
 function createWolf(x,z,index){
  const id="wolf-"+index;
@@ -435,6 +443,7 @@ function updateWildlife(dt){
   animal.z+=Math.cos(animal.heading)*speed*dt;
   animal.object.position.set(animal.x,terrainHeight(animal.x,animal.z),animal.z);
   animal.object.rotation.y=animal.heading;
+  if(animal.healthBar){animal.healthBar.quaternion.copy(animal.object.quaternion).invert().multiply(camera.quaternion);}
  }
 }
 function createFiberPlant(x,z){
