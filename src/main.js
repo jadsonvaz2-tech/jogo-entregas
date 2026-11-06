@@ -399,7 +399,8 @@ function loadGame(){
   if(Array.isArray(saved.huntedAnimals))state.huntedAnimals=saved.huntedAnimals.filter(v=>typeof v==="string");
    if(Array.isArray(saved.fenceSections))state.fenceSections=saved.fenceSections.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,200);
    if(Array.isArray(saved.gates))state.gates=saved.gates.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,30).map(v=>({...v,open:v.open===true}));
-  if(Array.isArray(saved.floorTiles))state.floorTiles=saved.floorTiles.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100);\n  if(Array.isArray(saved.wallPanels))state.wallPanels=saved.wallPanels.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100);
+  if(Array.isArray(saved.floorTiles))state.floorTiles=saved.floorTiles.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100);
+  if(Array.isArray(saved.wallPanels))state.wallPanels=saved.wallPanels.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100);
   if(Number.isFinite(saved.campfireX))state.campfireX=saved.campfireX;
   if(Number.isFinite(saved.campfireZ))state.campfireZ=saved.campfireZ;
   if(Number.isFinite(saved.shelterX))state.shelterX=saved.shelterX;
