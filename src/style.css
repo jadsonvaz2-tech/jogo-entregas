@@ -74,6 +74,5 @@
  overflow-wrap:anywhere;
 }
 
-/* Posicionamento de estruturas logo abaixo do botão FABRICAR. */
-#buildPlacementToggle{left:auto!important;right:16px!important;top:calc(200px + env(safe-area-inset-top,0px))!important;bottom:auto!important;transform:none!important;max-width:150px;white-space:normal;line-height:1.25}
-@media(min-width:800px){#buildPlacementToggle{right:28px!important;top:280px!important}}
+/* Botão de ocultar/mostrar permanece no rodapé; o painel de posicionamento fica sob FABRICAR. */
+#buildPlacementToggle{left:50%!important;right:auto!important;top:auto!important;bottom:calc(16px + env(safe-area-inset-bottom,0px))!important;transform:translateX(-50%)!important}
