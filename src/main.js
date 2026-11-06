@@ -328,18 +328,20 @@ async function buildForest(){
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0}};
+const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0},waterSkin:false,waterCharges:0};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
   if(!saved)return;
-  for(const key of ["health","hunger","thirst","temperature","energy","wood","stone","day","timeOfDay","berries","fiber","meat","cookedMeat","hide","bandages"])if(Number.isFinite(saved[key]))state[key]=saved[key];
+  for(const key of ["health","hunger","thirst","temperature","energy","wood","stone","day","timeOfDay","berries","fiber","meat","cookedMeat","hide","bandages","waterCharges"])if(Number.isFinite(saved[key]))state[key]=saved[key];
   state.axe=saved.axe===true;state.pickaxe=saved.pickaxe===true;
   state.starterKitGranted=saved.starterKitGranted===true;
   state.campfire=saved.campfire===true;
   state.shelter=saved.shelter===true;
   state.bed=saved.bed===true;
   state.storageChest=saved.storageChest===true;
+  state.waterSkin=saved.waterSkin===true;
+  state.waterCharges=Math.max(0,Math.min(3,state.waterCharges));
   if(saved.storage&&typeof saved.storage==="object")for(const key of ["wood","stone","fiber","berries","meat","cookedMeat","hide","bandages"])if(Number.isFinite(saved.storage[key]))state.storage[key]=Math.max(0,saved.storage[key]);
   state.coldCloak=saved.coldCloak===true;
   state.leatherBoots=saved.leatherBoots===true;
@@ -359,7 +361,7 @@ function loadGame(){
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,starterKitGranted:state.starterKitGranted}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,starterKitGranted:state.starterKitGranted}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -390,6 +392,11 @@ function updateHUD(){
  $("craftCloak").disabled=state.coldCloak||state.fiber<5||state.wood<2;
  $("bootsStatus").textContent=state.leatherBoots?"Botas de couro: equipadas":"Botas de couro: não fabricadas";
  $("craftBoots").disabled=state.leatherBoots||state.hide<2||state.fiber<3;
+ $("waterSkinStatus").textContent=state.waterSkin?"Cantil de couro: fabricado · Cargas: "+state.waterCharges+"/3":"Cantil de couro: não fabricado";
+ $("craftWaterSkin").disabled=state.waterSkin||state.hide<2||state.fiber<3;
+ const nearWater=!!(state.near&&state.near.type==="water");
+ $("fillWaterSkin").disabled=!state.waterSkin||!nearWater||state.waterCharges>=3;
+ $("drinkWaterSkin").disabled=state.waterCharges<1||state.thirst>=100;
  $("bandageStatus").textContent="Ataduras medicinais: "+state.bandages;
  $("craftBandage").disabled=state.fiber<4;
  $("useBandage").disabled=state.bandages<1||state.health>=100;
@@ -585,6 +592,23 @@ function createCloakVisual(){
 }
 $("craftCloak").addEventListener("click",craftCloak);
 $("craftBoots").addEventListener("click",craftBoots);
+function craftWaterSkin(){
+ if(state.waterSkin){toast("Você já fabricou um cantil de couro.");return;}
+ if(state.hide<2||state.fiber<3){toast("Faltam materiais: 2 couros e 3 fibras.");return;}
+ state.hide-=2;state.fiber-=3;state.waterSkin=true;state.waterCharges=0;
+ updateHUD();saveGame();toast("Cantil de couro fabricado! Encha-o em uma fonte de água.");
+}
+function fillWaterSkin(){
+ if(!state.waterSkin){toast("Fabrique um cantil primeiro.");return;}
+ if(!state.near||state.near.type!=="water"){toast("Aproxime-se de uma fonte de água.");return;}
+ if(state.waterCharges>=3){toast("O cantil já está cheio.");return;}
+ state.waterCharges=3;updateHUD();saveGame();toast("Cantil cheio: 3 goles de água.");
+}
+function drinkWaterSkin(){
+ if(state.waterCharges<1||state.thirst>=100)return;
+ state.waterCharges--;state.thirst=Math.min(100,state.thirst+35);
+ updateHUD();saveGame();toast("Você bebeu do cantil e recuperou 35 pontos de sede.");
+}
 function craftBandage(){
  if(state.fiber<4){toast("Você precisa de 4 fibras para preparar uma atadura.");return;}
  state.fiber-=4;state.bandages++;updateHUD();saveGame();toast("Atadura medicinal preparada!");
@@ -594,6 +618,9 @@ function useBandage(){
  state.bandages--;state.health=Math.min(100,state.health+30);
  updateHUD();saveGame();toast("Você usou uma atadura e recuperou até 30 pontos de vida.");
 }
+$("craftWaterSkin").addEventListener("click",craftWaterSkin);
+$("fillWaterSkin").addEventListener("click",fillWaterSkin);
+$("drinkWaterSkin").addEventListener("click",drinkWaterSkin);
 $("craftBandage").addEventListener("click",craftBandage);
 $("useBandage").addEventListener("click",useBandage);
 function craftBed(){
