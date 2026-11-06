@@ -377,7 +377,7 @@ async function buildForest(){
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],gateObjects:[],nearGateIndex:-1};
+const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],gateObjects:[],nearGateIndex:-1};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
@@ -399,6 +399,7 @@ function loadGame(){
   if(Array.isArray(saved.huntedAnimals))state.huntedAnimals=saved.huntedAnimals.filter(v=>typeof v==="string");
    if(Array.isArray(saved.fenceSections))state.fenceSections=saved.fenceSections.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,200);
    if(Array.isArray(saved.gates))state.gates=saved.gates.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,30).map(v=>({...v,open:v.open===true}));
+  if(Array.isArray(saved.floorTiles))state.floorTiles=saved.floorTiles.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100);
   if(Number.isFinite(saved.campfireX))state.campfireX=saved.campfireX;
   if(Number.isFinite(saved.campfireZ))state.campfireZ=saved.campfireZ;
   if(Number.isFinite(saved.shelterX))state.shelterX=saved.shelterX;
@@ -413,7 +414,7 @@ function loadGame(){
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,starterKitGranted:state.starterKitGranted}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,starterKitGranted:state.starterKitGranted}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -499,6 +500,8 @@ function updateHUD(){
  $("craftBed").disabled=state.bed||state.wood<3||state.fiber<6;
  $("storageChestStatus").textContent=state.storageChest?"Baú de armazenamento: construído":"Baú de armazenamento: não construído";
   $("fenceStatus").textContent="Cercas construídas: "+state.fenceSections.length+" seções";
+  $("floorTileStatus").textContent="Pisos de madeira: "+state.floorTiles.length+" módulos";
+  $("craftFloorTile").disabled=state.wood<4||state.fiber<2||state.floorTiles.length>=100;
   $("craftFence").disabled=state.wood<5||state.fiber<2||state.fenceSections.length>=200;
   $("gateStatus").textContent="Portões construídos: "+state.gates.length;
   $("craftGate").disabled=state.wood<8||state.fiber<3||state.gates.length>=30;
@@ -617,6 +620,7 @@ $("craftAxe").addEventListener("click",()=>craftTool("axe"));
 $("craftPickaxe").addEventListener("click",()=>craftTool("pickaxe"));
 $("craftStorageChest").addEventListener("click",craftStorageChest);
  $("craftFence").addEventListener("click",craftFenceSection);
+ $("craftFloorTile").addEventListener("click",craftFloorTile);
  $("craftGate").addEventListener("click",craftGate);
  $("gateToggle").addEventListener("click",toggleNearbyGate);
 $("storeResources").addEventListener("click",storeResources);
@@ -683,6 +687,43 @@ function findFenceConnection(targetX,targetZ,extension){
    }
   }
   return best;
+ }
+ function craftFloorTile(){
+  if(state.floorTiles.length>=100){toast("Limite de 100 módulos de piso atingido.");return;}
+  if(state.wood<4||state.fiber<2){toast("Faltam materiais: 4 madeiras e 2 fibras.");return;}
+  const facing=player.rotation.y;
+  const yaw=Math.round(facing/(Math.PI/2))*(Math.PI/2);
+  const targetX=player.position.x+Math.sin(yaw)*4.5;
+  const targetZ=player.position.z+Math.cos(yaw)*4.5;
+  const x=Math.round(targetX/3)*3,z=Math.round(targetZ/3)*3;
+  if(state.floorTiles.some(tile=>Math.hypot(tile.x-x,tile.z-z)<2.3)){
+   toast("Este espaço já tem um piso. Afaste-se para construir o próximo módulo.");return;
+  }
+  const tile={x,z,yaw};
+  state.wood-=4;state.fiber-=2;
+  createFloorTile(tile);state.floorTiles.push(tile);
+  updateHUD();saveGame();
+  toast("Piso de madeira construído! Os próximos módulos se alinham à grade do assentamento.");
+ }
+ function createFloorTile(tile){
+  const group=new THREE.Group();
+  const wood=new THREE.MeshStandardMaterial({color:0x87603a,roughness:1});
+  const edge=new THREE.MeshStandardMaterial({color:0x513720,roughness:1});
+  for(let i=0;i<9;i++){
+   const plank=new THREE.Mesh(new THREE.BoxGeometry(2.86,.14,.29),wood);
+   plank.position.set(0,.2,-1.28+i*.32);plank.castShadow=true;plank.receiveShadow=true;group.add(plank);
+  }
+  for(const z of [-1.22,1.22]){
+   const beam=new THREE.Mesh(new THREE.BoxGeometry(3.02,.2,.18),edge);
+   beam.position.set(0,.08,z);beam.castShadow=true;group.add(beam);
+  }
+  for(const x of [-1.25,1.25]){
+   const beam=new THREE.Mesh(new THREE.BoxGeometry(.18,.2,2.55),edge);
+   beam.position.set(x,.08,0);beam.castShadow=true;group.add(beam);
+  }
+  group.position.set(tile.x,terrainHeight(tile.x,tile.z),tile.z);
+  group.rotation.y=tile.yaw;scene.add(group);
+  return group;
  }
  function craftFenceSection(){
   if(state.fenceSections.length>=200){toast("Limite de 200 seções de cerca atingido.");return;}
@@ -1153,6 +1194,7 @@ async function start(){
  if(state.bed&&Number.isFinite(state.bedX)&&Number.isFinite(state.bedZ))createBed(state.bedX,state.bedZ);
  if(state.storageChest&&Number.isFinite(state.storageChestX)&&Number.isFinite(state.storageChestZ))createStorageChest(state.storageChestX,state.storageChestZ);
  for(const section of state.fenceSections)createFenceSection(section.x,section.z,section.yaw);
+ for(const tile of state.floorTiles)createFloorTile(tile);
  for(const gate of state.gates)createGate(gate);
  $("loadingBar").style.width="72%";
  $("loadingText").textContent="Carregando o viajante...";
