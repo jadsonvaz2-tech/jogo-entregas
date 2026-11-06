@@ -377,7 +377,7 @@ async function buildForest(){
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],pathTiles:[],lanternPosts:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
+const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],pathTiles:[],lanternPosts:[],wells:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
@@ -408,6 +408,7 @@ function loadGame(){
   if(Array.isArray(saved.chimneys))state.chimneys=saved.chimneys.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100);
   if(Array.isArray(saved.pathTiles))state.pathTiles=saved.pathTiles.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,200);
   if(Array.isArray(saved.lanternPosts))state.lanternPosts=saved.lanternPosts.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,24);
+  if(Array.isArray(saved.wells))state.wells=saved.wells.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)).slice(0,5);
   if(Array.isArray(saved.doorPanels))state.doorPanels=saved.doorPanels.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100).map(v=>({...v,open:v.open===true}));
   if(Array.isArray(saved.windowShutters))state.windowShutters=saved.windowShutters.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100).map(v=>({...v,open:v.open===true}));
   if(Number.isFinite(saved.campfireX))state.campfireX=saved.campfireX;
@@ -424,7 +425,7 @@ function loadGame(){
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,wells:state.wells,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -492,7 +493,9 @@ function updateHUD(){
  $("craftBoots").disabled=state.leatherBoots||state.hide<2||state.fiber<3;
  $("waterSkinStatus").textContent=state.waterSkin?"Cantil de couro: fabricado · Cargas: "+state.waterCharges+"/3":"Cantil de couro: não fabricado";
  $("craftWaterSkin").disabled=state.waterSkin||state.hide<2||state.fiber<3;
- const nearWater=!!(state.near&&state.near.type==="water");
+ const nearWell=state.wells.some(w=>Math.hypot(player.position.x-w.x,player.position.z-w.z)<3.8);
+ const nearWater=!!(state.near&&state.near.type==="water")||nearWell;
+ $("drinkWell").disabled=!nearWell||state.thirst>=100;
  $("fillWaterSkin").disabled=!state.waterSkin||!nearWater||state.waterCharges>=3;
  $("drinkWaterSkin").disabled=state.waterCharges<1||state.thirst>=100;
  $("bandageStatus").textContent="Ataduras medicinais: "+state.bandages;
@@ -519,6 +522,8 @@ function updateHUD(){
   $("chimneyStatus").textContent="Chaminés de pedra: "+state.chimneys.length;
   $("pathTileStatus").textContent="Caminhos de pedra: "+state.pathTiles.length+" trechos";
   $("lanternPostStatus").textContent="Postes de iluminação: "+state.lanternPosts.length+"/24";
+  $("wellStatus").textContent="Poços comunitários: "+state.wells.length+"/5";
+  $("craftWell").disabled=state.stone<12||state.wood<5||state.wells.length>=5;
   $("craftLanternPost").disabled=state.wood<3||state.fiber<2||state.lanternPosts.length>=24||state.pathTiles.length===0;
   $("craftPathTile").disabled=state.stone<5||state.wood<1||state.pathTiles.length>=200;
   $("craftChimney").disabled=state.stone<6||state.wood<2||state.chimneys.length>=100||state.roofTiles.length===0;
@@ -669,6 +674,8 @@ $("craftStorageChest").addEventListener("click",craftStorageChest);
  $("craftChimney").addEventListener("click",craftChimney);
  $("craftPathTile").addEventListener("click",craftPathTile);
  $("craftLanternPost").addEventListener("click",craftLanternPost);
+ $("craftWell").addEventListener("click",craftWell);
+ $("drinkWell").addEventListener("click",drinkFromWell);
  $("craftDoorPanel").addEventListener("click",craftDoorPanel);
  $("doorToggle").addEventListener("click",toggleNearbyDoor);
  $("craftShutters").addEventListener("click",craftWindowShutters);
@@ -774,6 +781,63 @@ function findFenceConnection(targetX,targetZ,extension){
   state.wood-=3;state.fiber-=2;
   createLanternPost(post);state.lanternPosts.push(post);
   updateHUD();saveGame();toast("Poste de iluminação instalado ao lado do caminho!");
+ }
+ function craftWell(){
+  if(state.wells.length>=5){toast("Limite de 5 poços comunitários atingido.");return;}
+  if(state.stone<12||state.wood<5){toast("Faltam materiais: 12 pedras e 5 madeiras.");return;}
+  const yaw=state.cameraYaw;
+  const x=Math.round((player.position.x+Math.sin(yaw)*5)/3)*3;
+  const z=Math.round((player.position.z+Math.cos(yaw)*5)/3)*3;
+  if(state.wells.some(w=>Math.hypot(w.x-x,w.z-z)<5)){
+   toast("Já existe um poço muito próximo. Afaste-se para construir outro.");return;
+  }
+  const well={x,z};
+  state.stone-=12;state.wood-=5;
+  createWell(well);state.wells.push(well);
+  updateHUD();saveGame();toast("Poço comunitário construído! Agora você pode beber e encher o cantil aqui.");
+ }
+ function createWell(well){
+  const group=new THREE.Group();
+  const stoneMat=new THREE.MeshStandardMaterial({color:0x77766e,roughness:1});
+  const darkStone=new THREE.MeshStandardMaterial({color:0x454943,roughness:1});
+  const woodMat=new THREE.MeshStandardMaterial({color:0x59391f,roughness:1});
+  const waterMat=new THREE.MeshStandardMaterial({color:0x285c70,metalness:.15,roughness:.25});
+  const ring=new THREE.Mesh(new THREE.CylinderGeometry(1.18,1.28,.72,12,1,true),stoneMat);
+  ring.position.y=.43;group.add(ring);
+  const lip=new THREE.Mesh(new THREE.TorusGeometry(1.16,.14,6,12),darkStone);
+  lip.rotation.x=Math.PI/2;lip.position.y=.82;group.add(lip);
+  const water=new THREE.Mesh(new THREE.CircleGeometry(1.02,16),waterMat);
+  water.rotation.x=-Math.PI/2;water.position.y=.61;group.add(water);
+  for(const x of [-.9,.9]){
+   const post=new THREE.Mesh(new THREE.BoxGeometry(.16,2.75,.16),woodMat);
+   post.position.set(x,1.95,0);group.add(post);
+  }
+  const beam=new THREE.Mesh(new THREE.BoxGeometry(2.15,.18,.2),woodMat);
+  beam.position.y=3.32;group.add(beam);
+  const roofMat=new THREE.MeshStandardMaterial({color:0x49301e,roughness:1});
+  const roofL=new THREE.Mesh(new THREE.BoxGeometry(2.65,.13,1.65),roofMat);
+  roofL.position.set(0,3.65,-.38);roofL.rotation.x=-.32;group.add(roofL);
+  const roofR=new THREE.Mesh(new THREE.BoxGeometry(2.65,.13,1.65),roofMat);
+  roofR.position.set(0,3.65,.38);roofR.rotation.x=.32;group.add(roofR);
+  const axle=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,2.05,8),woodMat);
+  axle.rotation.z=Math.PI/2;axle.position.y=2.55;group.add(axle);
+  const crank=new THREE.Mesh(new THREE.BoxGeometry(.12,.72,.12),woodMat);
+  crank.position.set(1.13,2.28,0);group.add(crank);
+  const rope=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,1.45,6),darkStone);
+  rope.position.set(0,1.75,0);group.add(rope);
+  const bucket=new THREE.Mesh(new THREE.CylinderGeometry(.18,.14,.28,8,1,true),woodMat);
+  bucket.position.set(0,1.05,0);group.add(bucket);
+  group.traverse(obj=>{if(obj.isMesh){obj.castShadow=true;obj.receiveShadow=true;}});
+  group.position.set(well.x,terrainHeight(well.x,well.z),well.z);
+  scene.add(group);
+ }
+ function drinkFromWell(){
+  let nearest=null,distance=3.8;
+  for(const well of state.wells){const d=Math.hypot(player.position.x-well.x,player.position.z-well.z);if(d<distance){distance=d;nearest=well;}}
+  if(!nearest){toast("Aproxime-se de um poço comunitário.");return;}
+  if(state.thirst>=100){toast("Você não está com sede.");return;}
+  state.thirst=Math.min(100,state.thirst+50);
+  updateHUD();saveGame();toast("Você bebeu água fresca do poço e recuperou 50 pontos de sede.");
  }
  function createLanternPost(post){
   const group=new THREE.Group();
@@ -1442,7 +1506,8 @@ function craftWaterSkin(){
 }
 function fillWaterSkin(){
  if(!state.waterSkin){toast("Fabrique um cantil primeiro.");return;}
- if(!state.near||state.near.type!=="water"){toast("Aproxime-se de uma fonte de água.");return;}
+ const nearWell=state.wells.some(w=>Math.hypot(player.position.x-w.x,player.position.z-w.z)<3.8);
+ if((!state.near||state.near.type!=="water")&&!nearWell){toast("Aproxime-se de uma fonte de água ou poço.");return;}
  if(state.waterCharges>=3){toast("O cantil já está cheio.");return;}
  state.waterCharges=3;updateHUD();saveGame();toast("Cantil cheio: 3 goles de água.");
 }
@@ -1745,6 +1810,7 @@ async function start(){
  for(const ridge of state.ridgeCaps)createRidgeCap(ridge);
  for(const chimney of state.chimneys)createChimney(chimney);
  for(const lantern of state.lanternPosts)createLanternPost(lantern);
+ for(const well of state.wells)createWell(well);
  for(const door of state.doorPanels)createDoorPanel(door);
  for(const shutters of state.windowShutters)createWindowShutters(shutters);
  for(const gate of state.gates)createGate(gate);
