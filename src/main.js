@@ -218,8 +218,10 @@ function applyWildlifeModel(target,path,targetHeight,protectedObjects=[]){
   model.scale.setScalar(scale);
   model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
   model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+  const protectedVisibility=[];
+  for(const keep of protectedObjects)keep.traverse(o=>protectedVisibility.push([o,o.visible]));
   target.traverse(o=>{if(o.isMesh)o.visible=false;});
-  for(const keep of protectedObjects)keep.traverse(o=>{o.visible=true;});
+  for(const [object,visible] of protectedVisibility)object.visible=visible;
   target.add(model);
   const clip=asset.animations?.find(c=>/walk|run|move/i.test(c.name))||asset.animations?.[0];
   if(clip){
