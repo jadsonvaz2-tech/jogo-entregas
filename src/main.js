@@ -1238,8 +1238,9 @@ function findFenceConnection(targetX,targetZ,extension){
   const targetX=player.position.x+Math.sin(yaw)*4.5;
   const targetZ=player.position.z+Math.cos(yaw)*4.5;
   const x=Math.round(targetX/3)*3,z=Math.round(targetZ/3)*3;
-  if(state.pathTiles.some(tile=>Math.hypot(tile.x-x,tile.z-z)<2.3)){
-   toast("Já existe um caminho neste espaço. Afaste-se para continuar.");return;
+  const candidate={x,z,yaw};
+  if(state.pathTiles.some(tile=>buildPathTilesOverlap(candidate,tile))){
+   toast("Os trechos de caminho ficariam sobrepostos. Ajuste sua posição para encaixar o próximo trecho.");return;
   }
   const tile={x,z,yaw};
   state.stone-=5;state.wood-=1;
@@ -2096,6 +2097,20 @@ function buildFenceSectionsOverlap(a,b){
  const dx=b.x-a.x,dz=b.z-a.z;
  const yawA=Number.isFinite(a.yaw)?a.yaw:0,yawB=Number.isFinite(b.yaw)?b.yaw:0;
  const halfLength=3.2,halfDepth=.09;
+ const axes=[yawA,yawA+Math.PI/2,yawB,yawB+Math.PI/2];
+ for(const angle of axes){
+  const ax=Math.cos(angle),az=-Math.sin(angle);
+  const distance=Math.abs(dx*ax+dz*az);
+  const radiusA=halfLength*Math.abs(Math.cos(yawA-angle))+halfDepth*Math.abs(Math.sin(yawA-angle));
+  const radiusB=halfLength*Math.abs(Math.cos(yawB-angle))+halfDepth*Math.abs(Math.sin(yawB-angle));
+  if(distance>=radiusA+radiusB-.035)return false;
+ }
+ return true;
+}
+function buildPathTilesOverlap(a,b){
+ const dx=b.x-a.x,dz=b.z-a.z;
+ const yawA=Number.isFinite(a.yaw)?a.yaw:0,yawB=Number.isFinite(b.yaw)?b.yaw:0;
+ const halfLength=1.48,halfDepth=1.48;
  const axes=[yawA,yawA+Math.PI/2,yawB,yawB+Math.PI/2];
  for(const angle of axes){
   const ax=Math.cos(angle),az=-Math.sin(angle);
