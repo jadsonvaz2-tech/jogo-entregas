@@ -587,8 +587,9 @@ function updateHUD(){
   $("objectiveDetail").textContent=current?current.detail:"Continue sobrevivendo, explorando e construindo sua aldeia.";
  $("bowStatus").textContent=state.bow?"Arco: fabricado · Flechas: "+state.arrows:"Arco: não fabricado · Madeira: "+state.wood+"/2 · Fibras: "+state.fiber+"/2";
   const deerTarget=nearestWildAnimal(16);
-  const wolfTarget=nearestWolf(16);
-  const huntTarget=wolfTarget&&(!deerTarget||Math.hypot(player.position.x-wolfTarget.x,player.position.z-wolfTarget.z)<Math.hypot(player.position.x-deerTarget.x,player.position.z-deerTarget.z))?wolfTarget:deerTarget;
+  // Wolves are threats before they enter pursuit range; surface them up to 24m.
+  const wolfTarget=nearestWolf(24);
+  const huntTarget=wolfTarget||deerTarget;
   const huntStatus=$("huntTargetStatus");
   if(huntTarget){
    const dx=huntTarget.x-player.position.x,dz=huntTarget.z-player.position.z;
@@ -598,11 +599,13 @@ function updateHUD(){
    const directions=["à frente","à frente e à direita","à direita","atrás e à direita","atrás","atrás e à esquerda","à esquerda","à frente e à esquerda"];
    const direction=directions[Math.round(relative/(Math.PI/4)+8)%8];
    const isWolf=huntTarget.id.startsWith("wolf-");
-   huntStatus.textContent=(isWolf?"⚠ LOBO: ":"Veado: ")+distance+" m · "+direction+" · Vida "+huntTarget.health+"/"+(isWolf?3:2);
-   huntStatus.style.color=isWolf?"#ff6b55":"";
+   const meters=Math.hypot(dx,dz);
+   const wolfAlert=isWolf&&meters<14;
+   huntStatus.textContent=(wolfAlert?"🚨 LOBO PERSEGUINDO: ":isWolf?"⚠ LOBO PRÓXIMO: ":"Veado: ")+distance+" m · "+direction+" · Vida "+huntTarget.health+"/"+(isWolf?3:2);
+   huntStatus.style.color=isWolf?(wolfAlert?"#ff3b30":"#e58b35"):"";
    huntStatus.style.fontWeight=isWolf?"800":"";
   }else{
-   huntStatus.textContent="Caça: nenhum animal a até 16 m";
+   huntStatus.textContent="Caça: nenhum animal próximo (lobos até 24 m)";
    huntStatus.style.color="";
    huntStatus.style.fontWeight="";
   }
