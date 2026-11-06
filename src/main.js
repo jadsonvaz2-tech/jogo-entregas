@@ -1932,6 +1932,47 @@ function buildPlacementSpec(type){
  };
  return specs[type];
 }
+function createBuildPreviewModel(type,material,height){
+ const group=new THREE.Group();
+ const part=(w,h,d,x,y,z,rz=0)=>{
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
+  mesh.position.set(x,y-height,z);mesh.rotation.z=rz;mesh.castShadow=false;mesh.receiveShadow=false;group.add(mesh);
+  if(!buildPreviewMesh)buildPreviewMesh=mesh;
+  return mesh;
+ };
+ if(type==="floor"){
+  for(let i=0;i<9;i++)part(2.86,.14,.29,0,.2,-1.28+i*.32);
+  for(const z of [-1.22,1.22])part(3.02,.2,.18,0,.08,z);
+  for(const x of [-1.25,1.25])part(.18,.2,2.55,x,.08,0);
+ }else if(type==="wall"){
+  for(const x of [-1.42,1.42])part(.18,2.45,.18,x,1.225,0);
+  for(const y of [.16,2.28])part(2.9,.16,.16,0,y,0);
+  for(let i=0;i<11;i++)part(.23,2.05,.11,-1.25+i*.25,1.22,.015);
+ }else if(type==="window"){
+  for(const x of [-1.42,1.42])part(.18,2.45,.18,x,1.225,0);
+  part(2.9,.16,.16,0,.16,0);part(2.9,.16,.16,0,2.28,0);
+  for(let i=0;i<11;i++){const x=-1.25+i*.25;if(Math.abs(x)<.62)continue;part(.23,.78,.11,x,.56,.015);part(.23,.42,.11,x,2.04,.015);}
+  part(1.05,.13,.12,0,.98,0);part(1.05,.13,.12,0,1.78,0);
+  for(const x of [-.55,.55])part(.13,.8,.13,x,1.38,0);
+  part(.1,.68,.08,0,1.38,.015);
+  for(const x of [-.275,.275])part(.46,.68,.035,x,1.38,.025);
+ }else if(type==="door"){
+  for(const x of [-1.42,1.42])part(.18,2.45,.18,x,1.225,0);
+  part(2.9,.18,.2,0,2.34,0);
+  part(2.58,2.12,.13,0,1.18,.04);
+  for(const y of [.2,.72,1.4,1.92])part(2.58,.1,.16,0,y,.1);
+  for(let i=0;i<9;i++)part(.2,2.02,.15,-1.12+i*.28,1.18,.115);
+  part(2.45,.12,.15,0,1.18,.16,-.55);
+ }else if(type==="roof"){
+  for(let i=0;i<10;i++){const z=-1.53+i*.34;part(2.12,.13,.32,-.94,2.98,z,.38);part(2.12,.13,.32,.94,2.98,z,-.38);}
+  for(const x of [-1.78,0,1.78])part(.18,.18,3.42,x,x===0?3.38:2.58,0);
+  for(const z of [-1.68,1.68])part(3.75,.16,.16,0,2.98,z);
+ }else if(type==="fence"){
+  for(let i=0;i<=4;i++)part(.16,1.25,.16,-3.2+i*1.6,.625,0);
+  for(let i=0;i<4;i++){const x=-2.4+i*1.6;for(const y of [.42,.91])part(1.55,.13,.12,x,y,0);for(let j=0;j<4;j++)part(.11,.62,.1,x-.48+j*.32,.68,0);}
+ }
+ return group;
+}
 function beginBuildPlacement(type){
  const spec=buildPlacementSpec(type);if(!spec)return;
  if(activeBuildPlacement)cancelBuildPlacement(false);
@@ -1944,8 +1985,8 @@ function beginBuildPlacement(type){
  $("buildPlacementLabel").textContent="POSICIONAR: "+spec.label+" · ajuste e confirme";
  buildPlacementUI.style.display="flex";
  const mat=new THREE.MeshStandardMaterial({color:0x55e58a,transparent:true,opacity:.42,roughness:.7,metalness:0,depthWrite:false});
- buildPreviewMaterial=mat;buildPreviewGroup=new THREE.Group();
- buildPreviewMesh=new THREE.Mesh(spec.geometry,mat);buildPreviewMesh.castShadow=false;buildPreviewMesh.receiveShadow=false;buildPreviewGroup.add(buildPreviewMesh);
+ buildPreviewMaterial=mat;buildPreviewMesh=null;
+ buildPreviewGroup=createBuildPreviewModel(type,mat,spec.height);
  const outline=new THREE.LineSegments(new THREE.EdgesGeometry(spec.geometry),new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.9}));
  buildPreviewGroup.add(outline);scene.add(buildPreviewGroup);
  updateBuildPreview();
