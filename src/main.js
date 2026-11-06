@@ -377,12 +377,12 @@ async function buildForest(){
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0,honey:0,wool:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],pathTiles:[],lanternPosts:[],wells:[],gardenPlots:[],gardenObjects:[],nearGardenIndex:-1,marketStalls:[],nearMarketIndex:-1,coins:0,chickenCoops:[],nearCoopIndex:-1,eggs:0,apiaries:[],nearApiaryIndex:-1,honey:0,sheepPens:[],nearSheepPenIndex:-1,wool:0,loom:null,nearLoom:false,woolGarment:false,watchtowers:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
+const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,smokedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0,honey:0,wool:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],pathTiles:[],lanternPosts:[],wells:[],gardenPlots:[],gardenObjects:[],nearGardenIndex:-1,marketStalls:[],nearMarketIndex:-1,coins:0,chickenCoops:[],nearCoopIndex:-1,eggs:0,apiaries:[],nearApiaryIndex:-1,honey:0,sheepPens:[],nearSheepPenIndex:-1,wool:0,loom:null,nearLoom:false,woolGarment:false,smokehouse:null,nearSmokehouse:false,watchtowers:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
   if(!saved)return;
-  for(const key of ["health","hunger","thirst","temperature","energy","wood","stone","day","timeOfDay","berries","fiber","meat","cookedMeat","hide","bandages","waterCharges","arrows","coins","eggs","honey","wool"])if(Number.isFinite(saved[key]))state[key]=saved[key];
+  for(const key of ["health","hunger","thirst","temperature","energy","wood","stone","day","timeOfDay","berries","fiber","meat","cookedMeat","smokedMeat","hide","bandages","waterCharges","arrows","coins","eggs","honey","wool"])if(Number.isFinite(saved[key]))state[key]=saved[key];
   state.axe=saved.axe===true;state.pickaxe=saved.pickaxe===true;
   state.starterKitGranted=saved.starterKitGranted===true;
   state.campfire=saved.campfire===true;
@@ -392,11 +392,12 @@ function loadGame(){
   state.waterSkin=saved.waterSkin===true;
   state.bow=saved.bow===true;
   state.waterCharges=Math.max(0,Math.min(3,state.waterCharges));
-  if(saved.storage&&typeof saved.storage==="object")for(const key of ["wood","stone","fiber","berries","meat","cookedMeat","hide","bandages","honey","wool"])if(Number.isFinite(saved.storage[key]))state.storage[key]=Math.max(0,saved.storage[key]);
+  if(saved.storage&&typeof saved.storage==="object")for(const key of ["wood","stone","fiber","berries","meat","cookedMeat","smokedMeat","hide","bandages","honey","wool"])if(Number.isFinite(saved.storage[key]))state.storage[key]=Math.max(0,saved.storage[key]);
   state.coldCloak=saved.coldCloak===true;
   state.leatherBoots=saved.leatherBoots===true;
   state.woolGarment=saved.woolGarment===true;
   if(saved.loom&&Number.isFinite(saved.loom.x)&&Number.isFinite(saved.loom.z)&&Number.isFinite(saved.loom.yaw))state.loom=saved.loom;
+  if(saved.smokehouse&&Number.isFinite(saved.smokehouse.x)&&Number.isFinite(saved.smokehouse.z)&&Number.isFinite(saved.smokehouse.yaw))state.smokehouse=saved.smokehouse;
   if(Array.isArray(saved.collectedResources))state.collectedResources=saved.collectedResources.filter(v=>typeof v==="string");
   if(Array.isArray(saved.huntedAnimals))state.huntedAnimals=saved.huntedAnimals.filter(v=>typeof v==="string");
    if(Array.isArray(saved.fenceSections))state.fenceSections=saved.fenceSections.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,200);
@@ -433,7 +434,7 @@ function loadGame(){
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,wells:state.wells,gardenPlots:state.gardenPlots,watchtowers:state.watchtowers,marketStalls:state.marketStalls,coins:state.coins,chickenCoops:state.chickenCoops,apiaries:state.apiaries,honey:state.honey,sheepPens:state.sheepPens,wool:state.wool,loom:state.loom,woolGarment:state.woolGarment,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,smokedMeat:state.smokedMeat,smokehouse:state.smokehouse,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,wells:state.wells,gardenPlots:state.gardenPlots,watchtowers:state.watchtowers,marketStalls:state.marketStalls,coins:state.coins,chickenCoops:state.chickenCoops,apiaries:state.apiaries,honey:state.honey,sheepPens:state.sheepPens,wool:state.wool,loom:state.loom,woolGarment:state.woolGarment,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -538,6 +539,11 @@ function updateHUD(){
   $("coopStatus").textContent="Galinheiros: "+state.chickenCoops.length+"/4 · Ovos: "+state.eggs;
   $("apiaryStatus").textContent="Colmeias: "+state.apiaries.length+"/4 · Mel: "+state.honey;
   $("sheepPenStatus").textContent="Apriscos: "+state.sheepPens.length+"/3 · Lã: "+state.wool;
+  $("smokehouseStatus").textContent=state.smokehouse?"Defumador construído · Carne defumada: "+state.smokedMeat:"Defumador comunitário: não construído";
+  $("craftSmokehouse").disabled=!!state.smokehouse||state.wood<10||state.stone<4;
+  $("smokeMeat").hidden=!state.nearSmokehouse;
+  $("smokeMeat").disabled=!state.nearSmokehouse||state.meat<1||state.wood<1;
+  $("eatSmokedMeat").disabled=state.smokedMeat<1||state.hunger>=100;
   $("loomStatus").textContent=state.loom?"Tearia construída · "+(state.woolGarment?"Roupa de lã fabricada":"Roupa de lã pendente"):"Oficina de tecelagem: não construída";
   $("craftLoom").disabled=!!state.loom||state.wood<8||state.fiber<4;
   $("craftWoolGarment").hidden=!state.nearLoom;
@@ -602,7 +608,7 @@ function updateHUD(){
   if(nearestShutter>=0)$("shutterToggle").textContent=state.windowShutters[nearestShutter].open?"FECHAR PERSIANAS":"ABRIR PERSIANAS";
  $("craftStorageChest").disabled=state.storageChest||state.wood<6||state.stone<2;
  const nearChest=state.storageChest&&Math.hypot(player.position.x-state.storageChestX,player.position.z-state.storageChestZ)<3.5;
- const carried=["wood","stone","fiber","berries","meat","cookedMeat","hide","bandages"].some(k=>state[k]>0);
+ const carried=["wood","stone","fiber","berries","meat","cookedMeat","smokedMeat","hide","bandages"].some(k=>state[k]>0);
  const stored=Object.values(state.storage).some(v=>v>0);
  $("storeResources").disabled=!nearChest||!carried;
  $("takeResources").disabled=!nearChest||!stored;
@@ -729,6 +735,9 @@ $("craftStorageChest").addEventListener("click",craftStorageChest);
  $("craftApiary").addEventListener("click",craftApiary);
  $("craftSheepPen").addEventListener("click",craftSheepPen);
  $("craftLoom").addEventListener("click",craftLoom);
+ $("craftSmokehouse").addEventListener("click",craftSmokehouse);
+ $("smokeMeat").addEventListener("click",smokeMeat);
+ $("eatSmokedMeat").addEventListener("click",eatSmokedMeat);
  $("craftWoolGarment").addEventListener("click",craftWoolGarment);
  $("collectWool").addEventListener("click",collectWool);
  $("collectHoney").addEventListener("click",collectHoney);
@@ -926,6 +935,46 @@ function findFenceConnection(targetX,targetZ,extension){
   if(produced<1){toast("As ovelhas ainda estão produzindo lã. Aguarde um pouco.");return;}
   state.wool+=produced;pen.lastWoolAt+=produced*300000;
   updateHUD();saveGame();toast("Você recolheu "+produced+" porção(ões) de lã!");
+ }
+ function craftSmokehouse(){
+  if(state.smokehouse){toast("O defumador já foi construído.");return;}
+  if(state.wood<10||state.stone<4){toast("Faltam materiais: 10 madeiras e 4 pedras.");return;}
+  const yaw=Math.round(state.cameraYaw/(Math.PI/2))*(Math.PI/2);
+  const x=Math.round((player.position.x+Math.sin(yaw)*6)/3)*3;
+  const z=Math.round((player.position.z+Math.cos(yaw)*6)/3)*3;
+  state.wood-=10;state.stone-=4;state.smokehouse={x,z,yaw};createSmokehouse(state.smokehouse);
+  updateHUD();saveGame();toast("Defumador comunitário construído! Aproxime-se para conservar a carne.");
+ }
+ function createSmokehouse(data){
+  const group=new THREE.Group();
+  const timber=new THREE.MeshStandardMaterial({color:0x684326,roughness:1});
+  const dark=new THREE.MeshStandardMaterial({color:0x39291e,roughness:1});
+  const stone=new THREE.MeshStandardMaterial({color:0x77766d,roughness:1});
+  const roofMat=new THREE.MeshStandardMaterial({color:0x51402e,roughness:1});
+  const body=new THREE.Mesh(new THREE.BoxGeometry(2.5,1.8,2.2),timber);body.position.set(0,.95,0);group.add(body);
+  const door=new THREE.Mesh(new THREE.BoxGeometry(1.35,1.25,.12),dark);door.position.set(0,.72,1.12);group.add(door);
+  const roof=new THREE.Mesh(new THREE.ConeGeometry(1.9,.85,4),roofMat);roof.rotation.y=Math.PI/4;roof.position.y=2.25;group.add(roof);
+  const chimney=new THREE.Mesh(new THREE.BoxGeometry(.42,.9,.42),stone);chimney.position.set(.72,2.25,-.35);group.add(chimney);
+  const opening=new THREE.Mesh(new THREE.BoxGeometry(.22,.52,.44),new THREE.MeshStandardMaterial({color:0x171512,roughness:1}));opening.position.set(.72,2.12,-.35);group.add(opening);
+  for(const y of [.62,1.05,1.48]){
+   const rack=new THREE.Mesh(new THREE.BoxGeometry(1.55,.07,.12),dark);rack.position.set(0,y,.78);group.add(rack);
+   for(let i=0;i<5;i++){const meat=new THREE.Mesh(new THREE.BoxGeometry(.16,.22,.09),new THREE.MeshStandardMaterial({color:0x874a35,roughness:1}));meat.position.set(-.62+i*.31,y-.15,.86);group.add(meat);}
+  }
+  for(const x of [-1.05,1.05])for(const z of [-.9,.9]){const post=new THREE.Mesh(new THREE.BoxGeometry(.13,2.05,.13),dark);post.position.set(x,1,z);group.add(post);}
+  group.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+  group.position.set(data.x,terrainHeight(data.x,data.z),data.z);group.rotation.y=data.yaw;scene.add(group);state.smokehouseObject=group;
+ }
+ function smokeMeat(){
+  if(!state.nearSmokehouse){toast("Aproxime-se do defumador comunitário.");return;}
+  const portions=Math.min(state.meat,state.wood);
+  if(portions<1){toast("Você precisa de carne crua e 1 madeira por porção.");return;}
+  state.meat-=portions;state.wood-=portions;state.smokedMeat+=portions;
+  updateHUD();saveGame();toast(portions+" porções de carne defumadas e conservadas!");
+ }
+ function eatSmokedMeat(){
+  if(state.smokedMeat<1||state.hunger>=100){toast("Não há carne defumada para consumir ou sua fome já está satisfeita.");return;}
+  state.smokedMeat--;state.hunger=Math.min(100,state.hunger+70);
+  updateHUD();saveGame();toast("Você comeu carne defumada. +70 de fome.");
  }
  function craftLoom(){
   if(state.loom){toast("A oficina de tecelagem já foi construída.");return;}
@@ -1967,7 +2016,7 @@ function craftDoorPanel(){
  }
  function storeResources(){
  if(!state.storageChest||Math.hypot(player.position.x-state.storageChestX,player.position.z-state.storageChestZ)>=3.5){toast("Aproxime-se do baú.");return;}
- const keys=["wood","stone","fiber","berries","meat","cookedMeat","hide","bandages","honey","wool"];
+ const keys=["wood","stone","fiber","berries","meat","cookedMeat","smokedMeat","hide","bandages","honey","wool"];
  let total=0;
  for(const key of keys){const amount=Math.max(0,Math.floor(state[key]));state.storage[key]+=amount;state[key]=0;total+=amount;}
  if(!total){toast("Sua mochila está vazia.");return;}
@@ -2348,6 +2397,7 @@ function update(dt){
   for(let i=0;i<state.sheepPens.length;i++){const pen=state.sheepPens[i],d=Math.hypot(player.position.x-pen.x,player.position.z-pen.z);if(d<sheepPenDistance){sheepPenDistance=d;nearSheepPen=i;}}
   state.nearSheepPenIndex=nearSheepPen;
   state.nearLoom=!!state.loom&&Math.hypot(player.position.x-state.loom.x,player.position.z-state.loom.z)<4.5;
+  state.nearSmokehouse=!!state.smokehouse&&Math.hypot(player.position.x-state.smokehouse.x,player.position.z-state.smokehouse.z)<4.8;
   const gardenActionButton=$("gardenAction");
   gardenActionButton.hidden=nearGarden<0;
   if(nearGarden>=0){
@@ -2389,6 +2439,7 @@ async function start(){
  for(const apiary of state.apiaries)createApiary(apiary);
  for(const pen of state.sheepPens)createSheepPen(pen);
  if(state.loom)createLoom(state.loom);
+ if(state.smokehouse)createSmokehouse(state.smokehouse);
  for(const door of state.doorPanels)createDoorPanel(door);
  for(const shutters of state.windowShutters)createWindowShutters(shutters);
  for(const gate of state.gates)createGate(gate);
