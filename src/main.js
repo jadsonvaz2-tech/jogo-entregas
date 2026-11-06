@@ -1866,12 +1866,30 @@ function findFenceConnection(targetX,targetZ,extension){
   if(state.floorTiles.length>=100){toast("Limite de 100 módulos de piso atingido.");return;}
   if(state.wood<4||state.fiber<2){toast("Faltam materiais: 4 madeiras e 2 fibras.");return;}
   const facing=player.rotation.y;
-  const yaw=Math.round(facing/(Math.PI/2))*(Math.PI/2);
+  let yaw=Math.round(facing/(Math.PI/2))*(Math.PI/2);
   const targetX=player.position.x+Math.sin(yaw)*4.5;
   const targetZ=player.position.z+Math.cos(yaw)*4.5;
-  const x=Math.round(targetX/3)*3,z=Math.round(targetZ/3)*3;
+  let x=Math.round(targetX/3)*3,z=Math.round(targetZ/3)*3;
+  // Quando houver um módulo próximo, usa a própria grade e orientação dele.
+  // Assim os novos pisos compartilham bordas sem depender da grade global do mundo.
+  let anchor=null,anchorDistance=7;
+  for(const existing of state.floorTiles){
+   const distance=Math.hypot(player.position.x-existing.x,player.position.z-existing.z);
+   if(distance<anchorDistance){anchorDistance=distance;anchor=existing;}
+  }
+  if(anchor){
+   const dx=targetX-anchor.x,dz=targetZ-anchor.z;
+   const localX=dx*Math.cos(anchor.yaw)-dz*Math.sin(anchor.yaw);
+   const localZ=dx*Math.sin(anchor.yaw)+dz*Math.cos(anchor.yaw);
+   const sideX=Math.abs(localX)>Math.abs(localZ);
+   const offsetX=sideX?Math.sign(localX||1)*3:Math.round(localX/3)*3;
+   const offsetZ=sideX?Math.round(localZ/3)*3:Math.sign(localZ||1)*3;
+   x=anchor.x+offsetX*Math.cos(anchor.yaw)+offsetZ*Math.sin(anchor.yaw);
+   z=anchor.z-offsetX*Math.sin(anchor.yaw)+offsetZ*Math.cos(anchor.yaw);
+   yaw=anchor.yaw;
+  }
   if(state.floorTiles.some(tile=>Math.hypot(tile.x-x,tile.z-z)<2.3)){
-   toast("Este espaço já tem um piso. Afaste-se para construir o próximo módulo.");return;
+   toast("Este espaço já tem um piso. Escolha uma borda livre para encaixar o próximo módulo.");return;
   }
   const tile={x,z,yaw};
   state.wood-=4;state.fiber-=2;
