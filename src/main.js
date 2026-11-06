@@ -3479,7 +3479,7 @@ function update(dt){
   if(state.steelShieldGuarding){state.energy=Math.max(0,state.energy-dt*.65);if(state.energy<=0){state.steelShieldGuarding=false;if(state.steelShieldObject)applySteelShieldPose(state.steelShieldObject);$("guardShieldBtn").textContent="🛡️ ERGUER ESCUDO";toast("Você ficou sem energia e baixou o escudo.");}}
  updateWildlife(dt);
  updateFlyingArrows(dt);
- const kx=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);
+ const kx=(keys.a?1:0)-(keys.d?1:0)+(keys.arrowright?1:0)-(keys.arrowleft?1:0);
  const ky=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0);
  const mx=THREE.MathUtils.clamp(state.moveX+kx,-1,1),my=THREE.MathUtils.clamp(state.moveY+ky,-1,1);
  const moving=!activeBuildPlacement&&Math.hypot(mx,my)>.08;
