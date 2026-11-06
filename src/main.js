@@ -1906,11 +1906,11 @@ function ensureBuildPlacementUI(){
  if(buildPlacementUI)return;
  const panel=document.createElement("div");
  panel.id="buildPlacementUI";
- panel.style.cssText="position:fixed;left:50%;top:50%;bottom:auto;transform:translate(-50%,-50%);z-index:90;display:none;flex-direction:column;align-items:center;gap:8px;width:min(94vw,430px);max-height:46vh;overflow:auto;padding:10px;background:rgba(25,30,24,.96);border:1px solid rgba(230,220,190,.65);border-radius:14px;color:#fff;font:600 12px system-ui;box-shadow:0 4px 20px #000b;touch-action:manipulation;pointer-events:auto";
+ panel.style.cssText="position:fixed;left:50%;top:50%;bottom:auto;transform:translate(-50%,-50%);z-index:90;display:none;flex-direction:column;align-items:center;gap:8px;width:min(94vw,430px);max-height:42vh;overflow:auto;padding:10px;background:rgba(25,30,24,.96);border:1px solid rgba(230,220,190,.65);border-radius:14px;color:#fff;font:600 12px system-ui;box-shadow:0 4px 20px #000b;touch-action:manipulation;pointer-events:auto";
  const label=document.createElement("div");label.id="buildPlacementLabel";label.textContent="POSICIONAR CONSTRUÇÃO";label.style.cssText="font-size:13px;letter-spacing:.06em";
  const row=document.createElement("div");row.style.cssText="display:flex;gap:6px;width:100%;justify-content:center;flex-wrap:wrap";
  const make=(id,txt,action,primary=false)=>{const b=document.createElement("button");b.type="button";b.id=id;b.textContent=txt;b.style.cssText="min-height:40px;min-width:58px;padding:8px 12px;border:1px solid #c9b994;border-radius:9px;background:"+(primary?"#527b43":"#4a5046")+";color:white;font:700 12px system-ui;touch-action:manipulation";b.addEventListener("click",e=>{e.preventDefault();e.stopPropagation();action();});row.appendChild(b);return b;};
- const moveStep=()=>activeBuildPlacement&&(activeBuildPlacement.type==="fence"?1.6:3);
+ const moveStep=()=>{if(!activeBuildPlacement)return 0;return activeBuildPlacement.type==="fence"?1.6:3;};
  make("buildLeft","◀ MOVER",()=>{if(activeBuildPlacement){activeBuildPlacement.offsetX-=moveStep();updateBuildPreview();}});
  make("buildForward","▲ MOVER",()=>{if(activeBuildPlacement){activeBuildPlacement.offsetZ+=moveStep();updateBuildPreview();}});
  make("buildBack","▼ MOVER",()=>{if(activeBuildPlacement){activeBuildPlacement.offsetZ-=moveStep();updateBuildPreview();}});
@@ -1975,7 +1975,7 @@ function buildPreviewCandidate(){
    z=anchor.z-ox*Math.sin(anchor.yaw)+oz*Math.cos(anchor.yaw);yaw=anchor.yaw;
   }else{x=Math.round(targetX/3)*3;z=Math.round(targetZ/3)*3;}
  }else if(type==="wall"||type==="window"||type==="door"){
-  anchor=nearestBuildFloor(targetX,targetZ,4.6);
+  anchor=nearestBuildFloor(targetX,targetZ,8.5);
   if(anchor){
    const dx=targetX-anchor.x,dz=targetZ-anchor.z;
    const lx=dx*Math.cos(anchor.yaw)-dz*Math.sin(anchor.yaw),lz=dx*Math.sin(anchor.yaw)+dz*Math.cos(anchor.yaw);
@@ -1991,7 +1991,7 @@ function buildPreviewCandidate(){
    slot=edges[side];x=anchor.x+slot.ex*Math.cos(anchor.yaw)+slot.ez*Math.sin(anchor.yaw);z=anchor.z-slot.ex*Math.sin(anchor.yaw)+slot.ez*Math.cos(anchor.yaw);yaw=slot.yaw;
   }
  }else if(type==="roof"){
-  anchor=nearestBuildFloor(targetX,targetZ,4.6);
+  anchor=nearestBuildFloor(targetX,targetZ,8.5);
   if(anchor){x=anchor.x;z=anchor.z;yaw=anchor.yaw;}
  }else if(type==="fence"){
   yaw=state.cameraYaw+p.rotationStep*Math.PI/2;
