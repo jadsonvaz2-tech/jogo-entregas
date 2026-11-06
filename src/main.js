@@ -313,6 +313,17 @@ function createDeer(x,z,index){
  neck.position.set(0,1.32,.55);neck.rotation.x=.48;neck.castShadow=true;deer.add(neck);
  const head=new THREE.Mesh(new THREE.SphereGeometry(.23,8,7),coat);
  head.position.set(0,1.64,.82);head.castShadow=true;deer.add(head);
+ const eyeMat=new THREE.MeshStandardMaterial({color:0x1b120d,roughness:.28,metalness:.02});
+ const eyes=[];
+ for(const side of [-1,1]){
+  const eye=new THREE.Mesh(new THREE.SphereGeometry(.035,8,6),eyeMat);
+  eye.position.set(side*.145,.045,.17);eye.scale.set(.9,.82,.72);head.add(eye);eyes.push(eye);
+ }
+ const nostrilMat=new THREE.MeshStandardMaterial({color:0x49352b,roughness:.9});
+ for(const side of [-1,1]){
+  const nostril=new THREE.Mesh(new THREE.SphereGeometry(.018,6,5),nostrilMat);
+  nostril.position.set(side*.045,1.59,1.115);nostril.scale.set(1,.75,.55);deer.add(nostril);
+ }
  const earMat=new THREE.MeshStandardMaterial({color:0x76513a,roughness:1});
  const ears=[];
  for(const side of [-1,1]){
@@ -349,7 +360,7 @@ function createDeer(x,z,index){
  healthFill.position.set(0,0,.008);healthBar.add(healthFill);
  healthBar.position.set(0,2.02,0);healthBar.visible=false;healthBar.renderOrder=5;deer.add(healthBar);
  deer.position.set(x,terrainHeight(x,z),z);scene.add(deer);
- wildAnimals.push({id,object:deer,x,z,heading:worldRandom()*Math.PI*2,health:2,alive:true,wander:1+worldRandom()*2,healthBar,healthFill,legs,tail,head,neck,ears,grazeTimer:2+worldRandom()*4,grazeBlend:0,grazing:false});
+ wildAnimals.push({id,object:deer,x,z,heading:worldRandom()*Math.PI*2,health:2,alive:true,wander:1+worldRandom()*2,healthBar,healthFill,legs,tail,head,neck,ears,eyes,blinkTimer:2+worldRandom()*3,blinkTime:0,grazeTimer:2+worldRandom()*4,grazeBlend:0,grazing:false});
 }
 function createWolf(x,z,index){
  const id="wolf-"+index;
@@ -482,6 +493,12 @@ function updateWildlife(dt){
   if(animal.head){const alert=d<9?-.08:0;animal.head.rotation.x=alert+animal.grazeBlend*.58+Math.sin(performance.now()*.0011+animal.x*.7)*.035;}
   if(animal.neck)animal.neck.rotation.x=.48+animal.grazeBlend*.16;
   if(animal.ears)animal.ears.forEach((ear,i)=>{const side=i===0?-1:1;const alert=d<9?-.16:0;ear.rotation.z=side*-.22+side*alert+Math.sin(performance.now()*.0024+animal.x+i*1.7)*.09;ear.rotation.x=Math.sin(performance.now()*.0017+animal.z+i)*.07;});
+  if(animal.eyes){
+   animal.blinkTimer-=dt;
+   if(animal.blinkTimer<=0&&animal.blinkTime<=0){animal.blinkTime=.18;animal.blinkTimer=2.5+worldRandom()*3.5;}
+   if(animal.blinkTime>0){animal.blinkTime=Math.max(0,animal.blinkTime-dt);const progress=1-animal.blinkTime/.18;const open=Math.max(.08,1-Math.sin(progress*Math.PI)*.92);animal.eyes.forEach(eye=>{eye.scale.y=.82*open;});}
+   else animal.eyes.forEach(eye=>{eye.scale.y=.82;});
+  }
   if(animal.healthBar){animal.healthBar.quaternion.copy(animal.object.quaternion).invert().multiply(camera.quaternion); }
  }
 }
