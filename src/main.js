@@ -336,13 +336,33 @@ function registerResource(resource){
  resources.push(resource);
 }
 function createCarcass(x,z,animalId=null){
- const bodyMat=new THREE.MeshStandardMaterial({color:0x76513a,roughness:1});
- const darkMat=new THREE.MeshStandardMaterial({color:0x49382c,roughness:1});
+ const isWolf=!!(animalId&&animalId.startsWith("wolf-"));
+ const bodyMat=new THREE.MeshStandardMaterial({color:isWolf?0x454747:0x76513a,roughness:1});
+ const darkMat=new THREE.MeshStandardMaterial({color:isWolf?0x292c2d:0x49382c,roughness:1});
  const carcass=new THREE.Group();
- const body=new THREE.Mesh(new THREE.SphereGeometry(.48,9,7),bodyMat);
- body.scale.set(1.35,.55,.8);body.position.set(0,.38,0);body.castShadow=true;carcass.add(body);
- const head=new THREE.Mesh(new THREE.SphereGeometry(.2,7,6),darkMat);
- head.position.set(0,.32,.58);head.castShadow=true;carcass.add(head);
+ const body=new THREE.Mesh(new THREE.SphereGeometry(isWolf ? .43 : .48,9,7),bodyMat);
+ body.scale.set(isWolf ? 1.55 : 1.35,isWolf ? .62 : .55,isWolf ? .78 : .8);body.position.set(0,isWolf ? .34 : .38,0);body.castShadow=true;carcass.add(body);
+ if(isWolf){
+  const chest=new THREE.Mesh(new THREE.SphereGeometry(.3,8,6),bodyMat);
+  chest.scale.set(1,.8,1.15);chest.position.set(0,.32,.43);carcass.add(chest);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.19,8,6),bodyMat);
+  head.position.set(0,.31,.83);carcass.add(head);
+  const muzzle=new THREE.Mesh(new THREE.ConeGeometry(.105,.3,7),darkMat);
+  muzzle.rotation.x=Math.PI/2;muzzle.position.set(0,.25,1.02);carcass.add(muzzle);
+  for(const side of [-1,1]){
+   const ear=new THREE.Mesh(new THREE.ConeGeometry(.065,.19,5),darkMat);
+   ear.position.set(side*.13,.48,.78);ear.rotation.z=side*.2;carcass.add(ear);
+  }
+  for(const lx of [-.23,.23])for(const lz of [-.34,.48]){
+   const leg=new THREE.Mesh(new THREE.CylinderGeometry(.065,.055,.28,6),darkMat);
+   leg.position.set(lx,.13,lz);leg.rotation.x=lz<0?-.16:.16;carcass.add(leg);
+  }
+  const tail=new THREE.Mesh(new THREE.ConeGeometry(.12,.48,7),bodyMat);
+  tail.rotation.x=-Math.PI/2;tail.position.set(0,.36,-.72);carcass.add(tail);
+ }else{
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.2,7,6),darkMat);
+  head.position.set(0,.32,.58);head.castShadow=true;carcass.add(head);
+ }
  carcass.position.set(x,terrainHeight(x,z),z);scene.add(carcass);
  registerResource({object:carcass,x,z,type:"carcass",animalId,active:true});
 }
@@ -785,7 +805,7 @@ async function buildForest(){
  for(let i=0;i<16;i++){const a=worldRandom()*Math.PI*2,r=8+worldRandom()*48;createFiberPlant(Math.cos(a)*r,Math.sin(a)*r);}
  for(let i=0;i<6;i++){const a=worldRandom()*Math.PI*2,r=24+worldRandom()*52;createDeer(Math.cos(a)*r,Math.sin(a)*r,i);}
  createFox(-34,22,0);createFox(37,31,1);createFox(52,-38,2);
- for(let i=0;i<3;i++){const a=worldRandom()*Math.PI*2,r=42+worldRandom()*24;createWolf(Math.cos(a)*r,Math.sin(a)*r,i);}
+ for(let i=0;i<3;i++){const a=i*(Math.PI*2/3)+(worldRandom()-.5)*.42,r=44+worldRandom()*12;createWolf(Math.cos(a)*r,Math.sin(a)*r,i);}
  createWaterSource(13,0);
  addGrass();
 }
