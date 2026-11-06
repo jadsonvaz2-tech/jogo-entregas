@@ -121,7 +121,7 @@ function updateFlyingArrows(dt){
   const t=THREE.MathUtils.clamp(arrow.elapsed/arrow.duration,0,1);
   arrow.object.position.lerpVectors(arrow.start,end,t);arrow.object.lookAt(end);
   if(t>=1){
-   scene.remove(arrow.object);arrow.object.geometry.dispose();arrow.object.material.dispose();
+   scene.remove(arrow.object);arrow.object.traverse(part=>{if(part.isMesh){part.geometry.dispose();if(Array.isArray(part.material))part.material.forEach(m=>m.dispose());else part.material.dispose();}});
    damageWildAnimal(arrow.target);flyingArrows.splice(i,1);
   }
  }
