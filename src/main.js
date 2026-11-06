@@ -322,7 +322,7 @@ function scatterModel(model,x,z,scale=1){
  const m=model.clone(true);
  m.position.set(x,terrainHeight(x,z),z); m.rotation.y=worldRandom()*Math.PI*2;
  const s=scale*(.78+worldRandom()*.5); m.scale.multiplyScalar(s);
- m.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}}); scene.add(m); treeModels.push(m);
+ m.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}}); scene.add(m); treeModels.push(m); return m;
 }
 function addRock(x,z,s=1,collectible=false){
  const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.7*s,1),new THREE.MeshStandardMaterial({color:0x77786b,roughness:1}));
@@ -796,8 +796,25 @@ function createResource(x,z,type="wood",target=null){
  registerResource({object:stump,x,z,type,target,active:true});
 }
 async function buildForest(){
- const [common,pine,twisted,rock] = await Promise.all([loadTree("CommonTree_1"),loadTree("Pine_1"),loadTree("TwistedTree_1"),loadTree("Rock_Medium_1")]);
+ const [common,pine,twisted,rock,grassShort,grassTall,wispyGrass,rockPathA,rockPathB] = await Promise.all([
+  loadTree("CommonTree_1"),loadTree("Pine_1"),loadTree("TwistedTree_1"),loadTree("Rock_Medium_1"),
+  loadTree("Grass_Common_Short"),loadTree("Grass_Common_Tall"),loadTree("Grass_Wispy_Short"),
+  loadTree("RockPath_Round_Small_1"),loadTree("RockPath_Round_Small_2")
+ ]);
  const choices=[common,pine,twisted];
+ // Vegetação real do pacote de assets: tufos distribuídos nas encostas e clareiras, sem cobrir o acampamento inicial.
+ const groundCover=[grassShort,grassTall,wispyGrass].filter(Boolean);
+ for(let i=0;i<115&&groundCover.length;i++){
+  const a=worldRandom()*Math.PI*2,r=10+worldRandom()*94,x=Math.cos(a)*r,z=Math.sin(a)*r;
+  const model=groundCover[i%groundCover.length];
+  scatterModel(model,x,z,.48+worldRandom()*.32);
+ }
+ // Pedras arredondadas do próprio pacote marcam trechos rochosos do relevo.
+ const rockyPatches=[rockPathA,rockPathB].filter(Boolean);
+ for(let i=0;i<18&&rockyPatches.length;i++){
+  const a=worldRandom()*Math.PI*2,r=16+worldRandom()*78,x=Math.cos(a)*r,z=Math.sin(a)*r;
+  if(terrainHeight(x,z)>1.2)scatterModel(rockyPatches[i%rockyPatches.length],x,z,.42+worldRandom()*.24);
+ }
  treePositions.forEach((p,i)=>{
   if(Math.hypot(p.x,p.z)<10)return;
   const tree=scatterModel(choices[i%choices.length],p.x,p.z,.8+worldRandom()*.55);
