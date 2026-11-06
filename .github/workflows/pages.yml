@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: "pages"
+  group: "validate"
   cancel-in-progress: true
 jobs:
   validate:
