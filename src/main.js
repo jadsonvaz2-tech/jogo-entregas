@@ -492,8 +492,13 @@ function updateWildlife(dt){
  for(const animal of wildAnimals){
   if(!animal.alive)continue;
   const dx=animal.x-player.position.x,dz=animal.z-player.position.z,d=Math.hypot(dx,dz);
+  let predatorDistance=Infinity,predatorX=0,predatorZ=0;
+  for(const wolf of hostileWolves){if(!wolf.alive)continue;const wd=Math.hypot(animal.x-wolf.x,animal.z-wolf.z);if(wd<predatorDistance){predatorDistance=wd;predatorX=wolf.x;predatorZ=wolf.z;}}
+  const predatorThreat=predatorDistance<8;
+  const threatX=predatorThreat?predatorX:player.position.x,threatZ=predatorThreat?predatorZ:player.position.z;
+  const threatDistance=predatorThreat?predatorDistance:d;
   let targetSpeed=.45;
-  if(d<9){const fleeHeading=Math.atan2(dx,dz);const turnDelta=Math.atan2(Math.sin(fleeHeading-animal.heading),Math.cos(fleeHeading-animal.heading));animal.heading+=turnDelta*Math.min(1,dt*(d<4?6.2:4.4));targetSpeed=d<4?4.25:3.2;}
+  if(d<9||predatorThreat){const fleeHeading=Math.atan2(animal.x-threatX,animal.z-threatZ);const turnDelta=Math.atan2(Math.sin(fleeHeading-animal.heading),Math.cos(fleeHeading-animal.heading));animal.heading+=turnDelta*Math.min(1,dt*(threatDistance<4?6.2:4.4));targetSpeed=threatDistance<4?4.25:3.2;}
   else{animal.wander-=dt;if(animal.wander<=0){animal.heading+=(worldRandom()-.5)*1.8;animal.wander=2+worldRandom()*3;}}
   animal.moveSpeed+=(targetSpeed-animal.moveSpeed)*Math.min(1,dt*(targetSpeed>animal.moveSpeed?4.2:2.4));
   const speed=animal.moveSpeed;
@@ -507,14 +512,14 @@ function updateWildlife(dt){
   animal.object.position.y=terrainHeight(animal.x,animal.z)+Math.abs(gait)*(.018+runBlend*.045);
   if(animal.body){const breath=Math.sin(performance.now()*.0019+animal.breathPhase);animal.body.scale.y=.78+breath*.012;animal.body.position.y=1.02+breath*.004;animal.body.rotation.z=Math.sin(performance.now()*.012+animal.x)*.035*runBlend;animal.body.rotation.x=-.035*runBlend+Math.sin(performance.now()*.018+animal.z)*.018*runBlend;}
   if(animal.tail){animal.tail.rotation.x=-.18+Math.sin(performance.now()*.004+animal.z)*.12;animal.tail.rotation.z=Math.sin(performance.now()*.0027+animal.x*1.3)*.13;}
-  if(d>=9){
+  if(d>=9&&!predatorThreat){
    animal.grazeTimer-=dt;
    if(animal.grazeTimer<=0){animal.grazing=!animal.grazing;animal.grazeTimer=animal.grazing?2.4+worldRandom()*1.8:4+worldRandom()*4;}
   }else animal.grazing=false;
   animal.grazeBlend+=((animal.grazing?1:0)-animal.grazeBlend)*Math.min(1,dt*2.2);
-  if(animal.head){const alert=d<9?-.08:0;animal.head.rotation.x=alert+animal.grazeBlend*.58+Math.sin(performance.now()*.0011+animal.x*.7)*.035;}
+  if(animal.head){const alert=d<9||predatorThreat?-.08:0;animal.head.rotation.x=alert+animal.grazeBlend*.58+Math.sin(performance.now()*.0011+animal.x*.7)*.035;}
   if(animal.neck)animal.neck.rotation.x=.48+animal.grazeBlend*.16;
-  if(animal.ears)animal.ears.forEach((ear,i)=>{const side=i===0?-1:1;const alert=d<9?-.16:0;ear.rotation.z=side*-.22+side*alert+Math.sin(performance.now()*.0024+animal.x+i*1.7)*.09;ear.rotation.x=Math.sin(performance.now()*.0017+animal.z+i)*.07;});
+  if(animal.ears)animal.ears.forEach((ear,i)=>{const side=i===0?-1:1;const alert=d<9||predatorThreat?-.16:0;ear.rotation.z=side*-.22+side*alert+Math.sin(performance.now()*.0024+animal.x+i*1.7)*.09;ear.rotation.x=Math.sin(performance.now()*.0017+animal.z+i)*.07;});
   if(animal.eyes){
    animal.blinkTimer-=dt;
    if(animal.blinkTimer<=0&&animal.blinkTime<=0){animal.blinkTime=.18;animal.blinkTimer=2.5+worldRandom()*3.5;}
