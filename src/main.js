@@ -553,7 +553,6 @@ function createToolVisual(type){
  const group=new THREE.Group();
  const woodMat=new THREE.MeshStandardMaterial({color:0x76502e,roughness:.92});
  const metalMat=new THREE.MeshStandardMaterial({color:0x9ba39d,metalness:.55,roughness:.38});
- // O punho fica na parte superior: o cabo desce e a cabeça fica junto à mão.
  const handle=new THREE.Mesh(new THREE.CylinderGeometry(.035,.052,.88,10),woodMat);
  handle.position.set(0,-.49,0);group.add(handle);
  const grip=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,.17,9),new THREE.MeshStandardMaterial({color:0x493522,roughness:1}));
@@ -569,43 +568,44 @@ function createToolVisual(type){
   const tipB=new THREE.Mesh(new THREE.ConeGeometry(.09,.2,9),metalMat);
   tipB.rotation.z=-Math.PI/2;tipB.position.set(-.4,-.045,0);group.add(tipB);
  }
- group.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
  const side=type==="axe"?"right":"left";
  const handPattern=side==="right"?/^fist[._ ]?r$/i:/^fist[._ ]?l$/i;
  const rig=state.characterModel||null;
  let hand=null;
  if(rig)rig.traverse(o=>{if(!hand&&handPattern.test(o.name||""))hand=o;});
- // Mantém o objeto na raiz do personagem e acompanha a posição
- // mundial do punho a cada quadro. Isso evita herdar escala e rotação
- // inesperadas da hierarquia do esqueleto.
  group.scale.setScalar(.78);
  group.visible=true;
  group.traverse(o=>{if(o.isMesh){
-  o.frustumCulled=false;o.renderOrder=20;
+  o.castShadow=true;o.frustumCulled=false;o.renderOrder=30;
   if(o.material){o.material.depthTest=false;o.material.depthWrite=false;}
  }});
- player.add(group);
+ // As ferramentas ficam na cena, não dentro do esqueleto. Assim não herdam
+ // escalas locais inesperadas e podem seguir os punhos em coordenadas mundiais.
+ scene.add(group);
  state[handKey]=hand;
- group.position.set(side==="right"?.38:-.38,1.02,.22);
  state[key]=group;
+ updateToolAttachments();
 }
 function updateToolAttachments(){
  const handPosition=new THREE.Vector3();
+ const playerQuaternion=new THREE.Quaternion();
+ const offset=new THREE.Vector3();
+ player.updateWorldMatrix(true,false);
+ player.getWorldQuaternion(playerQuaternion);
  for(const type of ["axe","pickaxe"]){
   const group=state[type==="axe"?"axeObject":"pickaxeObject"];
   const hand=state[type==="axe"?"axeHand":"pickaxeHand"];
-  if(!group||group.parent!==player)continue;
+  if(!group||group.parent!==scene)continue;
   if(hand){
    hand.updateWorldMatrix(true,false);
    hand.getWorldPosition(handPosition);
-   player.worldToLocal(handPosition);
-   group.position.copy(handPosition);
-   group.position.x+=type==="axe"?.045:-.045;
-   group.position.y-=.04;
-   group.position.z+=.10;
+   offset.set(type==="axe"?.025:-.025,-.045,.075).applyQuaternion(playerQuaternion);
+   group.position.copy(handPosition).add(offset);
   }else{
-   group.position.set(type==="axe"?.38:-.38,1.02,.22);
+   offset.set(type==="axe"?.38:-.38,1.02,.22).applyQuaternion(playerQuaternion);
+   group.position.copy(player.position).add(offset);
   }
+  group.quaternion.copy(playerQuaternion);
   group.visible=true;
  }
 }
