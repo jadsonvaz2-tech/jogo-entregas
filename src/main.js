@@ -334,7 +334,7 @@ function createWolf(x,z,index){
  const warningRing=new THREE.Mesh(new THREE.RingGeometry(.72,.94,32),new THREE.MeshBasicMaterial({color:0xff3328,transparent:true,opacity:.72,side:THREE.DoubleSide,depthWrite:false}));
  warningRing.rotation.x=-Math.PI/2;warningRing.position.y=.045;warningRing.visible=false;wolf.add(warningRing);
  wolf.position.set(x,terrainHeight(x,z),z);scene.add(wolf);
- hostileWolves.push({id,object:wolf,x,z,heading:worldRandom()*Math.PI*2,health:3,alive:true,wander:1+worldRandom()*2,attackCooldown:1+index*.7,attackWindup:0,warningRing,legs});
+ hostileWolves.push({id,object:wolf,x,z,heading:worldRandom()*Math.PI*2,health:3,alive:true,wander:1+worldRandom()*2,attackCooldown:1+index*.7,attackWindup:0,staggerTime:0,staggerHeading:0,warningRing,legs});
 }
 function nearestWolf(maxDistance){
  let nearest=null,dist=maxDistance;
@@ -351,10 +351,12 @@ function updateWildlife(dt){
   if(!wolf.alive)continue;
   const dx=player.position.x-wolf.x,dz=player.position.z-wolf.z,d=Math.hypot(dx,dz);
   wolf.attackCooldown=Math.max(0,wolf.attackCooldown-dt);
+  wolf.staggerTime=Math.max(0,wolf.staggerTime-dt);
   let speed=.35;
-  if(d<14){wolf.heading=Math.atan2(dx,dz);speed=d>1.55?2.65:0;}
+  if(wolf.staggerTime>0){wolf.heading=wolf.staggerHeading;speed=2.4;}
+  else if(d<14){wolf.heading=Math.atan2(dx,dz);speed=d>1.55?2.65:0;}
   else{wolf.wander-=dt;if(wolf.wander<=0){wolf.heading+=(worldRandom()-.5)*1.4;wolf.wander=2+worldRandom()*3;}}
-  if(d<1.9&&wolf.attackCooldown<=0&&!(wolf.attackWindup>0))wolf.attackWindup=.75;
+  if(wolf.staggerTime<=0&&d<1.9&&wolf.attackCooldown<=0&&!(wolf.attackWindup>0))wolf.attackWindup=.75;
   if(wolf.attackWindup>0){
    speed=0;
    wolf.attackWindup=Math.max(0,wolf.attackWindup-dt);
@@ -372,8 +374,15 @@ function updateWildlife(dt){
      const protection=(state.leatherArmor?.65:1)*(state.steelHelmet?.55:state.ironHelmet?.75:1)*(state.steelChestplate?.35:state.ironChestplate?.55:1)*(state.steelShield?(state.steelShieldGuarding?.4:.8):1);
      state.health=Math.max(0,state.health-9*protection);
      state.energy=Math.max(0,state.energy-5);
-     wolf.attackCooldown=2.4;
-     toast(state.steelShieldGuarding?"O lobo atacou, mas seu escudo segurou parte do golpe!":"O lobo saltou para atacar! Afaste-se ou erga o escudo.");
+     if(state.steelShield&&state.steelShieldGuarding){
+      wolf.staggerTime=1.15;
+      wolf.staggerHeading=Math.atan2(wolf.x-player.position.x,wolf.z-player.position.z);
+      wolf.attackCooldown=3.2;
+      toast("Bloqueio perfeito! O lobo recuou. Aproveite para contra-atacar!");
+     }else{
+      wolf.attackCooldown=2.4;
+      toast("O lobo saltou para atacar! Afaste-se ou erga o escudo.");
+     }
      updateHUD();saveGame();
     }else wolf.attackCooldown=.35;
    }
