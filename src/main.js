@@ -1085,17 +1085,26 @@ function restoreSaveBackup(file){
 }
 function resetBuiltStructures(){
  if(!confirm("Apagar todas as construções deste mundo? Seus recursos, itens, ferramentas, equipamentos, animais, progresso e posição serão preservados."))return;
+ const resetArrays=["fenceSections","gates","floorTiles","wallPanels","windowPanels","roofTiles","gablePanels","ridgeCaps","chimneys","pathTiles","lanternPosts","wells","gardenPlots","herbBeds","watchtowers","marketStalls","chickenCoops","apiaries","sheepPens","doorPanels","windowShutters"];
+ const resetObjects=["smithy","steelFurnace","loom","smokehouse","herbalistHut","tannery"];
+ const resetFlags=["campfire","shelter","bed","storageChest"];
+ const resetPositions=["campfireX","campfireZ","shelterX","shelterZ","bedX","bedZ","storageChestX","storageChestZ"];
  try{
+  for(const key of resetArrays)state[key]=[];
+  for(const key of resetObjects)state[key]=null;
+  for(const key of resetFlags)state[key]=false;
+  for(const key of resetPositions)state[key]=null;
   saveGame();
-  const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"{}");
-  for(const key of ["fenceSections","gates","floorTiles","wallPanels","windowPanels","roofTiles","gablePanels","ridgeCaps","chimneys","pathTiles","lanternPosts","wells","gardenPlots","herbBeds","watchtowers","marketStalls","chickenCoops","apiaries","sheepPens","doorPanels","windowShutters"])saved[key]=[];
-  for(const key of ["smithy","steelFurnace","loom","smokehouse","herbalistHut","tannery"])saved[key]=null;
-  for(const key of ["campfire","shelter","bed","storageChest"])saved[key]=false;
-  for(const key of ["campfireX","campfireZ","shelterX","shelterZ","bedX","bedZ","storageChestX","storageChestZ"])saved[key]=null;
-  localStorage.setItem("cronicas-floresta-save",JSON.stringify(saved));
-  toast("Construções removidas. Recursos, equipamentos e progresso preservados.");
-  setTimeout(()=>location.reload(),650);
- }catch(error){console.error(error);toast("Não foi possível resetar as construções. Seu salvamento foi mantido.");}
+  const check=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
+  if(!check||resetArrays.some(key=>!Array.isArray(check[key])||check[key].length!==0)||resetObjects.some(key=>check[key]!=null)||resetFlags.some(key=>check[key]!==false)){
+   throw new Error("O salvamento não confirmou a remoção das construções.");
+  }
+  toast("Construções removidas! Recarregando o mundo...");
+  setTimeout(()=>location.reload(),350);
+ }catch(error){
+  console.error("Falha ao resetar construções:",error);
+  toast("Não foi possível resetar. Seu progresso foi preservado.");
+ }
 }
 exportBackupButton.addEventListener("click",downloadSaveBackup);
 importBackupButton.addEventListener("click",()=>backupFileInput.click());
