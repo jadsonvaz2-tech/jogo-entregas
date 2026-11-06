@@ -563,35 +563,35 @@ function createToolVisual(type){
  const gripMat=new THREE.MeshStandardMaterial({color:0x382719,roughness:1});
  const metalMat=new THREE.MeshStandardMaterial({color:0xd8e1e4,metalness:.2,roughness:.3,emissive:0x303b40,emissiveIntensity:.35});
 
- // Cabo orientado para fora da palma, atravessando o eixo da mão
- // em vez de continuar alinhado ao braço.
+ // A palma segura o centro do cabo. A haste atravessa a mão no eixo
+ // perpendicular ao antebraço; a cabeça fica numa ponta e o pomo na outra.
  const handle=new THREE.Mesh(new THREE.CylinderGeometry(.045,.055,.82,12),woodMat);
  handle.rotation.x=Math.PI/2;
- handle.position.set(0,0,-.34);
+ handle.position.set(0,0,0);
  group.add(handle);
- const grip=new THREE.Mesh(new THREE.CylinderGeometry(.065,.065,.19,12),gripMat);
+ const grip=new THREE.Mesh(new THREE.CylinderGeometry(.065,.065,.20,12),gripMat);
  grip.rotation.x=Math.PI/2;
- grip.position.set(0,0,.015);
+ grip.position.set(0,0,0);
  group.add(grip);
 
  if(type==="axe"){
   const head=new THREE.Mesh(new THREE.BoxGeometry(.42,.17,.14),metalMat);
-  head.position.set(.08,0,.105);
+  head.position.set(.08,0,-.39);
   group.add(head);
   const blade=new THREE.Mesh(new THREE.BoxGeometry(.19,.29,.17),metalMat);
-  blade.position.set(.27,0,.08);
+  blade.position.set(.27,0,-.39);
   group.add(blade);
  }else{
   const head=new THREE.Mesh(new THREE.BoxGeometry(.62,.15,.14),metalMat);
-  head.position.set(0,0,.105);
+  head.position.set(0,0,-.39);
   group.add(head);
   const tipA=new THREE.Mesh(new THREE.ConeGeometry(.09,.19,10),metalMat);
   tipA.rotation.z=Math.PI/2;
-  tipA.position.set(.37,0,.105);
+  tipA.position.set(.37,0,-.39);
   group.add(tipA);
   const tipB=new THREE.Mesh(new THREE.ConeGeometry(.09,.19,10),metalMat);
   tipB.rotation.z=-Math.PI/2;
-  tipB.position.set(-.37,0,.105);
+  tipB.position.set(-.37,0,-.39);
   group.add(tipB);
  }
 
@@ -620,7 +620,7 @@ function createToolVisual(type){
 
  if(hand){
   hand.add(group);
-  group.position.set(type==="axe"?.10:-.10,0,.20);
+  group.position.set(0,0,0);
   group.rotation.set(0,0,0);
  }else{
   // Personagem provisório: mantém a ferramenta visível até o modelo carregar.
@@ -642,7 +642,7 @@ function updateToolAttachments(){
    // O próprio AnimationMixer move a mão e a ferramenta acompanha o mesmo osso.
    if(group.parent!==hand){
     hand.add(group);
-    group.position.set(0,-.045,.19);
+    group.position.set(0,0,0);
     group.rotation.set(0,0,0);
    }
   }else{
