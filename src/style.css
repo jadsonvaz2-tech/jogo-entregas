@@ -27,3 +27,5 @@
 
 /* Botão de dormir aparece apenas quando o jogador pode descansar. */
 #sleepBtn[hidden]{display:none}
+
+#journeyProgress{height:5px;width:100%;overflow:hidden;border-radius:8px;background:#303a30;border:1px solid #c2a76a44}#journeyProgressFill{display:block;width:0;height:100%;border-radius:8px;background:linear-gradient(90deg,#8ca85b,#d2b477);transition:width .35s ease}
