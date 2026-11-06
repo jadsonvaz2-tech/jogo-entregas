@@ -41,12 +41,25 @@ function terrainHeight(x,z){
 const groundGeo = new THREE.PlaneGeometry(260,260,160,160);
 groundGeo.rotateX(-Math.PI/2);
 const pos = groundGeo.attributes.position;
+const groundColors=[];
+const meadowColor=new THREE.Color(0x526a42);
+const soilColor=new THREE.Color(0x79684c);
+const mossColor=new THREE.Color(0x68784a);
 for(let i=0;i<pos.count;i++){
  const x=pos.getX(i), z=pos.getZ(i);
- pos.setY(i,terrainHeight(x,z));
+ const height=terrainHeight(x,z);
+ pos.setY(i,height);
+ // Variação de solo acompanha as elevações: gramado nos baixios, terra exposta nas encostas e musgo em manchas suaves.
+ const slopeExposure=THREE.MathUtils.clamp((height-1.8)/6.8,0,.62);
+ const patch=(Math.sin(x*.073+Math.cos(z*.061)*1.7)+Math.cos(z*.087-x*.039)+Math.sin((x+z)*.052)) / 3;
+ const color=meadowColor.clone().lerp(soilColor,slopeExposure);
+ color.lerp(mossColor,THREE.MathUtils.clamp((patch-.18)*.34,0,.22));
+ color.multiplyScalar(.94+patch*.075);
+ groundColors.push(color.r,color.g,color.b);
 }
+groundGeo.setAttribute("color",new THREE.Float32BufferAttribute(groundColors,3));
 groundGeo.computeVertexNormals();
-const ground = new THREE.Mesh(groundGeo,new THREE.MeshStandardMaterial({color:0x526a42,roughness:1}));
+const ground = new THREE.Mesh(groundGeo,new THREE.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:1}));
 ground.receiveShadow=true; scene.add(ground);
 
 const player = new THREE.Group(); scene.add(player);
