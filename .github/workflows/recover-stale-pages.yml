@@ -1,4 +1,4 @@
-name: Recover stale GitHub Pages deployment
+name: Recover stale GitHub Pages deployment # trigger recovery after Pages sync timeout
 on:
   push:
     branches: ["main"]
