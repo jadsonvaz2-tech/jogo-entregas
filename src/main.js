@@ -550,70 +550,97 @@ function createToolVisual(type){
  const previous=state[key];
  if(previous?.parent)previous.parent.remove(previous);
  state[handKey]=null;
+
  const group=new THREE.Group();
  const woodMat=new THREE.MeshStandardMaterial({color:0x8a5a2b,roughness:.88});
  const gripMat=new THREE.MeshStandardMaterial({color:0x382719,roughness:1});
- const metalMat=new THREE.MeshStandardMaterial({color:0xd8e1e4,metalness:.25,roughness:.28,emissive:0x66747a,emissiveIntensity:.7});
- // O punho fica dentro da palma; o cabo desce pelo lado de fora do antebraço.
- const handle=new THREE.Mesh(new THREE.CylinderGeometry(.055,.07,1.12,12),woodMat);
- handle.position.set(0,-.47,0);group.add(handle);
- const grip=new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,.25,12),gripMat);
- grip.position.set(0,.015,-.025);group.add(grip);
- const head=new THREE.Mesh(type==="axe"?new THREE.BoxGeometry(.5,.22,.2):new THREE.BoxGeometry(.76,.19,.2),metalMat);
- head.position.set(0,.18,-.07);group.add(head);
+ const metalMat=new THREE.MeshStandardMaterial({color:0xd8e1e4,metalness:.2,roughness:.3,emissive:0x303b40,emissiveIntensity:.35});
+
+ // O ponto de origem do grupo coincide com a palma. O cabo desce pelo antebraço.
+ const handle=new THREE.Mesh(new THREE.CylinderGeometry(.045,.055,.82,12),woodMat);
+ handle.position.set(0,-.34,0);
+ group.add(handle);
+ const grip=new THREE.Mesh(new THREE.CylinderGeometry(.065,.065,.19,12),gripMat);
+ grip.position.set(0,.015,0);
+ group.add(grip);
+
  if(type==="axe"){
-  const blade=new THREE.Mesh(new THREE.BoxGeometry(.22,.34,.22),metalMat);
-  blade.position.set(.25,.14,0);group.add(blade);
+  const head=new THREE.Mesh(new THREE.BoxGeometry(.42,.17,.14),metalMat);
+  head.position.set(.08,.105,0);
+  group.add(head);
+  const blade=new THREE.Mesh(new THREE.BoxGeometry(.19,.29,.17),metalMat);
+  blade.position.set(.27,.08,0);
+  group.add(blade);
  }else{
-  const tipA=new THREE.Mesh(new THREE.ConeGeometry(.105,.24,10),metalMat);
-  tipA.rotation.z=Math.PI/2;tipA.position.set(.45,.14,0);group.add(tipA);
-  const tipB=new THREE.Mesh(new THREE.ConeGeometry(.105,.24,10),metalMat);
-  tipB.rotation.z=-Math.PI/2;tipB.position.set(-.45,.14,0);group.add(tipB);
+  const head=new THREE.Mesh(new THREE.BoxGeometry(.62,.15,.14),metalMat);
+  head.position.set(0,.105,0);
+  group.add(head);
+  const tipA=new THREE.Mesh(new THREE.ConeGeometry(.09,.19,10),metalMat);
+  tipA.rotation.z=Math.PI/2;
+  tipA.position.set(.37,.105,0);
+  group.add(tipA);
+  const tipB=new THREE.Mesh(new THREE.ConeGeometry(.09,.19,10),metalMat);
+  tipB.rotation.z=-Math.PI/2;
+  tipB.position.set(-.37,.105,0);
+  group.add(tipB);
  }
- // Aumenta a leitura visual em tela pequena; o cabo não fica escondido dentro do punho.
- group.scale.setScalar(1.4);
+
+ group.scale.setScalar(.95);
  group.visible=true;
- group.traverse(o=>{if(o.isMesh){
-  o.castShadow=true;o.frustumCulled=false;o.renderOrder=100;
-  if(o.material){o.material.depthTest=false;o.material.depthWrite=false;}
- }});
+ group.traverse(o=>{
+  if(!o.isMesh)return;
+  o.castShadow=true;
+  o.frustumCulled=false;
+  o.renderOrder=100;
+  if(o.material){
+   o.material.side=THREE.DoubleSide;
+   o.material.depthTest=false;
+   o.material.depthWrite=false;
+  }
+ });
+
+ // Os nomes e a hierarquia foram conferidos no glTF: Fist.R/L são filhos
+ // diretos dos respectivos LowerArm e pertencem ao esqueleto animado.
  const side=type==="axe"?"right":"left";
- const handPattern=side==="right"?/^fist[._ ]?r$/i:/^fist[._ ]?l$/i;
+ const pattern=side==="right"?/^fist[._ ]?r$/i:/^fist[._ ]?l$/i;
  const rig=state.characterModel||null;
  let hand=null;
- if(rig)rig.traverse(o=>{if(!hand&&handPattern.test(o.name||""))hand=o;});
+ if(rig)rig.traverse(o=>{if(!hand&&pattern.test(o.name||""))hand=o;});
  state[handKey]=hand;
- // Mantém a ferramenta na hierarquia do jogador. Quando o modelo carregado
- // possui o osso da mão, a posição local é recalculada a partir dele a cada quadro.
- // Isso evita dessincronização entre osso, personagem e objeto na cena.
- player.add(group);
- if(!hand)group.position.set(side==="right"?.62:-.62,1.02,-.42);
+
+ if(hand){
+  hand.add(group);
+  group.position.set(0,0,0);
+  group.rotation.set(0,0,0);
+ }else{
+  // Personagem provisório: mantém a ferramenta visível até o modelo carregar.
+  player.add(group);
+  group.position.set(side==="right"?.48:-.48,1.05,-.30);
+  group.rotation.set(0,0,side==="right"?-.08:.08);
+ }
  state[key]=group;
 }
+
 function updateToolAttachments(){
- const worldUp=new THREE.Vector3(0,1,0);
- const right=new THREE.Vector3(1,0,0).applyAxisAngle(worldUp,player.rotation.y);
- // A câmera define apenas um pequeno afastamento para o lado visível da mão.
- const towardCamera=new THREE.Vector3(-Math.sin(state.cameraYaw),0,-Math.cos(state.cameraYaw));
  for(const type of ["axe","pickaxe"]){
   const group=state[type==="axe"?"axeObject":"pickaxeObject"];
   const hand=state[type==="axe"?"axeHand":"pickaxeHand"];
   if(!group)continue;
-  if(group.parent!==player)player.add(group);
+
   if(hand){
-   // Converte a posição mundial real do osso para o espaço local do jogador.
-   // Assim a ferramenta acompanha animações e deslocamentos sem sair da mão.
-   const targetWorld=hand.getWorldPosition(new THREE.Vector3());
-   const side=type==="axe"?1:-1;
-   targetWorld.addScaledVector(right,side*.10);
-   targetWorld.addScaledVector(towardCamera,.20);
-   targetWorld.y+=.035;
-   player.updateWorldMatrix(true,false);
-   group.position.copy(player.worldToLocal(targetWorld));
-   group.rotation.set(0,0,type==="axe"?-.10:.10);
+   // Parentar diretamente ao osso elimina conversões entre espaços de coordenadas.
+   // O próprio AnimationMixer move a mão e a ferramenta acompanha o mesmo osso.
+   if(group.parent!==hand){
+    hand.add(group);
+    group.position.set(0,0,0);
+    group.rotation.set(0,0,0);
+   }
   }else{
-   group.position.set(type==="axe"?.62:-.62,1.02,-.42);
-   group.rotation.set(0,0,type==="axe"?-.10:.10);
+   if(group.parent!==player){
+    player.add(group);
+    group.position.set(type==="axe"?.48:-.48,1.05,-.30);
+    group.rotation.set(0,0,type==="axe"?-.08:.08);
+   }
   }
   group.visible=true;
  }
