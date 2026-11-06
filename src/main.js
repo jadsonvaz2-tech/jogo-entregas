@@ -1980,6 +1980,7 @@ function findFenceConnection(targetX,targetZ,extension){
   const group=new THREE.Group();
   const timber=new THREE.MeshStandardMaterial({color:0x93683f,roughness:1});
   const dark=new THREE.MeshStandardMaterial({color:0x4d321e,roughness:1});
+  const glass=new THREE.MeshStandardMaterial({color:0x9fc8d5,transparent:true,opacity:.3,roughness:.18,metalness:.08,depthWrite:false,side:THREE.DoubleSide});
   function beam(w,h,d,x,y,z,material){
    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
    mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh);
@@ -1997,6 +1998,12 @@ function findFenceConnection(targetX,targetZ,extension){
   beam(1.05,.13,.12,0,1.78,0,dark);
   for(const x of [-.55,.55])beam(.13,.8,.13,x,1.38,0,dark);
   beam(.1,.68,.08,0,1.38,.015,dark);
+  for(const x of [-.275,.275]){
+   const pane=new THREE.Mesh(new THREE.BoxGeometry(.46,.68,.035),glass);
+   pane.position.set(x,1.38,.025);pane.castShadow=false;pane.receiveShadow=true;group.add(pane);
+  }
+  beam(1.22,.1,.2,0,.88,.045,timber);
+  beam(1.22,.09,.16,0,1.88,.035,timber);
   group.position.set(panel.x,terrainHeight(panel.x,panel.z)+.28,panel.z);
   group.rotation.y=panel.yaw;scene.add(group);
   return group;
