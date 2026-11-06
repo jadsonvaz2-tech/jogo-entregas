@@ -1915,7 +1915,7 @@ function craftDoorPanel(){
 }
 function takeResources(){
  if(!state.storageChest||Math.hypot(player.position.x-state.storageChestX,player.position.z-state.storageChestZ)>=3.5){toast("Aproxime-se do baú.");return;}
- const keys=["wood","stone","fiber","berries","meat","cookedMeat","hide","bandages"];
+ const keys=["wood","stone","fiber","berries","meat","cookedMeat","hide","bandages","honey","wool"];
  let total=0;
  for(const key of keys){const amount=Math.max(0,Math.floor(state.storage[key]));state[key]+=amount;state.storage[key]=0;total+=amount;}
  if(!total){toast("O baú está vazio.");return;}
