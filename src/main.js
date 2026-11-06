@@ -54,6 +54,7 @@ head.position.y=1.55; head.castShadow=true; fallback.add(head);
 let mixer=null, characterReady=false;
 let animationActions={},currentAnimation=null,lockedAnimation=null;
 let verticalVelocity=0,isJumping=false;
+let spearThrustTime=0;
 function playCharacterAnimation(name,once=false){
  const next=animationActions[name.toLowerCase()];
  if(!next)return false;
@@ -129,6 +130,7 @@ function updateFlyingArrows(dt){
 }
 function attackCharacter(){
  if(!characterReady || isJumping || lockedAnimation)return;
+ if(state.steelSpear)spearThrustTime=.34;
  playOneShot("swordslash");
  const animal=nearestWildAnimal(state.steelSpear?5.4:3.8);
  if(animal){
@@ -2839,10 +2841,22 @@ function updateWorldLighting(dt){
  const period=hour<5||hour>=20?"NOITE":hour<7?"AMANHECER":hour<17?"DIA":hour<19?"PÔR DO SOL":"ANOITECER";
  $("period").textContent=period;$("day").textContent=state.day;
 }
+function updateSteelSpearThrust(dt){
+ const spear=state.steelSpearObject;
+ if(!spear)return;
+ if(spearThrustTime>0){
+  spearThrustTime=Math.max(0,spearThrustTime-dt);
+  const progress=1-spearThrustTime/.34;
+  const thrust=Math.sin(progress*Math.PI);
+  spear.position.z=.22+thrust*.72;
+  spear.rotation.x=.08+thrust*.95;
+ }else{spear.position.z=.22;spear.rotation.x=.08;}
+}
 function update(dt){
  const nowMs=Date.now();
  for(const r of resources){if(r.type==="fiber"&&!r.active&&r.respawnAt&&nowMs>=r.respawnAt){r.active=true;r.respawnAt=0;r.object.visible=true;toast("Uma planta fibrosa cresceu novamente.");}}
  updateWorldLighting(dt);
+ updateSteelSpearThrust(dt);
   if(state.steelShieldGuarding){state.energy=Math.max(0,state.energy-dt*.65);if(state.energy<=0){state.steelShieldGuarding=false;if(state.steelShieldObject)applySteelShieldPose(state.steelShieldObject);$("guardShieldBtn").textContent="🛡️ ERGUER ESCUDO";toast("Você ficou sem energia e baixou o escudo.");}}
  updateWildlife(dt);
  updateFlyingArrows(dt);
