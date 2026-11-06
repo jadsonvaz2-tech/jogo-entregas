@@ -433,7 +433,15 @@ function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");
 function updateHUD(){
  $("bowStatus").textContent=state.bow?"Arco: fabricado · Flechas: "+state.arrows:"Arco: não fabricado · Madeira: "+state.wood+"/2 · Fibras: "+state.fiber+"/2";
   const huntTarget=nearestWildAnimal(16);
-  $("huntTargetStatus").textContent=huntTarget?"Alvo: veado a "+Math.hypot(player.position.x-huntTarget.x,player.position.z-huntTarget.z).toFixed(1)+" m · Vida "+huntTarget.health+"/2":"Caça: nenhum veado a até 16 m";
+  if(huntTarget){
+   const dx=huntTarget.x-player.position.x,dz=huntTarget.z-player.position.z;
+   const distance=Math.hypot(dx,dz).toFixed(1);
+   const angle=Math.atan2(dx,dz)-state.cameraYaw;
+   const relative=Math.atan2(Math.sin(angle),Math.cos(angle));
+   const directions=["à frente","à frente e à direita","à direita","atrás e à direita","atrás","atrás e à esquerda","à esquerda","à frente e à esquerda"];
+   const direction=directions[Math.round(relative/(Math.PI/4)+8)%8];
+   $("huntTargetStatus").textContent="Veado: "+distance+" m · "+direction+" · Vida "+huntTarget.health+"/2";
+  }else $("huntTargetStatus").textContent="Caça: nenhum veado a até 16 m";
  $("craftBow").disabled=state.bow;
  $("craftArrows").disabled=!state.bow||state.wood<1||state.fiber<1;
  $("shootBtn").disabled=!state.bow||state.arrows<1;
