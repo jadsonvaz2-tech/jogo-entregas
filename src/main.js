@@ -348,7 +348,7 @@ function createDeer(x,z,index){
  healthFill.position.set(0,0,.008);healthBar.add(healthFill);
  healthBar.position.set(0,2.02,0);healthBar.visible=false;healthBar.renderOrder=5;deer.add(healthBar);
  deer.position.set(x,terrainHeight(x,z),z);scene.add(deer);
- wildAnimals.push({id,object:deer,x,z,heading:worldRandom()*Math.PI*2,health:2,alive:true,wander:1+worldRandom()*2,healthBar,healthFill,legs,tail,head});
+ wildAnimals.push({id,object:deer,x,z,heading:worldRandom()*Math.PI*2,health:2,alive:true,wander:1+worldRandom()*2,healthBar,healthFill,legs,tail,head,neck,grazeTimer:2+worldRandom()*4,grazeBlend:0,grazing:false});
 }
 function createWolf(x,z,index){
  const id="wolf-"+index;
@@ -466,7 +466,13 @@ function updateWildlife(dt){
   animal.legs.forEach((leg,i)=>{leg.rotation.x=(i===0||i===3?1:-1)*gait;});
   animal.object.position.y=terrainHeight(animal.x,animal.z)+Math.abs(gait)*.035;
   if(animal.tail)animal.tail.rotation.x=-.18+Math.sin(performance.now()*.004+animal.z)*.12;
-  if(animal.head){const alert=d<9?-.08:0;animal.head.rotation.x=alert+Math.sin(performance.now()*.0011+animal.x*.7)*.045;}
+  if(d>=9){
+   animal.grazeTimer-=dt;
+   if(animal.grazeTimer<=0){animal.grazing=!animal.grazing;animal.grazeTimer=animal.grazing?2.4+worldRandom()*1.8:4+worldRandom()*4;}
+  }else animal.grazing=false;
+  animal.grazeBlend+=(animal.grazing?1:0-animal.grazeBlend)*Math.min(1,dt*2.2);
+  if(animal.head){const alert=d<9?-.08:0;animal.head.rotation.x=alert+animal.grazeBlend*.58+Math.sin(performance.now()*.0011+animal.x*.7)*.035;}
+  if(animal.neck)animal.neck.rotation.x=.48+animal.grazeBlend*.16;
   if(animal.healthBar){animal.healthBar.quaternion.copy(animal.object.quaternion).invert().multiply(camera.quaternion); }
  }
 }
