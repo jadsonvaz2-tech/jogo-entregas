@@ -584,30 +584,37 @@ function createToolVisual(type){
  if(rig)rig.traverse(o=>{if(!hand&&handPattern.test(o.name||""))hand=o;});
  state[handKey]=hand;
  if(hand){
-  // Filho direto do osso correto: herda a pose e a rotação da mão em cada animação.
-  hand.add(group);
-  // Desloca a empunhadura para fora da palma e à frente do corpo, sem perder o vínculo com o osso.
-  group.position.set(side==="right"?.025:-.025,0,-.16);
-  group.rotation.set(0,0,side==="right"?-.10:.10);
+  // O objeto fica na cena, mas sua posição é atualizada pela posição mundial do osso.
+  // Isso evita herdar escalas/eixos locais inesperados do esqueleto GLTF.
+  scene.add(group);
  }else{
-  // Fallback temporário até o modelo terminar de carregar.
+  // Personagem provisório: mantém a ferramenta ao lado da mão aproximada.
   player.add(group);
-  group.position.set(side==="right"?.62:-.62,1.02,-.42);
+  group.position.set(side==="right"?.62:-.62,1.02,.28);
  }
  state[key]=group;
 }
 function updateToolAttachments(){
+ const right=new THREE.Vector3(1,0,0).applyAxisAngle(new THREE.Vector3(0,1,0),player.rotation.y);
+ const forward=new THREE.Vector3(0,0,1).applyAxisAngle(new THREE.Vector3(0,1,0),player.rotation.y);
  for(const type of ["axe","pickaxe"]){
   const group=state[type==="axe"?"axeObject":"pickaxeObject"];
   const hand=state[type==="axe"?"axeHand":"pickaxeHand"];
   if(!group)continue;
-  if(hand&&group.parent===hand){
-   group.visible=true;
-   continue;
+  if(hand){
+   const handPosition=hand.getWorldPosition(new THREE.Vector3());
+   const side=type==="axe"?1:-1;
+   handPosition.addScaledVector(right,side*.12);
+   handPosition.addScaledVector(forward,.12);
+   handPosition.y+=.06;
+   group.position.copy(handPosition);
+   group.rotation.set(0,player.rotation.y,type==="axe"?-.10:.10);
+   if(group.parent!==scene)scene.add(group);
+  }else{
+   if(group.parent!==player)player.add(group);
+   group.position.set(type==="axe"?.62:-.62,1.02,.28);
+   group.rotation.set(0,0,type==="axe"?-.10:.10);
   }
-  if(group.parent!==player)player.add(group);
-  group.position.set(type==="axe"?.62:-.62,1.02,-.42);
-  group.rotation.set(0,0,type==="axe"?-.10:.10);
   group.visible=true;
  }
 }
