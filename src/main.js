@@ -90,6 +90,14 @@ function craftArrows(){
  state.wood--;state.fiber--;state.arrows+=5;
  toast("Você fabricou 5 flechas.");updateHUD();saveGame();
 }
+function updateWolfHealthBar(wolf){
+ if(!wolf||!wolf.healthBar)return;
+ const ratio=THREE.MathUtils.clamp(wolf.health/3,0,1);
+ wolf.healthBar.visible=wolf.alive&&ratio<1;
+ wolf.healthFill.scale.x=ratio;
+ wolf.healthFill.position.x=-.05-.38*(1-ratio);
+ wolf.healthFill.material.color.setHex(ratio>.66?0x76bd55:ratio>.33?0xe2a43b:0xd94b43);
+}
 function reactWolfToHit(wolf){
  if(!wolf||!wolf.alive)return;
  wolf.hitStunTime=.55;
@@ -101,6 +109,7 @@ function reactWolfToHit(wolf){
 function damageWildAnimal(animal){
  if(!animal||!animal.alive)return;
  animal.health--;
+ if(animal.id.startsWith("wolf-"))updateWolfHealthBar(animal);
  if(animal.id.startsWith("wolf-")&&animal.health>0)reactWolfToHit(animal);
  if(animal.health<=0){
   animal.alive=false;animal.object.visible=false;
@@ -155,6 +164,7 @@ function attackCharacter(){
  const animal=nearestWildAnimal(range);
  if(wolf){
   wolf.health-=state.steelSword?3:state.ironSword||state.steelSpear?2:1;
+  updateWolfHealthBar(wolf);
   if(wolf.health>0)reactWolfToHit(wolf);
   if(wolf.health<=0){
    wolf.alive=false;wolf.object.visible=false;
@@ -341,10 +351,16 @@ function createWolf(x,z,index){
  }
  const tail=new THREE.Mesh(new THREE.CylinderGeometry(.08,.13,.62,7),coat);
  tail.position.set(0,.78,-.86);tail.rotation.x=-1.05;wolf.add(tail);
+ const healthBar=new THREE.Group();
+ const healthBack=new THREE.Mesh(new THREE.PlaneGeometry(.86,.105),new THREE.MeshBasicMaterial({color:0x171512,transparent:true,opacity:.88,depthWrite:false,side:THREE.DoubleSide}));
+ healthBack.position.z=0;healthBar.add(healthBack);
+ const healthFill=new THREE.Mesh(new THREE.PlaneGeometry(.76,.055),new THREE.MeshBasicMaterial({color:0x76bd55,depthWrite:false,side:THREE.DoubleSide}));
+ healthFill.position.set(-.05,0,.008);healthBar.add(healthFill);
+ healthBar.position.set(0,1.78,0);healthBar.visible=false;healthBar.renderOrder=5;wolf.add(healthBar);
  const warningRing=new THREE.Mesh(new THREE.RingGeometry(.72,.94,32),new THREE.MeshBasicMaterial({color:0xff3328,transparent:true,opacity:.72,side:THREE.DoubleSide,depthWrite:false}));
  warningRing.rotation.x=-Math.PI/2;warningRing.position.y=.045;warningRing.visible=false;wolf.add(warningRing);
  wolf.position.set(x,terrainHeight(x,z),z);scene.add(wolf);
- hostileWolves.push({id,object:wolf,x,z,heading:worldRandom()*Math.PI*2,health:3,alive:true,wander:1+worldRandom()*2,attackCooldown:1+index*.7,attackWindup:0,staggerTime:0,staggerHeading:0,hitStunTime:0,hitHeading:0,warningRing,legs});
+ hostileWolves.push({id,object:wolf,x,z,heading:worldRandom()*Math.PI*2,health:3,alive:true,wander:1+worldRandom()*2,attackCooldown:1+index*.7,attackWindup:0,staggerTime:0,staggerHeading:0,hitStunTime:0,hitHeading:0,warningRing,healthBar,healthFill,legs});
 }
 function nearestWolf(maxDistance){
  let nearest=null,dist=maxDistance;
@@ -403,6 +419,8 @@ function updateWildlife(dt){
   wolf.z+=Math.cos(wolf.heading)*speed*dt;
   wolf.object.position.set(wolf.x,terrainHeight(wolf.x,wolf.z),wolf.z);
   wolf.object.rotation.y=wolf.heading;
+  if(wolf.healthBar){wolf.healthBar.quaternion.copy(wolf.object.quaternion).invert().multiply(camera.quaternion);}
+
   if(wolf.hitStunTime<=0&&wolf.staggerTime<=0)wolf.object.rotation.x=0;
   const gait=Math.sin(Date.now()*.012+wolf.x)*.22*(speed>0?1:0);
   wolf.legs.forEach((leg,i)=>{leg.rotation.x=(i===0||i===3?1:-1)*gait;});
