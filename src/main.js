@@ -377,12 +377,12 @@ async function buildForest(){
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],pathTiles:[],lanternPosts:[],wells:[],gardenPlots:[],gardenObjects:[],nearGardenIndex:-1,marketStalls:[],nearMarketIndex:-1,coins:0,watchtowers:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
+const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],pathTiles:[],lanternPosts:[],wells:[],gardenPlots:[],gardenObjects:[],nearGardenIndex:-1,marketStalls:[],nearMarketIndex:-1,coins:0,chickenCoops:[],nearCoopIndex:-1,eggs:0,watchtowers:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
   if(!saved)return;
-  for(const key of ["health","hunger","thirst","temperature","energy","wood","stone","day","timeOfDay","berries","fiber","meat","cookedMeat","hide","bandages","waterCharges","arrows","coins"])if(Number.isFinite(saved[key]))state[key]=saved[key];
+  for(const key of ["health","hunger","thirst","temperature","energy","wood","stone","day","timeOfDay","berries","fiber","meat","cookedMeat","hide","bandages","waterCharges","arrows","coins","eggs"])if(Number.isFinite(saved[key]))state[key]=saved[key];
   state.axe=saved.axe===true;state.pickaxe=saved.pickaxe===true;
   state.starterKitGranted=saved.starterKitGranted===true;
   state.campfire=saved.campfire===true;
@@ -412,6 +412,7 @@ function loadGame(){
   if(Array.isArray(saved.gardenPlots))state.gardenPlots=saved.gardenPlots.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,8).map(v=>({...v,plantedAt:Number.isFinite(v.plantedAt)?v.plantedAt:0}));
   if(Array.isArray(saved.watchtowers))state.watchtowers=saved.watchtowers.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,6);
   if(Array.isArray(saved.marketStalls))state.marketStalls=saved.marketStalls.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,4);
+  if(Array.isArray(saved.chickenCoops))state.chickenCoops=saved.chickenCoops.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,4).map(v=>({...v,lastEggAt:Number.isFinite(v.lastEggAt)?v.lastEggAt:Date.now()}));
   if(Array.isArray(saved.doorPanels))state.doorPanels=saved.doorPanels.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100).map(v=>({...v,open:v.open===true}));
   if(Array.isArray(saved.windowShutters))state.windowShutters=saved.windowShutters.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100).map(v=>({...v,open:v.open===true}));
   if(Number.isFinite(saved.campfireX))state.campfireX=saved.campfireX;
@@ -428,7 +429,7 @@ function loadGame(){
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,wells:state.wells,gardenPlots:state.gardenPlots,watchtowers:state.watchtowers,marketStalls:state.marketStalls,coins:state.coins,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,wells:state.wells,gardenPlots:state.gardenPlots,watchtowers:state.watchtowers,marketStalls:state.marketStalls,coins:state.coins,chickenCoops:state.chickenCoops,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -529,6 +530,11 @@ function updateHUD(){
   $("gardenStatus").textContent="Hortas comunitárias: "+state.gardenPlots.length+"/8";
   $("watchtowerStatus").textContent="Torres de vigia: "+state.watchtowers.length+"/6";
   $("marketStatus").textContent="Feiras construídas: "+state.marketStalls.length+"/4 · Moedas: "+state.coins;
+  $("coopStatus").textContent="Galinheiros: "+state.chickenCoops.length+"/4 · Ovos: "+state.eggs;
+  $("craftCoop").disabled=state.wood<9||state.fiber<3||state.chickenCoops.length>=4;
+  $("collectEggs").hidden=state.nearCoopIndex<0;
+  $("collectEggs").disabled=state.nearCoopIndex<0||!state.chickenCoops[state.nearCoopIndex]||Math.floor((Date.now()-state.chickenCoops[state.nearCoopIndex].lastEggAt)/180000)<1;
+  $("eatEgg").disabled=state.eggs<1;
   $("craftMarket").disabled=state.wood<10||state.fiber<4||state.marketStalls.length>=4;
   const marketNear=state.nearMarketIndex>=0;
   $("marketActions").hidden=!marketNear;
@@ -692,6 +698,9 @@ $("craftStorageChest").addEventListener("click",craftStorageChest);
  $("craftGarden").addEventListener("click",craftGardenPlot);
  $("craftWatchtower").addEventListener("click",craftWatchtower);
  $("craftMarket").addEventListener("click",craftMarketStall);
+ $("craftCoop").addEventListener("click",craftChickenCoop);
+ $("collectEggs").addEventListener("click",collectCoopEggs);
+ $("eatEgg").addEventListener("click",eatEgg);
  $("sellBerries").addEventListener("click",()=>sellMarketGoods("berries"));
  $("sellMeat").addEventListener("click",()=>sellMarketGoods("meat"));
  $("sellHide").addEventListener("click",()=>sellMarketGoods("hide"));
@@ -816,6 +825,82 @@ function findFenceConnection(targetX,targetZ,extension){
   state.stone-=12;state.wood-=5;
   createWell(well);state.wells.push(well);
   updateHUD();saveGame();toast("Poço comunitário construído! Agora você pode beber e encher o cantil aqui.");
+ }
+ function craftChickenCoop(){
+  if(state.chickenCoops.length>=4){toast("Limite de 4 galinheiros atingido.");return;}
+  if(state.wood<9||state.fiber<3){toast("Faltam materiais: 9 madeiras e 3 fibras.");return;}
+  const yaw=Math.round(state.cameraYaw/(Math.PI/2))*(Math.PI/2);
+  const x=Math.round((player.position.x+Math.sin(yaw)*6)/3)*3;
+  const z=Math.round((player.position.z+Math.cos(yaw)*6)/3)*3;
+  if(state.chickenCoops.some(coop=>Math.hypot(coop.x-x,coop.z-z)<5)){
+   toast("Já existe um galinheiro muito próximo. Escolha outro local.");return;
+  }
+  const coop={x,z,yaw,lastEggAt:Date.now()};
+  state.wood-=9;state.fiber-=3;
+  state.chickenCoops.push(coop);createChickenCoop(coop);
+  updateHUD();saveGame();toast("Galinheiro construído! As galinhas começarão a produzir ovos.");
+ }
+ function createChickenCoop(coop){
+  const group=new THREE.Group();
+  const timber=new THREE.MeshStandardMaterial({color:0x684326,roughness:1});
+  const dark=new THREE.MeshStandardMaterial({color:0x3f2b1d,roughness:1});
+  const straw=new THREE.MeshStandardMaterial({color:0xb69a59,roughness:1});
+  const white=new THREE.MeshStandardMaterial({color:0xe6dfc9,roughness:.85});
+  const red=new THREE.MeshStandardMaterial({color:0x9e342a,roughness:.8});
+  const feather=new THREE.MeshStandardMaterial({color:0xc8bda5,roughness:1});
+  for(const x of [-1.7,1.7])for(const z of [-1.25,1.25]){
+   const post=new THREE.Mesh(new THREE.BoxGeometry(.13,.85,.13),dark);
+   post.position.set(x,.43,z);group.add(post);
+  }
+  for(const z of [-1.25,1.25])for(const y of [.32,.67]){
+   const rail=new THREE.Mesh(new THREE.BoxGeometry(3.35,.1,.1),timber);rail.position.set(0,y,z);group.add(rail);
+  }
+  for(const x of [-1.7,1.7])for(const y of [.32,.67]){
+   const rail=new THREE.Mesh(new THREE.BoxGeometry(.1,.1,2.45),timber);rail.position.set(x,y,0);group.add(rail);
+  }
+  const house=new THREE.Mesh(new THREE.BoxGeometry(1.45,1.05,1.25),timber);
+  house.position.set(0,.62,-.35);group.add(house);
+  const roof=new THREE.Mesh(new THREE.ConeGeometry(1.15,.72,4),straw);
+  roof.position.set(0,1.48,-.35);roof.rotation.y=Math.PI/4;group.add(roof);
+  const door=new THREE.Mesh(new THREE.BoxGeometry(.38,.65,.08),dark);
+  door.position.set(0,.38,.31);group.add(door);
+  for(let i=0;i<3;i++){
+   const x=-.85+i*.82,z=.72+(i%2)*.22;
+   const body=new THREE.Mesh(new THREE.SphereGeometry(.28,9,7),white);
+   body.scale.set(1,.78,1.25);body.position.set(x,.48,z);group.add(body);
+   const head=new THREE.Mesh(new THREE.SphereGeometry(.13,8,6),feather);
+   head.position.set(x,.72,z+.24);group.add(head);
+   const beak=new THREE.Mesh(new THREE.ConeGeometry(.065,.18,5),straw);
+   beak.position.set(x,.69,z+.39);beak.rotation.x=Math.PI/2;group.add(beak);
+   const comb=new THREE.Mesh(new THREE.SphereGeometry(.07,6,5),red);
+   comb.position.set(x,.86,z+.2);group.add(comb);
+   for(const side of [-1,1]){
+    const leg=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,.22,5),red);
+    leg.position.set(x+side*.09,.2,z);group.add(leg);
+   }
+  }
+  for(const x of [-.95,.95]){
+   const nest=new THREE.Mesh(new THREE.CylinderGeometry(.28,.32,.16,8),straw);
+   nest.position.set(x,.2,-.8);group.add(nest);
+  }
+  group.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+  group.position.set(coop.x,terrainHeight(coop.x,coop.z),coop.z);
+  group.rotation.y=coop.yaw;scene.add(group);return group;
+ }
+ function collectCoopEggs(){
+  const coop=state.chickenCoops[state.nearCoopIndex];
+  if(!coop){toast("Aproxime-se de um galinheiro.");return;}
+  const elapsed=Math.max(0,Date.now()-coop.lastEggAt);
+  const produced=Math.min(3,Math.floor(elapsed/180000));
+  if(produced<1){toast("As galinhas ainda estão botando ovos. Aguarde um pouco.");return;}
+  state.eggs+=produced;coop.lastEggAt+=produced*180000;
+  updateHUD();saveGame();toast("Você recolheu "+produced+" ovo(s) frescos!");
+ }
+ function eatEgg(){
+  if(state.eggs<1){toast("Você não tem ovos para comer.");return;}
+  if(state.hunger>=100){toast("Sua fome já está satisfeita.");return;}
+  state.eggs--;state.hunger=Math.min(100,state.hunger+22);
+  updateHUD();saveGame();toast("Você comeu um ovo fresco. +22 de fome.");
  }
  function craftMarketStall(){
   if(state.marketStalls.length>=4){toast("Limite de 4 bancas de feira atingido.");return;}
@@ -2025,6 +2110,9 @@ function update(dt){
   let nearMarket=-1,marketDistance=5;
   for(let i=0;i<state.marketStalls.length;i++){const stall=state.marketStalls[i],d=Math.hypot(player.position.x-stall.x,player.position.z-stall.z);if(d<marketDistance){marketDistance=d;nearMarket=i;}}
   state.nearMarketIndex=nearMarket;
+  let nearCoop=-1,coopDistance=4.5;
+  for(let i=0;i<state.chickenCoops.length;i++){const coop=state.chickenCoops[i],d=Math.hypot(player.position.x-coop.x,player.position.z-coop.z);if(d<coopDistance){coopDistance=d;nearCoop=i;}}
+  state.nearCoopIndex=nearCoop;
   const gardenActionButton=$("gardenAction");
   gardenActionButton.hidden=nearGarden<0;
   if(nearGarden>=0){
@@ -2062,6 +2150,7 @@ async function start(){
  for(const plot of state.gardenPlots)state.gardenObjects.push(createGardenPlot(plot));
  for(const tower of state.watchtowers)createWatchtower(tower);
  for(const stall of state.marketStalls)createMarketStall(stall);
+ for(const coop of state.chickenCoops)createChickenCoop(coop);
  for(const door of state.doorPanels)createDoorPanel(door);
  for(const shutters of state.windowShutters)createWindowShutters(shutters);
  for(const gate of state.gates)createGate(gate);
