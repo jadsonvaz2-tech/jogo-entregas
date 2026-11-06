@@ -3718,12 +3718,14 @@ function update(dt){
   const currentGround=terrainHeight(player.position.x,player.position.z);
   const lookAhead=1.6;
   const terrainRise=terrainHeight(player.position.x+dx*lookAhead,player.position.z+dz*lookAhead)-currentGround;
-  const slopeSpeed=THREE.MathUtils.clamp(1-terrainRise*.24,.78,1.12);
+  // As botas de couro oferecem aderência extra em subidas e descidas íngremes.
+   const bootGrip=state.leatherBoots?.78:1;
+   const slopeSpeed=THREE.MathUtils.clamp(1-terrainRise*.24*bootGrip,.78,1.12);
   const speed=(fast?7.1:3.6)*slopeSpeed;
   player.position.x+=dx*speed*dt;player.position.z+=dz*speed*dt;
   state.yaw=Math.atan2(dx,dz);player.rotation.y=state.yaw;
   // Subidas íngremes exigem esforço; descidas suaves ajudam a recuperar o fôlego.
-  const uphillEffort=THREE.MathUtils.clamp(terrainRise*.9,0,1.15);
+  const uphillEffort=THREE.MathUtils.clamp(terrainRise*.9*bootGrip,0,1.15);
   const downhillRelief=THREE.MathUtils.clamp(-terrainRise*.55,0,.55);
   if(fast)state.energy=Math.max(0,state.energy-dt*(2.5+uphillEffort*.9));
   else if(uphillEffort>.18)state.energy=Math.max(0,state.energy-dt*uphillEffort*.32);
