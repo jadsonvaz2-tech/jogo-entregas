@@ -444,6 +444,8 @@ function updateHUD(){
    {done:state.leatherBoots,title:"Fabricar botas de couro",detail:"Use 2 couros e 3 fibras para se proteger."}
   ];
   const completed=milestones.filter(item=>item.done).length;
+  const progress=Math.round(completed/milestones.length*100);
+  $("journeyProgressFill").style.width=progress+"%";
   const current=milestones.find(item=>!item.done);
   $("objectiveStep").textContent=current?"JORNADA · ETAPA "+(completed+1)+"/"+milestones.length:"JORNADA CONCLUÍDA";
   $("objectiveTitle").textContent=current?current.title:"Você está pronto para explorar e expandir seu assentamento.";
