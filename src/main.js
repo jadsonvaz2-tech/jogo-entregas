@@ -668,16 +668,33 @@ function createStorageChest(x,z){
  group.position.set(x,terrainHeight(x,z),z);group.rotation.y=player.rotation.y;scene.add(group);
  state.storageChestObject=group;state.storageChest=true;state.storageChestX=x;state.storageChestZ=z;
 }
-function craftFenceSection(){
+function findFenceConnection(targetX,targetZ,extension){
+  let best=null,bestDistance=5.5;
+  for(const section of state.fenceSections){
+   const axisX=Math.cos(section.yaw),axisZ=-Math.sin(section.yaw);
+   for(const side of [-1,1]){
+    const endX=section.x+axisX*side*3.2;
+    const endZ=section.z+axisZ*side*3.2;
+    const candidateX=endX+axisX*side*extension;
+    const candidateZ=endZ+axisZ*side*extension;
+    const distance=Math.hypot(candidateX-targetX,candidateZ-targetZ);
+    if(distance<bestDistance){bestDistance=distance;best={x:candidateX,z:candidateZ,yaw:section.yaw};}
+   }
+  }
+  return best;
+ }
+ function craftFenceSection(){
   if(state.fenceSections.length>=200){toast("Limite de 200 seções de cerca atingido.");return;}
   if(state.wood<5||state.fiber<2){toast("Faltam materiais: 5 madeiras e 2 fibras.");return;}
-  state.wood-=5;state.fiber-=2;
   const yaw=player.rotation.y;
-  const x=player.position.x+Math.sin(yaw)*3.5;
-  const z=player.position.z+Math.cos(yaw)*3.5;
-  createFenceSection(x,z,yaw);
-  state.fenceSections.push({x,z,yaw});
-  updateHUD();saveGame();toast("Cerca construída! Continue expandindo seu assentamento.");
+  const targetX=player.position.x+Math.sin(yaw)*3.5;
+  const targetZ=player.position.z+Math.cos(yaw)*3.5;
+  const snapped=findFenceConnection(targetX,targetZ,3.2);
+  const x=snapped?snapped.x:targetX,z=snapped?snapped.z:targetZ,placedYaw=snapped?snapped.yaw:yaw;
+  state.wood-=5;state.fiber-=2;
+  createFenceSection(x,z,placedYaw);
+  state.fenceSections.push({x,z,yaw:placedYaw});
+  updateHUD();saveGame();toast(snapped?"Cerca conectada à extremidade do perímetro!":"Cerca construída! Continue expandindo seu assentamento.");
  }
  function createFenceSection(x,z,yaw){
   const group=new THREE.Group();
@@ -705,13 +722,15 @@ function craftFenceSection(){
  function craftGate(){
   if(state.gates.length>=30){toast("Limite de 30 portões atingido.");return;}
   if(state.wood<8||state.fiber<3){toast("Faltam materiais: 8 madeiras e 3 fibras.");return;}
-  state.wood-=8;state.fiber-=3;
   const yaw=player.rotation.y;
-  const x=player.position.x+Math.sin(yaw)*3.5;
-  const z=player.position.z+Math.cos(yaw)*3.5;
-  const gate={x,z,yaw,open:false};
+  const targetX=player.position.x+Math.sin(yaw)*3.5;
+  const targetZ=player.position.z+Math.cos(yaw)*3.5;
+  const snapped=findFenceConnection(targetX,targetZ,1.7);
+  const x=snapped?snapped.x:targetX,z=snapped?snapped.z:targetZ,placedYaw=snapped?snapped.yaw:yaw;
+  state.wood-=8;state.fiber-=3;
+  const gate={x,z,yaw:placedYaw,open:false};
   state.gates.push(gate);createGate(gate);
-  updateHUD();saveGame();toast("Portão construído! Aproxime-se para abrir ou fechar.");
+  updateHUD();saveGame();toast(snapped?"Portão encaixado no perímetro da cerca!":"Portão construído! Aproxime-se para abrir ou fechar.");
  }
  function createGate(gate){
   const group=new THREE.Group();
