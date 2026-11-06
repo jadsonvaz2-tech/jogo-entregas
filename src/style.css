@@ -29,3 +29,24 @@
 #sleepBtn[hidden]{display:none}
 
 #journeyProgress{height:5px;width:100%;overflow:hidden;border-radius:8px;background:#303a30;border:1px solid #c2a76a44}#journeyProgressFill{display:block;width:0;height:100%;border-radius:8px;background:linear-gradient(90deg,#8ca85b,#d2b477);transition:width .35s ease}
+
+/* Oficina organizada em grupos recolhíveis para telas pequenas. */
+#craftPanel{display:none;grid-template-columns:minmax(0,1fr);align-content:start;gap:7px}
+#craftPanel.open{display:grid}
+#craftPanel>.craft-category{display:block;min-width:0;border:1px solid #c2a76a66;border-radius:7px;background:#202c22}
+#craftPanel>.craft-category>summary{padding:11px 10px;color:#e7d3a5;font:bold 11px Arial,sans-serif;letter-spacing:.6px;cursor:pointer;touch-action:manipulation;list-style:none}
+#craftPanel>.craft-category>summary::-webkit-details-marker{display:none}
+#craftPanel>.craft-category>summary:after{content:"＋";float:right;color:#d2b477}
+#craftPanel>.craft-category[open]>summary:after{content:"−"}
+#craftPanel>.craft-category>*:not(summary){display:block;width:100%;margin:0 0 5px}
+#craftPanel>.craft-category>span{padding:5px 7px 0;color:#d8d4c8;font-size:10px}
+#craftPanel>.craft-category>button{padding:10px 8px}
+#craftPanel>.craft-category>div{display:grid;gap:5px;padding:3px}
+#buildPlacementUI button{white-space:nowrap}
+@media(max-width:520px){
+ #buildPlacementUI{width:min(96vw,390px)!important;max-height:42vh!important;padding:8px!important;gap:6px!important}
+ #buildPlacementUI>div:nth-child(2){display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px!important}
+ #buildPlacementUI>div:nth-child(2) button{min-width:0!important;padding:8px 3px!important;font-size:10px!important}
+ #buildPlacementUI>div:nth-child(3) button{min-height:40px!important}
+ #craftPanel{width:min(92vw,340px);max-height:72dvh}
+}
