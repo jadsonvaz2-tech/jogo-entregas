@@ -493,7 +493,7 @@ function updateWildlife(dt){
   if(!animal.alive)continue;
   const dx=animal.x-player.position.x,dz=animal.z-player.position.z,d=Math.hypot(dx,dz);
   let targetSpeed=.45;
-  if(d<9){animal.heading=Math.atan2(dx,dz);targetSpeed=d<4?4.25:3.2;}
+  if(d<9){const fleeHeading=Math.atan2(dx,dz);const turnDelta=Math.atan2(Math.sin(fleeHeading-animal.heading),Math.cos(fleeHeading-animal.heading));animal.heading+=turnDelta*Math.min(1,dt*(d<4?6.2:4.4));targetSpeed=d<4?4.25:3.2;}
   else{animal.wander-=dt;if(animal.wander<=0){animal.heading+=(worldRandom()-.5)*1.8;animal.wander=2+worldRandom()*3;}}
   animal.moveSpeed+=(targetSpeed-animal.moveSpeed)*Math.min(1,dt*(targetSpeed>animal.moveSpeed?4.2:2.4));
   const speed=animal.moveSpeed;
