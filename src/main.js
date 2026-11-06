@@ -432,6 +432,8 @@ const flyingArrows=[];
 function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>$("toast").classList.remove("show"),1900);}
 function updateHUD(){
  $("bowStatus").textContent=state.bow?"Arco: fabricado · Flechas: "+state.arrows:"Arco: não fabricado · Madeira: "+state.wood+"/2 · Fibras: "+state.fiber+"/2";
+  const huntTarget=nearestWildAnimal(16);
+  $("huntTargetStatus").textContent=huntTarget?"Alvo: veado a "+Math.hypot(player.position.x-huntTarget.x,player.position.z-huntTarget.z).toFixed(1)+" m · Vida "+huntTarget.health+"/2":"Caça: nenhum veado a até 16 m";
  $("craftBow").disabled=state.bow;
  $("craftArrows").disabled=!state.bow||state.wood<1||state.fiber<1;
  $("shootBtn").disabled=!state.bow||state.arrows<1;
