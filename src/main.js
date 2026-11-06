@@ -542,7 +542,64 @@ function craftTool(type){
  }
  updateHUD();saveGame();
 }
+
 const craftToggle=$("craftToggle"),craftPanel=$("craftPanel");
+// Backup manual do progresso: usa a mesma chave de salvamento, sem alterar o formato existente.
+const backupArea=document.createElement("div");
+backupArea.style.cssText="display:grid;gap:6px;margin-top:6px;padding-top:8px;border-top:1px solid #c2a76a55";
+const backupTitle=document.createElement("strong");
+backupTitle.textContent="SEGURANÇA DO PROGRESSO";
+const backupInfo=document.createElement("small");
+backupInfo.textContent="Exporte uma cópia do seu mundo ou restaure um arquivo salvo anteriormente.";
+const exportBackupButton=document.createElement("button");
+exportBackupButton.type="button";
+exportBackupButton.textContent="⬇ BAIXAR BACKUP DO JOGO";
+const importBackupButton=document.createElement("button");
+importBackupButton.type="button";
+importBackupButton.textContent="⬆ RESTAURAR BACKUP";
+const backupFileInput=document.createElement("input");
+backupFileInput.type="file";
+backupFileInput.accept=".json,application/json";
+backupFileInput.hidden=true;
+backupArea.append(backupTitle,backupInfo,exportBackupButton,importBackupButton,backupFileInput);
+craftPanel.appendChild(backupArea);
+function downloadSaveBackup(){
+ const rawSave=localStorage.getItem("cronicas-floresta-save");
+ if(!rawSave){toast("Nenhum progresso salvo foi encontrado neste navegador.");return;}
+ try{
+  JSON.parse(rawSave);
+  const blob=new Blob([rawSave],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement("a");
+  const stamp=new Date().toISOString().replace(/[:.]/g,"-");
+  link.href=url;link.download="cronicas-floresta-backup-"+stamp+".json";
+  document.body.appendChild(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  toast("Backup do progresso preparado para baixar.");
+ }catch(error){toast("Não foi possível preparar o backup.");}
+}
+function restoreSaveBackup(file){
+ if(!file)return;
+ const reader=new FileReader();
+ reader.onload=()=>{
+  try{
+   const imported=JSON.parse(String(reader.result||""));
+   if(!imported||typeof imported!=="object"||Array.isArray(imported))throw new Error("Formato inválido");
+   const validKeys=["x","z","health","hunger","thirst","wood","stone","axe","pickaxe","day","timeOfDay","collectedResources"];
+   if(!validKeys.some(key=>Object.prototype.hasOwnProperty.call(imported,key)))throw new Error("Backup sem dados do jogo");
+   if(!confirm("Restaurar este backup substituirá o progresso salvo neste navegador. Deseja continuar?"))return;
+   localStorage.setItem("cronicas-floresta-save",JSON.stringify(imported));
+   toast("Backup restaurado. Recarregando o mundo...");
+   setTimeout(()=>location.reload(),700);
+  }catch(error){toast("Arquivo inválido. O progresso atual foi mantido.");}
+ };
+ reader.onerror=()=>toast("Não foi possível ler o arquivo de backup.");
+ reader.readAsText(file);
+}
+exportBackupButton.addEventListener("click",downloadSaveBackup);
+importBackupButton.addEventListener("click",()=>backupFileInput.click());
+backupFileInput.addEventListener("change",()=>{const file=backupFileInput.files?.[0];restoreSaveBackup(file);backupFileInput.value="";});
+
 craftToggle.addEventListener("click",()=>{const open=craftPanel.classList.toggle("open");craftToggle.textContent=open?"FECHAR OFICINA":"FABRICAR";});
 $("craftAxe").addEventListener("click",()=>craftTool("axe"));
 $("craftPickaxe").addEventListener("click",()=>craftTool("pickaxe"));
