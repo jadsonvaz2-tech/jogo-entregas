@@ -1056,11 +1056,12 @@ craftToggle.addEventListener("click",()=>{const open=craftPanel.classList.toggle
 $("craftAxe").addEventListener("click",()=>craftTool("axe"));
 $("craftPickaxe").addEventListener("click",()=>craftTool("pickaxe"));
 $("craftStorageChest").addEventListener("click",craftStorageChest);
- $("craftFence").addEventListener("click",craftFenceSection);
- $("craftFloorTile").addEventListener("click",craftFloorTile);
- $("craftWallPanel").addEventListener("click",craftWallPanel);
- $("craftWindowPanel").addEventListener("click",craftWindowPanel);
- $("craftRoofTile").addEventListener("click",craftRoofTile);
+ $("craftFence").addEventListener("click",()=>beginBuildPlacement("fence"));
+ $("craftFloorTile").addEventListener("click",()=>beginBuildPlacement("floor"));
+ $("craftWallPanel").addEventListener("click",()=>beginBuildPlacement("wall"));
+ $("craftWindowPanel").addEventListener("click",()=>beginBuildPlacement("window"));
+ $("craftDoorPanel")?.addEventListener("click",()=>beginBuildPlacement("door"));
+ $("craftRoofTile").addEventListener("click",()=>beginBuildPlacement("roof"));
  $("craftGable").addEventListener("click",craftGablePanel);
  $("craftRidgeCap").addEventListener("click",craftRidgeCap);
  $("craftChimney").addEventListener("click",craftChimney);
@@ -1862,7 +1863,159 @@ function findFenceConnection(targetX,targetZ,extension){
   group.rotation.y=tile.yaw;scene.add(group);
   return group;
  }
- function craftFloorTile(){
+ 
+let activeBuildPlacement=null;
+let buildPreviewGroup=null,buildPreviewMesh=null,buildPreviewMaterial=null,buildPlacementUI=null;
+function buildPlacementMessage(msg){toast(msg);}
+function ensureBuildPlacementUI(){
+ if(buildPlacementUI)return;
+ const panel=document.createElement("div");
+ panel.id="buildPlacementUI";
+ panel.style.cssText="position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:80;display:none;flex-direction:column;align-items:center;gap:8px;width:min(94vw,430px);padding:10px;background:rgba(25,30,24,.92);border:1px solid rgba(230,220,190,.45);border-radius:14px;color:#fff;font:600 12px system-ui;box-shadow:0 4px 20px #0008;touch-action:manipulation";
+ const label=document.createElement("div");label.id="buildPlacementLabel";label.textContent="POSICIONAR CONSTRUÇÃO";label.style.cssText="font-size:13px;letter-spacing:.06em";
+ const row=document.createElement("div");row.style.cssText="display:flex;gap:6px;width:100%;justify-content:center;flex-wrap:wrap";
+ const make=(id,txt,action,primary=false)=>{const b=document.createElement("button");b.type="button";b.id=id;b.textContent=txt;b.style.cssText="min-height:40px;min-width:58px;padding:8px 12px;border:1px solid #c9b994;border-radius:9px;background:"+(primary?"#527b43":"#4a5046")+";color:white;font:700 12px system-ui;touch-action:manipulation";b.addEventListener("click",e=>{e.preventDefault();e.stopPropagation();action();});row.appendChild(b);return b;};
+ make("buildLeft","◀",()=>{if(activeBuildPlacement){activeBuildPlacement.offsetX-=.5;updateBuildPreview();}});
+ make("buildForward","▲",()=>{if(activeBuildPlacement){activeBuildPlacement.offsetZ+=.5;updateBuildPreview();}});
+ make("buildBack","▼",()=>{if(activeBuildPlacement){activeBuildPlacement.offsetZ-=.5;updateBuildPreview();}});
+ make("buildRight","▶",()=>{if(activeBuildPlacement){activeBuildPlacement.offsetX+=.5;updateBuildPreview();}});
+ make("buildRotate","GIRAR 90°",()=>{if(activeBuildPlacement){activeBuildPlacement.rotationStep=(activeBuildPlacement.rotationStep+1)%4;updateBuildPreview();}});
+ const actions=document.createElement("div");actions.style.cssText="display:flex;gap:8px;width:100%";
+ const confirm=document.createElement("button");confirm.type="button";confirm.textContent="✓ CONFIRMAR";confirm.style.cssText="flex:1;min-height:44px;border:0;border-radius:9px;background:#628d4b;color:white;font:800 13px system-ui";confirm.addEventListener("click",confirmBuildPlacement);
+ const cancel=document.createElement("button");cancel.type="button";cancel.textContent="✕ CANCELAR";cancel.style.cssText="flex:1;min-height:44px;border:1px solid #b99a8d;border-radius:9px;background:#633f38;color:white;font:800 13px system-ui";cancel.addEventListener("click",cancelBuildPlacement);
+ actions.append(confirm,cancel);panel.append(label,row,actions);document.body.appendChild(panel);buildPlacementUI=panel;
+}
+function buildPlacementSpec(type){
+ const specs={
+  floor:{label:"PISO MODULAR",wood:4,fiber:2,geometry:new THREE.BoxGeometry(3,.16,3),height:.12},
+  wall:{label:"PAREDE",wood:6,fiber:2,geometry:new THREE.BoxGeometry(2.9,2.45,.18),height:1.5},
+  window:{label:"PAREDE COM JANELA",wood:7,fiber:2,geometry:new THREE.BoxGeometry(2.9,2.45,.18),height:1.5},
+  door:{label:"PORTA",wood:8,fiber:3,geometry:new THREE.BoxGeometry(2.9,2.45,.2),height:1.5},
+  roof:{label:"TELHADO",wood:8,fiber:3,geometry:new THREE.BoxGeometry(3,1.25,3),height:2.25},
+  fence:{label:"CERCA",wood:5,fiber:2,geometry:new THREE.BoxGeometry(6.4,1.25,.18),height:.63}
+ };
+ return specs[type];
+}
+function beginBuildPlacement(type){
+ const spec=buildPlacementSpec(type);if(!spec)return;
+ if(activeBuildPlacement)cancelBuildPlacement(false);
+ if(state.wood<spec.wood||state.fiber<spec.fiber){toast("Materiais insuficientes: "+spec.wood+" madeiras e "+spec.fiber+" fibras.");return;}
+ if(type==="wall"||type==="window"||type==="door"||type==="roof"){
+  if(!state.floorTiles.length){toast("Construa primeiro um piso modular.");return;}
+ }
+ activeBuildPlacement={type,offsetX:0,offsetZ:0,rotationStep:0,valid:false,placement:null};
+ ensureBuildPlacementUI();
+ $("buildPlacementLabel").textContent="POSICIONAR: "+spec.label+" · ajuste e confirme";
+ buildPlacementUI.style.display="flex";
+ const mat=new THREE.MeshStandardMaterial({color:0x55e58a,transparent:true,opacity:.42,roughness:.7,metalness:0,depthWrite:false});
+ buildPreviewMaterial=mat;buildPreviewGroup=new THREE.Group();
+ buildPreviewMesh=new THREE.Mesh(spec.geometry,mat);buildPreviewMesh.castShadow=false;buildPreviewMesh.receiveShadow=false;buildPreviewGroup.add(buildPreviewMesh);
+ const outline=new THREE.LineSegments(new THREE.EdgesGeometry(spec.geometry),new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.9}));
+ buildPreviewGroup.add(outline);scene.add(buildPreviewGroup);
+ updateBuildPreview();
+ toast("Pré-visualização ativa. Ajuste a posição e confirme quando estiver verde.");
+}
+function nearestBuildFloor(x,z,maxDistance=9){
+ let best=null,bestD=maxDistance;
+ for(const tile of state.floorTiles){const d=Math.hypot(tile.x-x,tile.z-z);if(d<bestD){bestD=d;best=tile;}}
+ return best;
+}
+function buildPreviewCandidate(){
+ const p=activeBuildPlacement,type=p.type;
+ const forward=new THREE.Vector3(Math.sin(state.cameraYaw),0,Math.cos(state.cameraYaw));
+ const right=new THREE.Vector3(forward.z,0,-forward.x);
+ const targetX=player.position.x+forward.x*4+right.x*p.offsetX+forward.x*p.offsetZ;
+ const targetZ=player.position.z+forward.z*4+right.z*p.offsetX+forward.z*p.offsetZ;
+ let x=targetX,z=targetZ,yaw=Math.round(state.cameraYaw/(Math.PI/2))*(Math.PI/2),anchor=null,slot=null;
+ if(type==="floor"){
+  anchor=nearestBuildFloor(player.position.x,player.position.z,8);
+  if(anchor){
+   const dx=targetX-anchor.x,dz=targetZ-anchor.z;
+   const lx=dx*Math.cos(anchor.yaw)-dz*Math.sin(anchor.yaw),lz=dx*Math.sin(anchor.yaw)+dz*Math.cos(anchor.yaw);
+   const sx=Math.abs(lx)>Math.abs(lz);
+   const ox=sx?Math.sign(lx||1)*3:Math.round(lx/3)*3;
+   const oz=sx?Math.round(lz/3)*3:Math.sign(lz||1)*3;
+   x=anchor.x+ox*Math.cos(anchor.yaw)+oz*Math.sin(anchor.yaw);
+   z=anchor.z-ox*Math.sin(anchor.yaw)+oz*Math.cos(anchor.yaw);yaw=anchor.yaw;
+  }else{x=Math.round(targetX/3)*3;z=Math.round(targetZ/3)*3;}
+ }else if(type==="wall"||type==="window"||type==="door"){
+  anchor=nearestBuildFloor(targetX,targetZ,10)||nearestBuildFloor(player.position.x,player.position.z,8);
+  if(anchor){
+   const dx=targetX-anchor.x,dz=targetZ-anchor.z;
+   const lx=dx*Math.cos(anchor.yaw)-dz*Math.sin(anchor.yaw),lz=dx*Math.sin(anchor.yaw)+dz*Math.cos(anchor.yaw);
+   let side;
+   if(Math.abs(lx)>Math.abs(lz))side=lx>=0?0:1;else side=lz>=0?2:3;
+   side=(side+p.rotationStep)%4;
+   const edges=[
+    {ex:1.5,ez:0,yaw:anchor.yaw+Math.PI/2},
+    {ex:-1.5,ez:0,yaw:anchor.yaw+Math.PI/2},
+    {ex:0,ez:1.5,yaw:anchor.yaw},
+    {ex:0,ez:-1.5,yaw:anchor.yaw}
+   ];
+   slot=edges[side];x=anchor.x+slot.ex*Math.cos(anchor.yaw)+slot.ez*Math.sin(anchor.yaw);z=anchor.z-slot.ex*Math.sin(anchor.yaw)+slot.ez*Math.cos(anchor.yaw);yaw=slot.yaw;
+  }
+ }else if(type==="roof"){
+  anchor=nearestBuildFloor(targetX,targetZ,10)||nearestBuildFloor(player.position.x,player.position.z,8);
+  if(anchor){x=anchor.x;z=anchor.z;yaw=anchor.yaw;}
+ }else if(type==="fence"){
+  yaw=state.cameraYaw+p.rotationStep*Math.PI/2;
+  const snapped=findFenceConnection(targetX,targetZ,3.2);
+  if(snapped){x=snapped.x;z=snapped.z;yaw=snapped.yaw;}
+ }
+ return {x,z,yaw,anchor,slot};
+}
+function updateBuildPreview(){
+ if(!activeBuildPlacement||!buildPreviewGroup)return;
+ const p=activeBuildPlacement,type=p.type,spec=buildPlacementSpec(type),c=buildPreviewCandidate();
+ const hasFloor=type==="floor"||type==="fence"||!!c.anchor;
+ let valid=hasFloor&&state.wood>=spec.wood&&state.fiber>=spec.fiber;
+ if(type==="floor")valid=valid&&!state.floorTiles.some(t=>Math.hypot(t.x-c.x,t.z-c.z)<2.3);
+ if(type==="wall")valid=valid&&!state.wallPanels.some(t=>Math.hypot(t.x-c.x,t.z-c.z)<2.35);
+ if(type==="window")valid=valid&&![...state.wallPanels,...state.windowPanels,...state.doorPanels].some(t=>Math.hypot(t.x-c.x,t.z-c.z)<2.35);
+ if(type==="door")valid=valid&&![...state.wallPanels,...state.windowPanels,...state.doorPanels].some(t=>Math.hypot(t.x-c.x,t.z-c.z)<2.35);
+ if(type==="roof")valid=valid&&!state.roofTiles.some(t=>Math.hypot(t.x-c.x,t.z-c.z)<2.3);
+ if(type==="fence")valid=valid&&!state.fenceSections.some(t=>Math.hypot(t.x-c.x,t.z-c.z)<5.8);
+ const limits={floor:state.floorTiles.length<100,wall:state.wallPanels.length<100,window:state.windowPanels.length<100,door:state.doorPanels.length<100,roof:state.roofTiles.length<100,fence:state.fenceSections.length<200};
+ valid=valid&&limits[type];
+ const ground=terrainHeight(c.x,c.z);
+ const y=ground+spec.height;
+ buildPreviewGroup.position.set(c.x,y,c.z);buildPreviewGroup.rotation.y=c.yaw;
+ buildPreviewMaterial.color.setHex(valid?0x55e58a:0xff514d);
+ activeBuildPlacement.valid=valid;activeBuildPlacement.placement={x:c.x,z:c.z,yaw:c.yaw,ground};
+ const confirm=$("buildPlacementUI")?.querySelector("button");
+ if(confirm){confirm.disabled=!valid;confirm.style.opacity=valid?"1":".45";}
+}
+function cancelBuildPlacement(showMessage=true){
+ if(buildPreviewGroup){scene.remove(buildPreviewGroup);buildPreviewGroup.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose();}});}
+ buildPreviewGroup=null;buildPreviewMesh=null;buildPreviewMaterial=null;activeBuildPlacement=null;
+ if(buildPlacementUI)buildPlacementUI.style.display="none";
+ if(showMessage)toast("Construção cancelada. Nenhum material foi consumido.");
+}
+function confirmBuildPlacement(){
+ const p=activeBuildPlacement;if(!p)return;
+ updateBuildPreview();
+ if(!p.valid){toast("Posição inválida: escolha um encaixe livre e confira os materiais.");return;}
+ const c=p.placement,type=p.type,spec=buildPlacementSpec(type);
+ if(state.wood<spec.wood||state.fiber<spec.fiber){toast("Materiais insuficientes.");return;}
+ if(type==="floor"){
+  const item={x:c.x,z:c.z,yaw:c.yaw};createFloorTile(item);state.floorTiles.push(item);
+ }else if(type==="wall"){
+  const item={x:c.x,z:c.z,yaw:c.yaw};createWallPanel(item);state.wallPanels.push(item);
+ }else if(type==="window"){
+  const item={x:c.x,z:c.z,yaw:c.yaw};createWindowPanel(item);state.windowPanels.push(item);
+ }else if(type==="door"){
+  const item={x:c.x,z:c.z,yaw:c.yaw,open:false};createDoorPanel(item);state.doorPanels.push(item);
+ }else if(type==="roof"){
+  const item={x:c.x,z:c.z,yaw:c.yaw};createRoofTile(item);state.roofTiles.push(item);
+ }else if(type==="fence"){
+  createFenceSection(c.x,c.z,c.yaw);state.fenceSections.push({x:c.x,z:c.z,yaw:c.yaw});
+ }
+ state.wood-=spec.wood;state.fiber-=spec.fiber;
+ cancelBuildPlacement(false);updateHUD();saveGame();
+ toast(spec.label+" construído e salvo!");
+}
+
+function craftFloorTile(){
   if(state.floorTiles.length>=100){toast("Limite de 100 módulos de piso atingido.");return;}
   if(state.wood<4||state.fiber<2){toast("Faltam materiais: 4 madeiras e 2 fibras.");return;}
   const facing=player.rotation.y;
@@ -3138,7 +3291,7 @@ function update(dt){
  const kx=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);
  const ky=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0);
  const mx=THREE.MathUtils.clamp(state.moveX+kx,-1,1),my=THREE.MathUtils.clamp(state.moveY+ky,-1,1);
- const moving=Math.hypot(mx,my)>.08;
+ const moving=!activeBuildPlacement&&Math.hypot(mx,my)>.08;
  const fast=(state.running||keys.shift)&&state.energy>0;
  if(moving){
   const direction=new THREE.Vector3(mx,0,my).normalize();
@@ -3209,8 +3362,9 @@ function update(dt){
 function animate(now){
  requestAnimationFrame(animate);
  const dt=Math.min((now-last)/1000,.05);last=now;
- update(dt);if(now-lastSave>5000){saveGame();lastSave=now;}renderer.render(scene,camera);
+ update(dt);if(activeBuildPlacement)updateBuildPreview();if(now-lastSave>5000){saveGame();lastSave=now;}renderer.render(scene,camera);
 }
+addEventListener("keydown",e=>{if(e.key==="Escape"&&activeBuildPlacement)cancelBuildPlacement();});
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));});
 async function start(){
  $("loadingText").textContent="Criando o terreno e a floresta...";
