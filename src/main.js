@@ -78,6 +78,53 @@ function jumpCharacter(){
  if(!characterReady || isJumping || lockedAnimation)return;
  if(playCharacterAnimation("jump",true)){isJumping=true;verticalVelocity=5.2;}
 }
+function craftBow(){
+ if(state.bow||state.wood<4||state.fiber<4){toast("Para fabricar o arco: 4 madeiras e 4 fibras.");return;}
+ state.wood-=4;state.fiber-=4;state.bow=true;
+ toast("Arco fabricado! Prepare flechas na oficina.");updateHUD();saveGame();
+}
+function craftArrows(){
+ if(!state.bow||state.wood<1||state.fiber<1){toast("Cada lote de flechas custa 1 madeira e 1 fibra.");return;}
+ state.wood--;state.fiber--;state.arrows+=5;
+ toast("Você fabricou 5 flechas.");updateHUD();saveGame();
+}
+function damageWildAnimal(animal){
+ if(!animal||!animal.alive)return;
+ animal.health--;
+ if(animal.health<=0){
+  animal.alive=false;animal.object.visible=false;
+  if(!state.huntedAnimals.includes(animal.id))state.huntedAnimals.push(animal.id);
+  createCarcass(animal.x,animal.z);
+  toast("Veado abatido! Recolha a carne e o couro.");saveGame();
+ }else toast("A flecha atingiu o veado! Ele está ferido.");
+}
+function shootArrow(){
+ if(!state.bow||state.arrows<1){toast("Você precisa de um arco e flechas.");return;}
+ const animal=nearestWildAnimal(16);
+ if(!animal){toast("Nenhum veado no alcance do arco.");return;}
+ if(!characterReady||isJumping||lockedAnimation)return;
+ state.arrows--;
+ const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,.58,5),new THREE.MeshStandardMaterial({color:0x9b7544,roughness:1}));
+ shaft.rotation.x=Math.PI/2;
+ const tip=new THREE.Mesh(new THREE.ConeGeometry(.055,.15,5),new THREE.MeshStandardMaterial({color:0x777b80,metalness:.35,roughness:.65}));
+ tip.rotation.x=-Math.PI/2;tip.position.z=.34;shaft.add(tip);
+ const start=new THREE.Vector3(player.position.x,player.position.y+1.35,player.position.z);
+ shaft.position.copy(start);scene.add(shaft);
+ flyingArrows.push({object:shaft,start,target:animal,elapsed:0,duration:.38});
+ playOneShot("swordslash");updateHUD();saveGame();
+}
+function updateFlyingArrows(dt){
+ for(let i=flyingArrows.length-1;i>=0;i--){
+  const arrow=flyingArrows[i];arrow.elapsed+=dt;
+  const end=new THREE.Vector3(arrow.target.x,terrainHeight(arrow.target.x,arrow.target.z)+1.15,arrow.target.z);
+  const t=THREE.MathUtils.clamp(arrow.elapsed/arrow.duration,0,1);
+  arrow.object.position.lerpVectors(arrow.start,end,t);arrow.object.lookAt(end);
+  if(t>=1){
+   scene.remove(arrow.object);arrow.object.geometry.dispose();arrow.object.material.dispose();
+   damageWildAnimal(arrow.target);flyingArrows.splice(i,1);
+  }
+ }
+}
 function attackCharacter(){
  if(!characterReady || isJumping || lockedAnimation)return;
  playOneShot("swordslash");
@@ -328,12 +375,12 @@ async function buildForest(){
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0},waterSkin:false,waterCharges:0};
+const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0},waterSkin:false,waterCharges:0,bow:false,arrows:0};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
   if(!saved)return;
-  for(const key of ["health","hunger","thirst","temperature","energy","wood","stone","day","timeOfDay","berries","fiber","meat","cookedMeat","hide","bandages","waterCharges"])if(Number.isFinite(saved[key]))state[key]=saved[key];
+  for(const key of ["health","hunger","thirst","temperature","energy","wood","stone","day","timeOfDay","berries","fiber","meat","cookedMeat","hide","bandages","waterCharges","arrows"])if(Number.isFinite(saved[key]))state[key]=saved[key];
   state.axe=saved.axe===true;state.pickaxe=saved.pickaxe===true;
   state.starterKitGranted=saved.starterKitGranted===true;
   state.campfire=saved.campfire===true;
@@ -341,6 +388,7 @@ function loadGame(){
   state.bed=saved.bed===true;
   state.storageChest=saved.storageChest===true;
   state.waterSkin=saved.waterSkin===true;
+  state.bow=saved.bow===true;
   state.waterCharges=Math.max(0,Math.min(3,state.waterCharges));
   if(saved.storage&&typeof saved.storage==="object")for(const key of ["wood","stone","fiber","berries","meat","cookedMeat","hide","bandages"])if(Number.isFinite(saved.storage[key]))state.storage[key]=Math.max(0,saved.storage[key]);
   state.coldCloak=saved.coldCloak===true;
@@ -361,7 +409,7 @@ function loadGame(){
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,starterKitGranted:state.starterKitGranted}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,starterKitGranted:state.starterKitGranted}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -378,8 +426,14 @@ if(state.coldCloak)createCloakVisual();
 if(state.leatherBoots)createBootsVisual();
 const cameraTarget=new THREE.Vector3();
 let last=performance.now(),toastTimer=0,lastSave=0;
+const flyingArrows=[];
 function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>$("toast").classList.remove("show"),1900);}
 function updateHUD(){
+ $("bowStatus").textContent=state.bow?"Arco: fabricado · Flechas: "+state.arrows:"Arco: não fabricado";
+ $("craftBow").disabled=state.bow||state.wood<4||state.fiber<4;
+ $("craftArrows").disabled=!state.bow||state.wood<1||state.fiber<1;
+ $("shootBtn").disabled=!state.bow||state.arrows<1;
+ $("shootBtn").textContent="🏹 ATIRAR ("+state.arrows+")";
  $("healthBar").style.width=state.health+"%";$("hungerBar").style.width=state.hunger+"%";$("thirstBar").style.width=state.thirst+"%";$("temperatureBar").style.width=state.temperature+"%";$("energyBar").style.width=state.energy+"%";
  $("wood").textContent=state.wood;$("stone").textContent=state.stone;$("day").textContent=state.day;
  $("berryStatus").textContent="Frutas silvestres: "+state.berries;
@@ -810,6 +864,9 @@ addEventListener("keydown",e=>{
 addEventListener("keyup",e=>{keys[e.key.toLowerCase()]=false;if(e.key==="Shift")state.running=false;});
 $("jumpBtn").addEventListener("click",jumpCharacter);
 $("attackBtn").addEventListener("click",attackCharacter);
+$("shootBtn").addEventListener("click",shootArrow);
+$("craftBow").addEventListener("click",craftBow);
+$("craftArrows").addEventListener("click",craftArrows);
 let lookPointer=null,lastX=0,lastY=0;
 renderer.domElement.addEventListener("pointerdown",e=>{if(e.pointerType==="mouse"||e.clientX>innerWidth*.38){lookPointer=e.pointerId;lastX=e.clientX;lastY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId);}});
 renderer.domElement.addEventListener("pointermove",e=>{if(e.pointerId!==lookPointer)return;const dx=e.clientX-lastX,dy=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;state.cameraYaw-=dx*.005;state.cameraPitch=THREE.MathUtils.clamp(state.cameraPitch+dy*.003,-.72,1.12);});
@@ -832,6 +889,7 @@ function updateWorldLighting(dt){
 function update(dt){
  updateWorldLighting(dt);
  updateWildlife(dt);
+ updateFlyingArrows(dt);
  const kx=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);
  const ky=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0);
  const mx=THREE.MathUtils.clamp(state.moveX+kx,-1,1),my=THREE.MathUtils.clamp(state.moveY+ky,-1,1);
