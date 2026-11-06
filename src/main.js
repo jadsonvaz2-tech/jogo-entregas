@@ -95,15 +95,24 @@ function damageWildAnimal(animal){
  animal.health--;
  if(animal.health<=0){
   animal.alive=false;animal.object.visible=false;
-  if(!state.huntedAnimals.includes(animal.id))state.huntedAnimals.push(animal.id);
-  createCarcass(animal.x,animal.z);
-  toast("Veado abatido! Recolha a carne e o couro.");saveGame();
- }else toast("A flecha atingiu o veado! Ele está ferido.");
+  if(animal.id.startsWith("wolf-")){
+   if(!state.huntedWolves.includes(animal.id))state.huntedWolves.push(animal.id);
+   createCarcass(animal.x,animal.z);
+   toast("Lobo abatido com uma flecha! Recolha a carne e o couro.");
+  }else{
+   if(!state.huntedAnimals.includes(animal.id))state.huntedAnimals.push(animal.id);
+   createCarcass(animal.x,animal.z);
+   toast("Veado abatido! Recolha a carne e o couro.");
+  }
+  saveGame();
+ }else toast(animal.id.startsWith("wolf-")?"A flecha atingiu o lobo! Ele ainda está vivo.":"A flecha atingiu o veado! Ele está ferido.");
 }
 function shootArrow(){
  if(!state.bow||state.arrows<1){toast("Você precisa de um arco e flechas.");return;}
- const animal=nearestWildAnimal(16);
- if(!animal){toast("Nenhum veado no alcance do arco.");return;}
+ const deer=nearestWildAnimal(16);
+ const wolf=nearestWolf(16);
+ const animal=wolf&&(!deer||Math.hypot(player.position.x-wolf.x,player.position.z-wolf.z)<Math.hypot(player.position.x-deer.x,player.position.z-deer.z))?wolf:deer;
+ if(!animal){toast("Nenhum animal no alcance do arco.");return;}
  if(!characterReady||isJumping||lockedAnimation)return;
  state.arrows--;
  const arrow=new THREE.Group();
@@ -140,8 +149,8 @@ function attackCharacter(){
   if(wolf.health<=0){
    wolf.alive=false;wolf.object.visible=false;
    if(!state.huntedWolves.includes(wolf.id))state.huntedWolves.push(wolf.id);
-   state.hide+=1;state.meat+=1;
-   toast("Lobo derrotado! Você recolheu 1 couro cru e 1 carne.");
+   createCarcass(wolf.x,wolf.z);
+   toast("Lobo derrotado! Recolha a carne e o couro.");
    updateHUD();saveGame();
   }else toast("Você atingiu o lobo! Ele ainda está vivo.");
   return;
@@ -296,7 +305,7 @@ function createDeer(x,z,index){
 }
 function createWolf(x,z,index){
  const id="wolf-"+index;
- if(state.huntedWolves.includes(id))return;
+ if(state.huntedWolves.includes(id)){createCarcass(x,z);return;}
  const wolf=new THREE.Group();
  const coat=new THREE.MeshStandardMaterial({color:0x555b5c,roughness:1});
  const dark=new THREE.MeshStandardMaterial({color:0x292d30,roughness:1});
