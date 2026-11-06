@@ -331,8 +331,10 @@ function createWolf(x,z,index){
  }
  const tail=new THREE.Mesh(new THREE.CylinderGeometry(.08,.13,.62,7),coat);
  tail.position.set(0,.78,-.86);tail.rotation.x=-1.05;wolf.add(tail);
+ const warningRing=new THREE.Mesh(new THREE.RingGeometry(.72,.94,32),new THREE.MeshBasicMaterial({color:0xff3328,transparent:true,opacity:.72,side:THREE.DoubleSide,depthWrite:false}));
+ warningRing.rotation.x=-Math.PI/2;warningRing.position.y=.045;warningRing.visible=false;wolf.add(warningRing);
  wolf.position.set(x,terrainHeight(x,z),z);scene.add(wolf);
- hostileWolves.push({id,object:wolf,x,z,heading:worldRandom()*Math.PI*2,health:3,alive:true,wander:1+worldRandom()*2,attackCooldown:1+index*.7,attackWindup:0,legs});
+ hostileWolves.push({id,object:wolf,x,z,heading:worldRandom()*Math.PI*2,health:3,alive:true,wander:1+worldRandom()*2,attackCooldown:1+index*.7,attackWindup:0,warningRing,legs});
 }
 function nearestWolf(maxDistance){
  let nearest=null,dist=maxDistance;
@@ -357,10 +359,14 @@ function updateWildlife(dt){
    speed=0;
    wolf.attackWindup=Math.max(0,wolf.attackWindup-dt);
    wolf.object.scale.y=.9;
+   wolf.warningRing.visible=true;
+   const pulse=1+Math.sin((.75-wolf.attackWindup)*24)*.12;
+   wolf.warningRing.scale.setScalar(pulse);
+   wolf.warningRing.material.opacity=.48+Math.sin((.75-wolf.attackWindup)*24)*.2;
    if(Math.hypot(player.position.x-wolf.x,player.position.z-wolf.z)>2.2){
-    wolf.attackWindup=0;wolf.attackCooldown=.35;wolf.object.scale.y=1;
+    wolf.attackWindup=0;wolf.attackCooldown=.35;wolf.object.scale.y=1;wolf.warningRing.visible=false;
    }else if(wolf.attackWindup<=0){
-    wolf.object.scale.y=1;
+    wolf.object.scale.y=1;wolf.warningRing.visible=false;
     const impactDistance=Math.hypot(player.position.x-wolf.x,player.position.z-wolf.z);
     if(impactDistance<2.2){
      const protection=(state.leatherArmor?.65:1)*(state.steelHelmet?.55:state.ironHelmet?.75:1)*(state.steelChestplate?.35:state.ironChestplate?.55:1)*(state.steelShield?(state.steelShieldGuarding?.4:.8):1);
@@ -371,7 +377,7 @@ function updateWildlife(dt){
      updateHUD();saveGame();
     }else wolf.attackCooldown=.35;
    }
-  }else wolf.object.scale.y=1;
+  }else{wolf.object.scale.y=1;wolf.warningRing.visible=false;}
   wolf.x+=Math.sin(wolf.heading)*speed*dt;
   wolf.z+=Math.cos(wolf.heading)*speed*dt;
   wolf.object.position.set(wolf.x,terrainHeight(wolf.x,wolf.z),wolf.z);
