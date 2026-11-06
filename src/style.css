@@ -24,3 +24,6 @@
  #craftToggle{right:28px;bottom:18px}
  #craftPanel{left:20px;right:auto;bottom:70px;max-height:75vh}
 }
+
+/* Botão de dormir aparece apenas quando o jogador pode descansar. */
+#sleepBtn[hidden]{display:none}
