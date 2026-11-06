@@ -377,7 +377,7 @@ async function buildForest(){
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0},waterSkin:false,waterCharges:0,bow:false,arrows:0};
+const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[]};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
@@ -397,6 +397,7 @@ function loadGame(){
   state.leatherBoots=saved.leatherBoots===true;
   if(Array.isArray(saved.collectedResources))state.collectedResources=saved.collectedResources.filter(v=>typeof v==="string");
   if(Array.isArray(saved.huntedAnimals))state.huntedAnimals=saved.huntedAnimals.filter(v=>typeof v==="string");
+   if(Array.isArray(saved.fenceSections))state.fenceSections=saved.fenceSections.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,200);
   if(Number.isFinite(saved.campfireX))state.campfireX=saved.campfireX;
   if(Number.isFinite(saved.campfireZ))state.campfireZ=saved.campfireZ;
   if(Number.isFinite(saved.shelterX))state.shelterX=saved.shelterX;
@@ -411,7 +412,7 @@ function loadGame(){
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,starterKitGranted:state.starterKitGranted}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,starterKitGranted:state.starterKitGranted}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -496,6 +497,8 @@ function updateHUD(){
  $("bedStatus").textContent=state.bed?"Cama improvisada: construída":"Cama improvisada: não construída";
  $("craftBed").disabled=state.bed||state.wood<3||state.fiber<6;
  $("storageChestStatus").textContent=state.storageChest?"Baú de armazenamento: construído":"Baú de armazenamento: não construído";
+  $("fenceStatus").textContent="Cercas construídas: "+state.fenceSections.length+" seções";
+  $("craftFence").disabled=state.wood<5||state.fiber<2||state.fenceSections.length>=200;
  $("craftStorageChest").disabled=state.storageChest||state.wood<6||state.stone<2;
  const nearChest=state.storageChest&&Math.hypot(player.position.x-state.storageChestX,player.position.z-state.storageChestZ)<3.5;
  const carried=["wood","stone","fiber","berries","meat","cookedMeat","hide","bandages"].some(k=>state[k]>0);
@@ -604,6 +607,7 @@ craftToggle.addEventListener("click",()=>{const open=craftPanel.classList.toggle
 $("craftAxe").addEventListener("click",()=>craftTool("axe"));
 $("craftPickaxe").addEventListener("click",()=>craftTool("pickaxe"));
 $("craftStorageChest").addEventListener("click",craftStorageChest);
+ $("craftFence").addEventListener("click",craftFenceSection);
 $("storeResources").addEventListener("click",storeResources);
 $("takeResources").addEventListener("click",takeResources);
 $("craftCampfire").addEventListener("click",craftCampfire);
@@ -654,7 +658,41 @@ function createStorageChest(x,z){
  group.position.set(x,terrainHeight(x,z),z);group.rotation.y=player.rotation.y;scene.add(group);
  state.storageChestObject=group;state.storageChest=true;state.storageChestX=x;state.storageChestZ=z;
 }
-function storeResources(){
+function craftFenceSection(){
+  if(state.fenceSections.length>=200){toast("Limite de 200 seções de cerca atingido.");return;}
+  if(state.wood<5||state.fiber<2){toast("Faltam materiais: 5 madeiras e 2 fibras.");return;}
+  state.wood-=5;state.fiber-=2;
+  const yaw=player.rotation.y;
+  const x=player.position.x+Math.sin(yaw)*3.5;
+  const z=player.position.z+Math.cos(yaw)*3.5;
+  createFenceSection(x,z,yaw);
+  state.fenceSections.push({x,z,yaw});
+  updateHUD();saveGame();toast("Cerca construída! Continue expandindo seu assentamento.");
+ }
+ function createFenceSection(x,z,yaw){
+  const group=new THREE.Group();
+  const timber=new THREE.MeshStandardMaterial({color:0x795331,roughness:1});
+  const dark=new THREE.MeshStandardMaterial({color:0x4b3321,roughness:1});
+  const postGeo=new THREE.BoxGeometry(.16,1.25,.16);
+  for(let i=0;i<=4;i++){
+   const post=new THREE.Mesh(postGeo,timber);
+   post.position.set(-3.2+i*1.6,.625,0);post.castShadow=true;post.receiveShadow=true;group.add(post);
+  }
+  for(let i=0;i<4;i++){
+   const x0=-2.4+i*1.6;
+   for(const y of [.42,.91]){
+    const rail=new THREE.Mesh(new THREE.BoxGeometry(1.55,.13,.12),dark);
+    rail.position.set(x0,y,0);rail.castShadow=true;rail.receiveShadow=true;group.add(rail);
+   }
+   for(let j=0;j<4;j++){
+    const slat=new THREE.Mesh(new THREE.BoxGeometry(.11,.62,.1),timber);
+    slat.position.set(x0-.48+j*.32,.68,0);slat.castShadow=true;group.add(slat);
+   }
+  }
+  group.position.set(x,terrainHeight(x,z),z);group.rotation.y=yaw;scene.add(group);
+  return group;
+ }
+ function storeResources(){
  if(!state.storageChest||Math.hypot(player.position.x-state.storageChestX,player.position.z-state.storageChestZ)>=3.5){toast("Aproxime-se do baú.");return;}
  const keys=["wood","stone","fiber","berries","meat","cookedMeat","hide","bandages"];
  let total=0;
@@ -1034,6 +1072,7 @@ async function start(){
  if(state.shelter&&Number.isFinite(state.shelterX)&&Number.isFinite(state.shelterZ))createShelter(state.shelterX,state.shelterZ);
  if(state.bed&&Number.isFinite(state.bedX)&&Number.isFinite(state.bedZ))createBed(state.bedX,state.bedZ);
  if(state.storageChest&&Number.isFinite(state.storageChestX)&&Number.isFinite(state.storageChestZ))createStorageChest(state.storageChestX,state.storageChestZ);
+ for(const section of state.fenceSections)createFenceSection(section.x,section.z,section.yaw);
  $("loadingBar").style.width="72%";
  $("loadingText").textContent="Carregando o viajante...";
  const loaded=await loadCharacter();
