@@ -379,12 +379,13 @@ function createWolf(x,z,index){
  muzzle.rotation.x=Math.PI/2;muzzle.position.set(0,1.03,1.18);wolf.add(muzzle);
  const jaw=new THREE.Mesh(new THREE.SphereGeometry(.115,7,5),dark);
  jaw.scale.set(1,.48,1.35);jaw.position.set(0,.91,1.19);wolf.add(jaw);
- const ears=[];
+ const ears=[],eyes=[];
+ const eyeMat=new THREE.MeshStandardMaterial({color:0xd9b36c,emissive:0x4a2d08});
  for(const xSide of [-.17,.17]){
   const ear=new THREE.Mesh(new THREE.ConeGeometry(.085,.28,5),dark);
   ear.position.set(xSide,1.38,.86);ear.rotation.z=xSide<0?.18:-.18;wolf.add(ear);ears.push(ear);
-  const eye=new THREE.Mesh(new THREE.SphereGeometry(.035,6,5),new THREE.MeshStandardMaterial({color:0xd9b36c,emissive:0x4a2d08}));
-  eye.position.set(xSide*.85,1.16,1.12);wolf.add(eye);
+  const eye=new THREE.Mesh(new THREE.SphereGeometry(.035,6,5),eyeMat);
+  eye.position.set(xSide*.85,1.16,1.12);wolf.add(eye);eyes.push(eye);
  }
  const legs=[];
  for(const lx of [-.25,.25])for(const lz of [-.43,.43]){
@@ -402,7 +403,7 @@ function createWolf(x,z,index){
  const warningRing=new THREE.Mesh(new THREE.RingGeometry(.72,.94,32),new THREE.MeshBasicMaterial({color:0xff3328,transparent:true,opacity:.72,side:THREE.DoubleSide,depthWrite:false}));
  warningRing.rotation.x=-Math.PI/2;warningRing.position.y=.045;warningRing.visible=false;wolf.add(warningRing);
  wolf.position.set(x,terrainHeight(x,z),z);scene.add(wolf);
- hostileWolves.push({id,object:wolf,x,z,heading:worldRandom()*Math.PI*2,health:3,alive:true,wander:1+worldRandom()*2,attackCooldown:1+index*.7,attackWindup:0,staggerTime:0,staggerHeading:0,hitStunTime:0,hitHeading:0,warningRing,healthBar,healthFill,legs,tail,head,jaw,ears});
+ hostileWolves.push({id,object:wolf,body,chest,x,z,heading:worldRandom()*Math.PI*2,health:3,alive:true,wander:1+worldRandom()*2,attackCooldown:1+index*.7,attackWindup:0,staggerTime:0,staggerHeading:0,hitStunTime:0,hitHeading:0,warningRing,healthBar,healthFill,legs,tail,head,jaw,ears,eyes,blinkTimer:1.5+worldRandom()*3,blinkTime:0,breathPhase:worldRandom()*Math.PI*2});
 }
 function nearestWolf(maxDistance){
  let nearest=null,dist=maxDistance;
@@ -469,7 +470,18 @@ function updateWildlife(dt){
   if(wolf.tail)wolf.tail.rotation.z=Math.sin(performance.now()*.003+wolf.x)*.16;
   if(wolf.head)wolf.head.rotation.x=(wolf.attackWindup>0?-.12:0)+Math.sin(performance.now()*.0018+wolf.z)*.025;
   if(wolf.jaw)wolf.jaw.rotation.x=wolf.attackWindup>0?-.28+Math.sin((.75-wolf.attackWindup)*18)*.07:0;
-  if(wolf.ears)wolf.ears.forEach((ear,i)=>{ear.rotation.z=(i===0?.18:-.18)+Math.sin(performance.now()*.0022+wolf.x+i)*.035;});
+  if(wolf.ears)wolf.ears.forEach((ear,i)=>{const alert=d<24?.12:0;ear.rotation.z=(i===0?.18:-.18)+(i===0?alert:-alert)+Math.sin(performance.now()*.0022+wolf.x+i)*.035;});
+  if(wolf.eyes){
+   wolf.blinkTimer-=dt;
+   if(wolf.blinkTimer<=0&&wolf.blinkTime<=0){wolf.blinkTime=.16;wolf.blinkTimer=2.8+worldRandom()*4.2;}
+   if(wolf.blinkTime>0){wolf.blinkTime=Math.max(0,wolf.blinkTime-dt);const blink=Math.max(.07,1-Math.sin((1-wolf.blinkTime/.16)*Math.PI)*.93);wolf.eyes.forEach(eye=>{eye.scale.y=blink;});}
+   else wolf.eyes.forEach(eye=>{eye.scale.y=1;});
+  }
+  if(wolf.body&&wolf.chest&&wolf.attackWindup<=0&&wolf.hitStunTime<=0&&wolf.staggerTime<=0){
+   const breath= Math.sin(performance.now()*.0021+wolf.breathPhase);
+   wolf.body.scale.y=.82+breath*.018;
+   wolf.chest.scale.y=1+breath*.025;
+  }
  }
  for(const animal of wildAnimals){
   if(!animal.alive)continue;
