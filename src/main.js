@@ -30,11 +30,15 @@ sun.shadow.camera.left=-55; sun.shadow.camera.right=55; sun.shadow.camera.top=55
 scene.add(sun);
 
 function terrainHeight(x,z){
- const hill=Math.sin(x*.035)*1.8+Math.cos(z*.041)*1.6+Math.sin((x+z)*.022)*2.4;
+ // Ondulações largas criam colinas e lombadas naturais sem alterar o nível do acampamento inicial.
+ const distance=Math.hypot(x,z);
+ const edgeBlend=1-Math.exp(-(distance*distance)/520);
+ const broadHills=Math.sin(x*.018+z*.012)*2.8+Math.cos(z*.021-x*.009)*2.2+Math.sin((x-z)*.015)*1.7;
+ const localHills=Math.sin(x*.035)*1.8+Math.cos(z*.041)*1.6+Math.sin((x+z)*.022)*2.4;
  const clearing=Math.exp(-(x*x+z*z)/500)*-.5;
- return hill+clearing;
+ return localHills+broadHills*edgeBlend+clearing;
 }
-const groundGeo = new THREE.PlaneGeometry(260,260,100,100);
+const groundGeo = new THREE.PlaneGeometry(260,260,160,160);
 groundGeo.rotateX(-Math.PI/2);
 const pos = groundGeo.attributes.position;
 for(let i=0;i<pos.count;i++){
