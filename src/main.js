@@ -2059,6 +2059,13 @@ function buildPlacementTerrainCheck(type,c,yaw){
  const limit=type==="floor"?.7:type==="fence"?.55:Infinity;
  return {average,difference:max-min,level:max-min<=limit};
 }
+function buildPlacementGround(c,terrainCheck){
+ if(c.anchor){
+  const floorGround=Number.isFinite(c.anchor.ground)?c.anchor.ground:terrainHeight(c.anchor.x,c.anchor.z);
+  return floorGround;
+ }
+ return terrainCheck.average;
+}
 function buildFloorModulesOverlap(a,b){
  const dx=b.x-a.x,dz=b.z-a.z;
  const axes=[a.yaw||0,(a.yaw||0)+Math.PI/2,b.yaw||0,(b.yaw||0)+Math.PI/2];
@@ -2098,7 +2105,7 @@ function updateBuildPreview(){
  const terrainCheck=buildPlacementTerrainCheck(type,c,c.yaw);
  const floorContinuity=type==="floor"?buildFloorPlacementContinuity(c,terrainCheck):{ok:true,ground:terrainCheck.average,step:0};
  let valid=hasFloor&&!missingMaterials&&!floorOccupied&&!occupiedPanelSlot&&!roofOccupied&&!fenceOccupied&&limits[type]&&terrainCheck.level&&floorContinuity.ok;
- const ground=type==="floor"?floorContinuity.ground:terrainCheck.average;
+ const ground=type==="floor"?floorContinuity.ground:buildPlacementGround(c,terrainCheck);
  const y=ground+spec.height;
  buildPreviewGroup.position.set(c.x,y,c.z);buildPreviewGroup.rotation.y=c.yaw;
  buildPreviewMaterial.color.setHex(valid?0x55e58a:0xff514d);
@@ -2126,13 +2133,13 @@ function confirmBuildPlacement(){
  if(type==="floor"){
   const item={x:c.x,z:c.z,yaw:c.yaw,ground:c.ground};createFloorTile(item);state.floorTiles.push(item);
  }else if(type==="wall"){
-  const item={x:c.x,z:c.z,yaw:c.yaw};createWallPanel(item);state.wallPanels.push(item);
+  const item={x:c.x,z:c.z,yaw:c.yaw,ground:c.ground};createWallPanel(item);state.wallPanels.push(item);
  }else if(type==="window"){
-  const item={x:c.x,z:c.z,yaw:c.yaw};createWindowPanel(item);state.windowPanels.push(item);
+  const item={x:c.x,z:c.z,yaw:c.yaw,ground:c.ground};createWindowPanel(item);state.windowPanels.push(item);
  }else if(type==="door"){
-  const item={x:c.x,z:c.z,yaw:c.yaw,open:false};createDoorPanel(item);state.doorPanels.push(item);
+  const item={x:c.x,z:c.z,yaw:c.yaw,ground:c.ground,open:false};createDoorPanel(item);state.doorPanels.push(item);
  }else if(type==="roof"){
-  const item={x:c.x,z:c.z,yaw:c.yaw};createRoofTile(item);state.roofTiles.push(item);
+  const item={x:c.x,z:c.z,yaw:c.yaw,ground:c.ground};createRoofTile(item);state.roofTiles.push(item);
  }else if(type==="fence"){
   createFenceSection(c.x,c.z,c.yaw);state.fenceSections.push({x:c.x,z:c.z,yaw:c.yaw});
  }
@@ -2241,7 +2248,7 @@ function craftFloorTile(){
    const plank=new THREE.Mesh(new THREE.BoxGeometry(.23,2.05,.11),timber);
    plank.position.set(-1.25+i*.25,1.22,.015);plank.castShadow=true;plank.receiveShadow=true;group.add(plank);
   }
-  group.position.set(panel.x,terrainHeight(panel.x,panel.z)+.28,panel.z);
+  group.position.set(panel.x,(Number.isFinite(panel.ground)?panel.ground:terrainHeight(panel.x,panel.z))+.28,panel.z);
   group.rotation.y=panel.yaw;scene.add(group);
   return group;
  }
@@ -2483,7 +2490,7 @@ function createRoofTile(roof){
    const brace=new THREE.Mesh(new THREE.BoxGeometry(3.75,.16,.16),dark);
    brace.position.set(0,2.98,z);brace.rotation.z=0;brace.castShadow=true;group.add(brace);
   }
-  group.position.set(roof.x,terrainHeight(roof.x,roof.z)+.28,roof.z);
+  group.position.set(roof.x,(Number.isFinite(roof.ground)?roof.ground:terrainHeight(roof.x,roof.z))+.28,roof.z);
   group.rotation.y=roof.yaw;scene.add(group);
   return group;
  }
@@ -2594,7 +2601,7 @@ function craftDoorPanel(){
   const handle=new THREE.Mesh(new THREE.BoxGeometry(.1,.24,.1),metal);
   handle.position.set(2.42,1.12,.13);leaf.add(handle);
   pivot.rotation.y=door.open?-1.35:0;
-  group.position.set(door.x,terrainHeight(door.x,door.z)+.28,door.z);
+  group.position.set(door.x,(Number.isFinite(door.ground)?door.ground:terrainHeight(door.x,door.z))+.28,door.z);
   group.rotation.y=door.yaw;scene.add(group);
   state.doorObjects.push({group,pivot});
  }
