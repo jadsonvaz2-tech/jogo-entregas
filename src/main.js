@@ -610,7 +610,7 @@ function createToolVisual(type){
 
  if(hand){
   hand.add(group);
-  group.position.set(0,0,0);
+  group.position.set(0,-.045,.19);
   group.rotation.set(0,0,0);
  }else{
   // Personagem provisório: mantém a ferramenta visível até o modelo carregar.
@@ -632,7 +632,7 @@ function updateToolAttachments(){
    // O próprio AnimationMixer move a mão e a ferramenta acompanha o mesmo osso.
    if(group.parent!==hand){
     hand.add(group);
-    group.position.set(0,0,0);
+    group.position.set(0,-.045,.19);
     group.rotation.set(0,0,0);
    }
   }else{
