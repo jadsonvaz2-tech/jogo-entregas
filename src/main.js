@@ -313,6 +313,25 @@ function createDeer(x,z,index){
  neck.position.set(0,1.32,.55);neck.rotation.x=.48;neck.castShadow=true;deer.add(neck);
  const head=new THREE.Mesh(new THREE.SphereGeometry(.23,8,7),coat);
  head.position.set(0,1.64,.82);head.castShadow=true;deer.add(head);
+ const earMat=new THREE.MeshStandardMaterial({color:0x76513a,roughness:1});
+ for(const side of [-1,1]){
+  const ear=new THREE.Mesh(new THREE.SphereGeometry(.105,7,5),earMat);
+  ear.position.set(side*.19,.015,-.015);ear.scale.set(.55,.42,1.65);ear.rotation.z=side*-.22;head.add(ear);
+ }
+ const antlerMat=new THREE.MeshStandardMaterial({color:0x8b8069,roughness:.95});
+ function addAntlerSegment(from,to,radius){
+  const a=new THREE.Vector3(...from),b=new THREE.Vector3(...to),delta=b.clone().sub(a);
+  const segment=new THREE.Mesh(new THREE.CylinderGeometry(radius*.62,radius,delta.length(),5),antlerMat);
+  segment.position.copy(a.add(b).multiplyScalar(.5));
+  segment.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());
+  segment.castShadow=true;head.add(segment);
+ }
+ for(const side of [-1,1]){
+  const p0=[side*.12,.14,-.015],p1=[side*.22,.34,-.025],p2=[side*.25,.55,-.035],p3=[side*.19,.72,-.045];
+  addAntlerSegment(p0,p1,.047);addAntlerSegment(p1,p2,.039);addAntlerSegment(p2,p3,.031);
+  addAntlerSegment([side*.21,.34,-.02],[side*.39,.44,-.025],.027);
+  addAntlerSegment([side*.25,.53,-.03],[side*.43,.65,-.04],.024);
+ }
  const muzzle=new THREE.Mesh(new THREE.SphereGeometry(.12,7,6),belly);
  muzzle.scale.set(.85,.65,1.2);muzzle.position.set(0,1.58,1.01);deer.add(muzzle);
  const legs=[];
@@ -329,7 +348,7 @@ function createDeer(x,z,index){
  healthFill.position.set(0,0,.008);healthBar.add(healthFill);
  healthBar.position.set(0,2.02,0);healthBar.visible=false;healthBar.renderOrder=5;deer.add(healthBar);
  deer.position.set(x,terrainHeight(x,z),z);scene.add(deer);
- wildAnimals.push({id,object:deer,x,z,heading:worldRandom()*Math.PI*2,health:2,alive:true,wander:1+worldRandom()*2,healthBar,healthFill,legs,tail});
+ wildAnimals.push({id,object:deer,x,z,heading:worldRandom()*Math.PI*2,health:2,alive:true,wander:1+worldRandom()*2,healthBar,healthFill,legs,tail,head});
 }
 function createWolf(x,z,index){
  const id="wolf-"+index;
@@ -447,6 +466,7 @@ function updateWildlife(dt){
   animal.legs.forEach((leg,i)=>{leg.rotation.x=(i===0||i===3?1:-1)*gait;});
   animal.object.position.y=terrainHeight(animal.x,animal.z)+Math.abs(gait)*.035;
   if(animal.tail)animal.tail.rotation.x=-.18+Math.sin(performance.now()*.004+animal.z)*.12;
+  if(animal.head){const alert=d<9?-.08:0;animal.head.rotation.x=alert+Math.sin(performance.now()*.0011+animal.x*.7)*.045;}
   if(animal.healthBar){animal.healthBar.quaternion.copy(animal.object.quaternion).invert().multiply(camera.quaternion); }
  }
 }
