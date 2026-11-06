@@ -456,7 +456,6 @@ if(!state.starterKitGranted){
 // Recria visualmente as ferramentas que já foram fabricadas e salvas.
 if(state.axe)createToolVisual("axe");
 if(state.pickaxe)createToolVisual("pickaxe");
-if(state.smithy)createSmithy(state.smithy);
 if(state.coldCloak)createCloakVisual();
 if(state.leatherBoots)createBootsVisual();
 if(state.woolGarment)createWoolGarmentVisual();
