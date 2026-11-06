@@ -605,14 +605,16 @@ function updateToolAttachments(){
    const handPosition=hand.getWorldPosition(new THREE.Vector3());
    const side=type==="axe"?1:-1;
    handPosition.addScaledVector(right,side*.12);
-   handPosition.addScaledVector(forward,.12);
-   handPosition.y+=.06;
+   // A câmera padrão fica atrás do personagem (lado -Z); trazemos a ferramenta
+   // para o lado visível do corpo, sem deixá-la escondida atrás do tronco.
+   handPosition.addScaledVector(forward,-.20);
+   handPosition.y+=.04;
    group.position.copy(handPosition);
    group.rotation.set(0,player.rotation.y,type==="axe"?-.10:.10);
    if(group.parent!==scene)scene.add(group);
   }else{
    if(group.parent!==player)player.add(group);
-   group.position.set(type==="axe"?.62:-.62,1.02,.28);
+   group.position.set(type==="axe"?.62:-.62,1.02,-.42);
    group.rotation.set(0,0,type==="axe"?-.10:.10);
   }
   group.visible=true;
