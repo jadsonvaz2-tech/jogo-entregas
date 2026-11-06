@@ -116,11 +116,11 @@ function damageWildAnimal(animal){
   animal.alive=false;animal.object.visible=false;
   if(animal.id.startsWith("wolf-")){
    if(!state.huntedWolves.includes(animal.id))state.huntedWolves.push(animal.id);
-   createCarcass(animal.x,animal.z);
+   createCarcass(animal.x,animal.z,animal.id);
    toast("Lobo abatido com uma flecha! Recolha a carne e o couro.");
   }else{
    if(!state.huntedAnimals.includes(animal.id))state.huntedAnimals.push(animal.id);
-   createCarcass(animal.x,animal.z);
+   createCarcass(animal.x,animal.z,animal.id);
    toast("Veado abatido! Recolha a carne e o couro.");
   }
   saveGame();
@@ -182,7 +182,7 @@ function attackCharacter(){
   if(animal.health<=0){
    animal.alive=false;animal.object.visible=false;
    if(!state.huntedAnimals.includes(animal.id))state.huntedAnimals.push(animal.id);
-   createCarcass(animal.x,animal.z);
+   createCarcass(animal.x,animal.z,animal.id);
    toast("Veado abatido! Recolha a carne e o couro.");
    saveGame();
   }else toast("Você atingiu o veado! Ele está ferido.");
@@ -289,7 +289,7 @@ function registerResource(resource){
  if(state.collectedResources.includes(resource.id)){resource.active=false;resource.object.visible=false;if(resource.target)resource.target.visible=false;}
  resources.push(resource);
 }
-function createCarcass(x,z){
+function createCarcass(x,z,animalId=null){
  const bodyMat=new THREE.MeshStandardMaterial({color:0x76513a,roughness:1});
  const darkMat=new THREE.MeshStandardMaterial({color:0x49382c,roughness:1});
  const carcass=new THREE.Group();
@@ -298,11 +298,11 @@ function createCarcass(x,z){
  const head=new THREE.Mesh(new THREE.SphereGeometry(.2,7,6),darkMat);
  head.position.set(0,.32,.58);head.castShadow=true;carcass.add(head);
  carcass.position.set(x,terrainHeight(x,z),z);scene.add(carcass);
- registerResource({object:carcass,x,z,type:"carcass",active:true});
+ registerResource({object:carcass,x,z,type:"carcass",animalId,active:true});
 }
 function createDeer(x,z,index){
  const id="deer-"+index;
- if(state.huntedAnimals.includes(id)){createCarcass(x,z);return;}
+ if(state.huntedAnimals.includes(id)){const remainsId=resourceId("carcass",x,z);if(state.collectedResources.includes(remainsId)){state.huntedAnimals=state.huntedAnimals.filter(v=>v!==id);}else{createCarcass(x,z,id);return;}}
  const deer=new THREE.Group();
  const coat=new THREE.MeshStandardMaterial({color:0x8b6442,roughness:1});
  const belly=new THREE.MeshStandardMaterial({color:0xd3bd9a,roughness:1});
@@ -887,7 +887,7 @@ function collect(){
  if(resource.type==="branch"){state.wood+=1;toast("Você recolheu 1 galho.");}
  else if(resource.type==="berries"){state.berries+=3;toast("Você recolheu 3 frutas silvestres.");}
  else if(resource.type==="fiber"){state.fiber+=2;toast("Você recolheu fibras vegetais.");}
- else if(resource.type==="carcass"){state.meat+=2;state.hide+=1;toast("Você recolheu 2 carnes e 1 couro.");}
+ else if(resource.type==="carcass"){state.meat+=2;state.hide+=1;if(resource.animalId&&resource.animalId.startsWith("deer-")){const deerId=resource.animalId;state.huntedAnimals=state.huntedAnimals.filter(v=>v!==deerId);const deerIndex=Number(deerId.slice(5));const deerX=resource.x,deerZ=resource.z;setTimeout(()=>{if(!wildAnimals.some(a=>a.id===deerId&&a.alive)){createDeer(deerX,deerZ,deerIndex);updateHUD();saveGame();}},45000);}toast("Você recolheu 2 carnes e 1 couro. Um novo veado poderá voltar à floresta.");}
  else if(resource.type==="looseStone"){state.stone+=1;toast("Você recolheu 1 pedra solta.");}
  else if(resource.type==="stone"){const amount=state.steelPickaxe?9:state.ironPickaxe?6:state.reinforcedPickaxe?4:2;state.stone+=amount;toast("Você minerou "+amount+" pedras.");}
  else if(resource.type==="ironOre"){const amount=state.steelPickaxe?3:state.ironPickaxe?2:1;state.ironOre+=amount;toast("Você extraiu "+amount+" minério(s) de ferro.");}
