@@ -2045,14 +2045,13 @@ function updateBuildPreview(){
  if(!activeBuildPlacement||!buildPreviewGroup)return;
  const p=activeBuildPlacement,type=p.type,spec=buildPlacementSpec(type),c=buildPreviewCandidate();
  const hasFloor=type==="floor"||type==="fence"||!!c.anchor;
- let valid=hasFloor&&state.wood>=spec.wood&&state.fiber>=spec.fiber;
- if(type==="floor")valid=valid&&!state.floorTiles.some(t=>Math.hypot(t.x-c.x,t.z-c.z)<2.3);
- const occupiedPanelSlot=[...state.wallPanels,...state.windowPanels,...state.doorPanels].some(t=>Math.hypot(t.x-c.x,t.z-c.z)<0.45);
- if(type==="wall"||type==="window"||type==="door")valid=valid&&!occupiedPanelSlot;
- if(type==="roof")valid=valid&&!state.roofTiles.some(t=>Math.hypot(t.x-c.x,t.z-c.z)<2.3);
- if(type==="fence")valid=valid&&!state.fenceSections.some(t=>Math.hypot(t.x-c.x,t.z-c.z)<5.8);
+ const floorOccupied=type==="floor"&&state.floorTiles.some(t=>Math.hypot(t.x-c.x,t.z-c.z)<2.3);
+ const occupiedPanelSlot=(type==="wall"||type==="window"||type==="door")&&[...state.wallPanels,...state.windowPanels,...state.doorPanels].some(t=>Math.hypot(t.x-c.x,t.z-c.z)<0.45);
+ const roofOccupied=type==="roof"&&state.roofTiles.some(t=>Math.hypot(t.x-c.x,t.z-c.z)<2.3);
+ const fenceOccupied=type==="fence"&&state.fenceSections.some(t=>Math.hypot(t.x-c.x,t.z-c.z)<5.8);
  const limits={floor:state.floorTiles.length<100,wall:state.wallPanels.length<100,window:state.windowPanels.length<100,door:state.doorPanels.length<100,roof:state.roofTiles.length<100,fence:state.fenceSections.length<200};
- valid=valid&&limits[type];
+ const missingMaterials=state.wood<spec.wood||state.fiber<spec.fiber;
+ let valid=hasFloor&&!missingMaterials&&!floorOccupied&&!occupiedPanelSlot&&!roofOccupied&&!fenceOccupied&&limits[type];
  const ground=terrainHeight(c.x,c.z);
  const y=ground+spec.height;
  buildPreviewGroup.position.set(c.x,y,c.z);buildPreviewGroup.rotation.y=c.yaw;
@@ -2062,10 +2061,7 @@ function updateBuildPreview(){
  if(confirm){confirm.disabled=!valid;confirm.style.opacity=valid?"1":".45";}
  const label=$("buildPlacementLabel");
  if(label){
-  const missingMaterials=state.wood<spec.wood||state.fiber<spec.fiber;
-  const occupiedSlot=(type==="wall"||type==="window"||type==="door")&&occupiedPanelSlot;
-  const roofOccupied=type==="roof"&&state.roofTiles.some(t=>Math.hypot(t.x-c.x,t.z-c.z)<2.3);
-  const status=!hasFloor?"PRECISA DE UM PISO":missingMaterials?"FALTAM MATERIAIS":occupiedSlot?"ESTE LADO JÁ TEM UMA PAREDE":roofOccupied?"ESTE PISO JÁ TEM TELHADO":valid?"ENCAIXE LIVRE · PODE CONFIRMAR":"LIMITE DE CONSTRUÇÃO ATINGIDO";
+  const status=!hasFloor?"PRECISA DE UM PISO":missingMaterials?"FALTAM MATERIAIS":floorOccupied?"ESTE LOCAL JÁ TEM UM PISO":occupiedPanelSlot?"ESTE LADO JÁ TEM UMA PAREDE":roofOccupied?"ESTE PISO JÁ TEM TELHADO":fenceOccupied?"CERCA MUITO PRÓXIMA":!limits[type]?"LIMITE DE CONSTRUÇÃO ATINGIDO":valid?"ENCAIXE LIVRE · PODE CONFIRMAR":"POSIÇÃO INVÁLIDA";
   label.textContent="POSICIONAR: "+spec.label+" · "+status;
  }
 }
