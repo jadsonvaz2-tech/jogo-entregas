@@ -377,7 +377,7 @@ async function buildForest(){
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0,honey:0,wool:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],pathTiles:[],lanternPosts:[],wells:[],gardenPlots:[],gardenObjects:[],nearGardenIndex:-1,marketStalls:[],nearMarketIndex:-1,coins:0,chickenCoops:[],nearCoopIndex:-1,eggs:0,apiaries:[],nearApiaryIndex:-1,honey:0,sheepPens:[],nearSheepPenIndex:-1,wool:0,watchtowers:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
+const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0,honey:0,wool:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],pathTiles:[],lanternPosts:[],wells:[],gardenPlots:[],gardenObjects:[],nearGardenIndex:-1,marketStalls:[],nearMarketIndex:-1,coins:0,chickenCoops:[],nearCoopIndex:-1,eggs:0,apiaries:[],nearApiaryIndex:-1,honey:0,sheepPens:[],nearSheepPenIndex:-1,wool:0,loom:null,nearLoom:false,woolGarment:false,watchtowers:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
@@ -395,6 +395,8 @@ function loadGame(){
   if(saved.storage&&typeof saved.storage==="object")for(const key of ["wood","stone","fiber","berries","meat","cookedMeat","hide","bandages","honey","wool"])if(Number.isFinite(saved.storage[key]))state.storage[key]=Math.max(0,saved.storage[key]);
   state.coldCloak=saved.coldCloak===true;
   state.leatherBoots=saved.leatherBoots===true;
+  state.woolGarment=saved.woolGarment===true;
+  if(saved.loom&&Number.isFinite(saved.loom.x)&&Number.isFinite(saved.loom.z)&&Number.isFinite(saved.loom.yaw))state.loom=saved.loom;
   if(Array.isArray(saved.collectedResources))state.collectedResources=saved.collectedResources.filter(v=>typeof v==="string");
   if(Array.isArray(saved.huntedAnimals))state.huntedAnimals=saved.huntedAnimals.filter(v=>typeof v==="string");
    if(Array.isArray(saved.fenceSections))state.fenceSections=saved.fenceSections.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,200);
@@ -431,7 +433,7 @@ function loadGame(){
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,wells:state.wells,gardenPlots:state.gardenPlots,watchtowers:state.watchtowers,marketStalls:state.marketStalls,coins:state.coins,chickenCoops:state.chickenCoops,apiaries:state.apiaries,honey:state.honey,sheepPens:state.sheepPens,wool:state.wool,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,wells:state.wells,gardenPlots:state.gardenPlots,watchtowers:state.watchtowers,marketStalls:state.marketStalls,coins:state.coins,chickenCoops:state.chickenCoops,apiaries:state.apiaries,honey:state.honey,sheepPens:state.sheepPens,wool:state.wool,loom:state.loom,woolGarment:state.woolGarment,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -446,6 +448,7 @@ if(state.axe)createToolVisual("axe");
 if(state.pickaxe)createToolVisual("pickaxe");
 if(state.coldCloak)createCloakVisual();
 if(state.leatherBoots)createBootsVisual();
+if(state.woolGarment)createWoolGarmentVisual();
 const cameraTarget=new THREE.Vector3();
 let last=performance.now(),toastTimer=0,lastSave=0;
 const flyingArrows=[];
@@ -535,6 +538,11 @@ function updateHUD(){
   $("coopStatus").textContent="Galinheiros: "+state.chickenCoops.length+"/4 · Ovos: "+state.eggs;
   $("apiaryStatus").textContent="Colmeias: "+state.apiaries.length+"/4 · Mel: "+state.honey;
   $("sheepPenStatus").textContent="Apriscos: "+state.sheepPens.length+"/3 · Lã: "+state.wool;
+  $("loomStatus").textContent=state.loom?"Tearia construída · "+(state.woolGarment?"Roupa de lã fabricada":"Roupa de lã pendente"):"Oficina de tecelagem: não construída";
+  $("craftLoom").disabled=!!state.loom||state.wood<8||state.fiber<4;
+  $("craftWoolGarment").hidden=!state.nearLoom;
+  $("craftWoolGarment").disabled=!state.nearLoom||state.woolGarment||state.wool<3||state.fiber<2;
+  $("craftWoolGarment").textContent=state.woolGarment?"ROUPA DE LÃ FABRICADA":"FABRICAR ROUPA DE LÃ · 3 LÃ + 2 FIBRAS";
   $("craftSheepPen").disabled=state.wood<12||state.fiber<5||state.sheepPens.length>=3;
   $("collectWool").hidden=state.nearSheepPenIndex<0;
   $("collectWool").disabled=state.nearSheepPenIndex<0||!state.sheepPens[state.nearSheepPenIndex]||Math.floor((Date.now()-state.sheepPens[state.nearSheepPenIndex].lastWoolAt)/300000)<1;
@@ -720,6 +728,8 @@ $("craftStorageChest").addEventListener("click",craftStorageChest);
  $("eatEgg").addEventListener("click",eatEgg);
  $("craftApiary").addEventListener("click",craftApiary);
  $("craftSheepPen").addEventListener("click",craftSheepPen);
+ $("craftLoom").addEventListener("click",craftLoom);
+ $("craftWoolGarment").addEventListener("click",craftWoolGarment);
  $("collectWool").addEventListener("click",collectWool);
  $("collectHoney").addEventListener("click",collectHoney);
  $("eatHoney").addEventListener("click",eatHoney);
@@ -916,6 +926,56 @@ function findFenceConnection(targetX,targetZ,extension){
   if(produced<1){toast("As ovelhas ainda estão produzindo lã. Aguarde um pouco.");return;}
   state.wool+=produced;pen.lastWoolAt+=produced*300000;
   updateHUD();saveGame();toast("Você recolheu "+produced+" porção(ões) de lã!");
+ }
+ function craftLoom(){
+  if(state.loom){toast("A oficina de tecelagem já foi construída.");return;}
+  if(state.wood<8||state.fiber<4){toast("Faltam materiais: 8 madeiras e 4 fibras.");return;}
+  const yaw=Math.round(state.cameraYaw/(Math.PI/2))*(Math.PI/2);
+  const x=Math.round((player.position.x+Math.sin(yaw)*6)/3)*3;
+  const z=Math.round((player.position.z+Math.cos(yaw)*6)/3)*3;
+  state.wood-=8;state.fiber-=4;state.loom={x,z,yaw};createLoom(state.loom);
+  updateHUD();saveGame();toast("Oficina de tecelagem construída! Aproxime-se para fabricar roupas de lã.");
+ }
+ function createLoom(loom){
+  const group=new THREE.Group();
+  const wood=new THREE.MeshStandardMaterial({color:0x704827,roughness:1});
+  const dark=new THREE.MeshStandardMaterial({color:0x3a281b,roughness:1});
+  const thread=new THREE.MeshStandardMaterial({color:0xd8c9a5,roughness:1});
+  // Estrutura vertical do tear, travessas e fios paralelos.
+  for(const x of [-.85,.85]){
+   const post=new THREE.Mesh(new THREE.BoxGeometry(.14,1.9,.14),dark);post.position.set(x,.95,0);group.add(post);
+   for(const y of [.18,1.72]){
+    const beam=new THREE.Mesh(new THREE.BoxGeometry(1.9,.14,.16),wood);beam.position.set(0,y,0);group.add(beam);
+   }
+  }
+  for(let i=0;i<13;i++){
+   const x=-.68+i*.113;
+   const cord=new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,1.35,5),thread);cord.position.set(x,.96,.09);group.add(cord);
+  }
+  const cloth=new THREE.Mesh(new THREE.PlaneGeometry(1.25,.72,8,8),new THREE.MeshStandardMaterial({color:0xb7a27a,side:THREE.DoubleSide,roughness:1}));
+  cloth.position.set(0,1.03,.13);group.add(cloth);
+  const feet=new THREE.Mesh(new THREE.BoxGeometry(2.05,.13,.9),wood);feet.position.set(0,.1,0);group.add(feet);
+  group.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+  group.position.set(loom.x,terrainHeight(loom.x,loom.z),loom.z);group.rotation.y=loom.yaw;scene.add(group);state.loomObject=group;
+ }
+ function craftWoolGarment(){
+  if(!state.loom||!state.nearLoom){toast("Aproxime-se da oficina de tecelagem.");return;}
+  if(state.woolGarment){toast("Você já fabricou a roupa de lã.");return;}
+  if(state.wool<3||state.fiber<2){toast("Faltam materiais: 3 lãs e 2 fibras.");return;}
+  state.wool-=3;state.fiber-=2;state.woolGarment=true;createWoolGarmentVisual();
+  updateHUD();saveGame();toast("Roupa de lã fabricada! Você agora perde menos calor.");
+ }
+ function createWoolGarmentVisual(){
+  if(state.woolGarmentObject)player.remove(state.woolGarmentObject);
+  const outfit=new THREE.Group();
+  const woolMat=new THREE.MeshStandardMaterial({color:0x9b896b,roughness:1});
+  const trim=new THREE.MeshStandardMaterial({color:0xd4c39b,roughness:1});
+  const tunic=new THREE.Mesh(new THREE.CylinderGeometry(.39,.52,.78,9),woolMat);tunic.position.set(0,1.02,0);tunic.castShadow=true;outfit.add(tunic);
+  const collar=new THREE.Mesh(new THREE.TorusGeometry(.25,.065,6,12),trim);collar.rotation.x=Math.PI/2;collar.position.set(0,1.43,.015);outfit.add(collar);
+  for(const side of [-1,1]){
+   const sleeve=new THREE.Mesh(new THREE.CylinderGeometry(.13,.16,.52,7),woolMat);sleeve.rotation.z=side*.28;sleeve.position.set(side*.43,1.22,0);outfit.add(sleeve);
+  }
+  player.add(outfit);state.woolGarmentObject=outfit;
  }
  function craftApiary(){
   if(state.apiaries.length>=4){toast("Limite de 4 colmeias atingido.");return;}
@@ -2251,7 +2311,7 @@ function update(dt){
  const nearFire=state.campfire&&Math.hypot(player.position.x-state.campfireX,player.position.z-state.campfireZ)<6;
  const nearShelter=state.shelter&&Math.hypot(player.position.x-state.shelterX,player.position.z-state.shelterZ)<5;
  if(nearFire){state.energy=Math.min(100,state.energy+dt*5);state.temperature=Math.min(100,state.temperature+dt*9);}
- else{const daylight=THREE.MathUtils.clamp(Math.sin((state.timeOfDay-6)/12*Math.PI),0,1);let coldRate=state.timeOfDay<6||state.timeOfDay>=19?.42:.10;if(nearShelter)coldRate*=.2;if(state.coldCloak)coldRate*=.45;if(state.leatherBoots)coldRate*=.7;state.temperature=THREE.MathUtils.clamp(state.temperature+dt*(daylight*.32-coldRate),0,100);}
+ else{const daylight=THREE.MathUtils.clamp(Math.sin((state.timeOfDay-6)/12*Math.PI),0,1);let coldRate=state.timeOfDay<6||state.timeOfDay>=19?.42:.10;if(nearShelter)coldRate*=.2;if(state.coldCloak)coldRate*=.45;if(state.leatherBoots)coldRate*=.7;if(state.woolGarment)coldRate*=.72;state.temperature=THREE.MathUtils.clamp(state.temperature+dt*(daylight*.32-coldRate),0,100);}
  const floorY=terrainHeight(player.position.x,player.position.z);
  if(isJumping){
   verticalVelocity-=12*dt;
@@ -2287,6 +2347,7 @@ function update(dt){
   let nearSheepPen=-1,sheepPenDistance=4.8;
   for(let i=0;i<state.sheepPens.length;i++){const pen=state.sheepPens[i],d=Math.hypot(player.position.x-pen.x,player.position.z-pen.z);if(d<sheepPenDistance){sheepPenDistance=d;nearSheepPen=i;}}
   state.nearSheepPenIndex=nearSheepPen;
+  state.nearLoom=!!state.loom&&Math.hypot(player.position.x-state.loom.x,player.position.z-state.loom.z)<4.5;
   const gardenActionButton=$("gardenAction");
   gardenActionButton.hidden=nearGarden<0;
   if(nearGarden>=0){
@@ -2327,6 +2388,7 @@ async function start(){
  for(const coop of state.chickenCoops)createChickenCoop(coop);
  for(const apiary of state.apiaries)createApiary(apiary);
  for(const pen of state.sheepPens)createSheepPen(pen);
+ if(state.loom)createLoom(state.loom);
  for(const door of state.doorPanels)createDoorPanel(door);
  for(const shutters of state.windowShutters)createWindowShutters(shutters);
  for(const gate of state.gates)createGate(gate);
