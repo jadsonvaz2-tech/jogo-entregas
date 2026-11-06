@@ -353,7 +353,7 @@ async function buildForest(){
  treePositions.forEach((p,i)=>{
   if(Math.hypot(p.x,p.z)<10)return;
   const tree=scatterModel(choices[i%choices.length],p.x,p.z,.8+worldRandom()*.55);
-  if(i%5===0)createResource(p.x+1.8,p.z+.8,"wood",tree);
+  createResource(p.x,p.z,"wood",tree);
  });
  for(let i=0;i<35;i++){const a=worldRandom()*6.28,r=9+worldRandom()*85;addRock(Math.cos(a)*r,Math.sin(a)*r,.45+worldRandom()*.9,i%4===0);}
  // Materiais iniciais são posicionados ao redor da posição salva do jogador.
