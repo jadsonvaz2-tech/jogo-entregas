@@ -26,7 +26,11 @@ jobs:
             "assets/3d/CommonTree_1.gltf",
             "assets/3d/Pine_1.gltf",
             "assets/3d/TwistedTree_1.gltf",
-            "assets/3d/Rock_Medium_1.gltf"
+            "assets/3d/Rock_Medium_1.gltf",
+            "assets/3d/Bush_Common_Flowers.gltf",
+            "assets/3d/Fern_1.gltf",
+            "assets/3d/Clover_1.gltf",
+            "assets/3d/Flower_3_Group.gltf"
           ];
           for (const file of models) {
             const gltf = JSON.parse(readFileSync(file, "utf8"));

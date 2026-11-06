@@ -796,10 +796,11 @@ function createResource(x,z,type="wood",target=null){
  registerResource({object:stump,x,z,type,target,active:true});
 }
 async function buildForest(){
- const [common,pine,twisted,rock,grassShort,grassTall,wispyGrass,wispyGrassTall,rockPathA,rockPathB] = await Promise.all([
+ const [common,pine,twisted,rock,grassShort,grassTall,wispyGrass,wispyGrassTall,rockPathA,rockPathB,bushFlowers,fern,clover,flowerGroup] = await Promise.all([
   loadTree("CommonTree_1"),loadTree("Pine_1"),loadTree("TwistedTree_1"),loadTree("Rock_Medium_1"),
   loadTree("Grass_Common_Short"),loadTree("Grass_Common_Tall"),loadTree("Grass_Wispy_Short"),loadTree("Grass_Wispy_Tall"),
-  loadTree("RockPath_Round_Small_1"),loadTree("RockPath_Round_Small_2")
+  loadTree("RockPath_Round_Small_1"),loadTree("RockPath_Round_Small_2"),
+  loadTree("Bush_Common_Flowers"),loadTree("Fern_1"),loadTree("Clover_1"),loadTree("Flower_3_Group")
  ]);
  const choices=[common,pine,twisted];
  // Vegetação real do pacote de assets: tufos distribuídos nas encostas e clareiras, sem cobrir o acampamento inicial.
@@ -845,6 +846,23 @@ async function buildForest(){
  for(let i=0;i<3;i++){const a=i*(Math.PI*2/3)+(worldRandom()-.5)*.42,r=44+worldRandom()*12;createWolf(Math.cos(a)*r,Math.sin(a)*r,i);}
  createWaterSource(13,0);
  addGrass();
+ // Decoração adicional: só é criada depois de todos os recursos persistentes,
+ // preservando a sequência determinística e os IDs usados pelo salvamento local.
+ const decorativePatches=[
+  {model:bushFlowers,count:9,minRadius:20,maxRadius:88,minScale:.58,maxScale:.82},
+  {model:fern,count:14,minRadius:14,maxRadius:78,minScale:.48,maxScale:.72},
+  {model:clover,count:24,minRadius:12,maxRadius:66,minScale:.34,maxScale:.52},
+  {model:flowerGroup,count:10,minRadius:18,maxRadius:82,minScale:.38,maxScale:.58}
+ ];
+ for(const patch of decorativePatches){
+  if(!patch.model)continue;
+  for(let i=0;i<patch.count;i++){
+   const angle=worldRandom()*Math.PI*2;
+   const radius=patch.minRadius+worldRandom()*(patch.maxRadius-patch.minRadius);
+   const x=Math.cos(angle)*radius,z=Math.sin(angle)*radius;
+   scatterModel(patch.model,x,z,patch.minScale+worldRandom()*(patch.maxScale-patch.minScale));
+  }
+ }
 }
 
 const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,ironOre:0,coal:0,ironIngots:0,steelIngots:0,steelSword:false,steelHelmet:false,steelChestplate:false,steelAxe:false,steelPickaxe:false,steelShield:false,steelShieldGuarding:false,steelSpear:false,steelSpearObject:null,steelShieldObject:null,steelFurnace:null,steelFurnaceObject:null,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,herbs:0,herbBeds:[],herbObjects:[],nearHerbBedIndex:-1,meat:0,cookedMeat:0,smokedMeat:0,healingSalve:0,hide:0,leather:0,leatherArmor:false,armorObject:null,reinforcedAxe:false,reinforcedPickaxe:false,ironAxe:false,ironPickaxe:false,ironSword:false,swordObject:null,swordHand:null,ironHelmet:false,helmetObject:null,helmetHead:null,ironChestplate:false,ironChestObject:null,smithy:null,smithyObject:null,nearSmithy:false,tannery:null,nearTannery:false,huntedAnimals:[],huntedWolves:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,ironOre:0,coal:0,ironIngots:0,steelIngots:0,fiber:0,berries:0,herbs:0,meat:0,cookedMeat:0,smokedMeat:0,healingSalve:0,hide:0,leather:0,bandages:0,honey:0,wool:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],pathTiles:[],lanternPosts:[],wells:[],gardenPlots:[],gardenObjects:[],nearGardenIndex:-1,marketStalls:[],nearMarketIndex:-1,coins:0,chickenCoops:[],nearCoopIndex:-1,eggs:0,apiaries:[],nearApiaryIndex:-1,honey:0,sheepPens:[],nearSheepPenIndex:-1,wool:0,loom:null,nearLoom:false,woolGarment:false,smokehouse:null,nearSmokehouse:false,herbalistHut:null,nearHerbalist:false,watchtowers:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
