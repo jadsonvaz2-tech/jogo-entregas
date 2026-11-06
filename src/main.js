@@ -549,6 +549,9 @@ function updateHUD(){
   $("sellHide").disabled=!marketNear||state.hide<1;
   $("sellEgg").disabled=!marketNear||state.eggs<1;
   $("sellHoney").disabled=!marketNear||state.honey<1;
+  $("buyWood").disabled=!marketNear||state.coins<12;
+  $("buyStone").disabled=!marketNear||state.coins<15;
+  $("buyFiber").disabled=!marketNear||state.coins<10;
   $("craftWatchtower").disabled=state.wood<14||state.fiber<5||state.watchtowers.length>=6;
   $("craftGarden").disabled=state.wood<4||state.fiber<2||state.gardenPlots.length>=8;
   $("craftWell").disabled=state.stone<12||state.wood<5||state.wells.length>=5;
@@ -717,6 +720,9 @@ $("craftStorageChest").addEventListener("click",craftStorageChest);
  $("sellHide").addEventListener("click",()=>sellMarketGoods("hide"));
  $("sellEgg").addEventListener("click",()=>sellMarketGoods("egg"));
  $("sellHoney").addEventListener("click",()=>sellMarketGoods("honey"));
+ $("buyWood").addEventListener("click",()=>buyMarketSupplies("wood"));
+ $("buyStone").addEventListener("click",()=>buyMarketSupplies("stone"));
+ $("buyFiber").addEventListener("click",()=>buyMarketSupplies("fiber"));
  $("gardenAction").addEventListener("click",gardenAction);
  $("drinkWell").addEventListener("click",drinkFromWell);
  $("craftDoorPanel").addEventListener("click",craftDoorPanel);
@@ -1026,6 +1032,19 @@ function findFenceConnection(targetX,targetZ,extension){
   group.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
   group.position.set(stall.x,terrainHeight(stall.x,stall.z),stall.z);
   group.rotation.y=stall.yaw;scene.add(group);return group;
+ }
+ function buyMarketSupplies(type){
+  if(state.nearMarketIndex<0){toast("Aproxime-se de uma banca de feira para comprar materiais.");return;}
+  const offers={
+   wood:{amount:3,price:12,label:"3 madeiras"},
+   stone:{amount:3,price:15,label:"3 pedras"},
+   fiber:{amount:4,price:10,label:"4 fibras"}
+  };
+  const offer=offers[type];
+  if(!offer)return;
+  if(state.coins<offer.price){toast("Moedas insuficientes para esta compra.");return;}
+  state.coins-=offer.price;state[type]+=offer.amount;
+  updateHUD();saveGame();toast("Compra concluída: "+offer.label+" por "+offer.price+" moedas.");
  }
  function sellMarketGoods(type){
   if(state.nearMarketIndex<0){toast("Aproxime-se de uma banca de feira para negociar.");return;}
