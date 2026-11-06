@@ -1083,11 +1083,26 @@ function restoreSaveBackup(file){
  reader.onerror=()=>toast("Não foi possível ler o arquivo de backup.");
  reader.readAsText(file);
 }
+function resetBuiltStructures(){
+ if(!confirm("Apagar todas as construções deste mundo? Seus recursos, itens, ferramentas, equipamentos, animais, progresso e posição serão preservados."))return;
+ try{
+  saveGame();
+  const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"{}");
+  for(const key of ["fenceSections","gates","floorTiles","wallPanels","windowPanels","roofTiles","gablePanels","ridgeCaps","chimneys","pathTiles","lanternPosts","wells","gardenPlots","herbBeds","watchtowers","marketStalls","chickenCoops","apiaries","sheepPens","doorPanels","windowShutters"])saved[key]=[];
+  for(const key of ["smithy","steelFurnace","loom","smokehouse","herbalistHut","tannery"])saved[key]=null;
+  for(const key of ["campfire","shelter","bed","storageChest"])saved[key]=false;
+  for(const key of ["campfireX","campfireZ","shelterX","shelterZ","bedX","bedZ","storageChestX","storageChestZ"])saved[key]=null;
+  localStorage.setItem("cronicas-floresta-save",JSON.stringify(saved));
+  toast("Construções removidas. Recursos, equipamentos e progresso preservados.");
+  setTimeout(()=>location.reload(),650);
+ }catch(error){console.error(error);toast("Não foi possível resetar as construções. Seu salvamento foi mantido.");}
+}
 exportBackupButton.addEventListener("click",downloadSaveBackup);
 importBackupButton.addEventListener("click",()=>backupFileInput.click());
 backupFileInput.addEventListener("change",()=>{const file=backupFileInput.files?.[0];restoreSaveBackup(file);backupFileInput.value="";});
 
 craftToggle.addEventListener("click",()=>{const open=craftPanel.classList.toggle("open");craftToggle.textContent=open?"FECHAR OFICINA":"FABRICAR";});
+$("resetBuiltStructures").addEventListener("click",resetBuiltStructures);
 $("craftAxe").addEventListener("click",()=>craftTool("axe"));
 $("craftPickaxe").addEventListener("click",()=>craftTool("pickaxe"));
 $("craftStorageChest").addEventListener("click",craftStorageChest);
