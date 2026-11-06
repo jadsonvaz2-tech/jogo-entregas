@@ -377,7 +377,7 @@ async function buildForest(){
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gateObjects:[],nearGateIndex:-1};
+const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,fiber:0,berries:0,meat:0,cookedMeat:0,hide:0,bandages:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,gateObjects:[],nearGateIndex:-1};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
@@ -403,6 +403,7 @@ function loadGame(){
   if(Array.isArray(saved.wallPanels))state.wallPanels=saved.wallPanels.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100);
   if(Array.isArray(saved.windowPanels))state.windowPanels=saved.windowPanels.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100);
   if(Array.isArray(saved.roofTiles))state.roofTiles=saved.roofTiles.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100);
+  if(Array.isArray(saved.doorPanels))state.doorPanels=saved.doorPanels.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100).map(v=>({...v,open:v.open===true}));
   if(Number.isFinite(saved.campfireX))state.campfireX=saved.campfireX;
   if(Number.isFinite(saved.campfireZ))state.campfireZ=saved.campfireZ;
   if(Number.isFinite(saved.shelterX))state.shelterX=saved.shelterX;
@@ -417,7 +418,7 @@ function loadGame(){
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,starterKitGranted:state.starterKitGranted}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,doorPanels:state.doorPanels,starterKitGranted:state.starterKitGranted}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -507,6 +508,8 @@ function updateHUD(){
   $("wallPanelStatus").textContent="Paredes modulares: "+state.wallPanels.length+" painéis";
   $("windowPanelStatus").textContent="Paredes com janela: "+state.windowPanels.length+" painéis";
   $("roofTileStatus").textContent="Telhados modulares: "+state.roofTiles.length+" módulos";
+  $("doorPanelStatus").textContent="Portas de madeira: "+state.doorPanels.length;
+  $("craftDoorPanel").disabled=state.wood<8||state.fiber<3||state.doorPanels.length>=100||state.floorTiles.length===0;
   $("craftRoofTile").disabled=state.wood<8||state.fiber<3||state.roofTiles.length>=100||state.floorTiles.length===0;
   $("craftWindowPanel").disabled=state.wood<7||state.fiber<2||state.windowPanels.length>=100||state.floorTiles.length===0;
   $("craftWallPanel").disabled=state.wood<6||state.fiber<2||state.wallPanels.length>=100||state.floorTiles.length===0;
@@ -519,6 +522,11 @@ function updateHUD(){
   state.nearGateIndex=nearestGate;
   $("gateToggle").hidden=nearestGate<0;
   if(nearestGate>=0)$("gateToggle").textContent=state.gates[nearestGate].open?"FECHAR PORTÃO":"ABRIR PORTÃO";
+  let nearestDoor=-1,doorDistance=4.2;
+  for(let i=0;i<state.doorPanels.length;i++){const door=state.doorPanels[i],d=Math.hypot(player.position.x-door.x,player.position.z-door.z);if(d<doorDistance){doorDistance=d;nearestDoor=i;}}
+  state.nearDoorIndex=nearestDoor;
+  $("doorToggle").hidden=nearestDoor<0;
+  if(nearestDoor>=0)$("doorToggle").textContent=state.doorPanels[nearestDoor].open?"FECHAR PORTA":"ABRIR PORTA";
  $("craftStorageChest").disabled=state.storageChest||state.wood<6||state.stone<2;
  const nearChest=state.storageChest&&Math.hypot(player.position.x-state.storageChestX,player.position.z-state.storageChestZ)<3.5;
  const carried=["wood","stone","fiber","berries","meat","cookedMeat","hide","bandages"].some(k=>state[k]>0);
@@ -633,6 +641,8 @@ $("craftStorageChest").addEventListener("click",craftStorageChest);
  $("craftWallPanel").addEventListener("click",craftWallPanel);
  $("craftWindowPanel").addEventListener("click",craftWindowPanel);
  $("craftRoofTile").addEventListener("click",craftRoofTile);
+ $("craftDoorPanel").addEventListener("click",craftDoorPanel);
+ $("doorToggle").addEventListener("click",toggleNearbyDoor);
  $("craftGate").addEventListener("click",craftGate);
  $("gateToggle").addEventListener("click",toggleNearbyGate);
 $("storeResources").addEventListener("click",storeResources);
@@ -882,6 +892,76 @@ function findFenceConnection(targetX,targetZ,extension){
   group.position.set(roof.x,terrainHeight(roof.x,roof.z)+.28,roof.z);
   group.rotation.y=roof.yaw;scene.add(group);
   return group;
+ }
+ function craftDoorPanel(){
+  if(state.doorPanels.length>=100){toast("Limite de 100 portas atingido.");return;}
+  if(state.wood<8||state.fiber<3){toast("Faltam materiais: 8 madeiras e 3 fibras.");return;}
+  if(!state.floorTiles.length){toast("Construa primeiro um piso modular para apoiar a porta.");return;}
+  let nearest=null,nearestDistance=7;
+  for(const tile of state.floorTiles){
+   const dx=player.position.x-tile.x,dz=player.position.z-tile.z;
+   const localX=dx*Math.cos(tile.yaw)-dz*Math.sin(tile.yaw);
+   const localZ=dx*Math.sin(tile.yaw)+dz*Math.cos(tile.yaw);
+   const distance=Math.hypot(dx,dz);
+   if(distance<nearestDistance){nearestDistance=distance;nearest={tile,localX,localZ};}
+  }
+  if(!nearest){toast("Aproxime-se de um piso modular.");return;}
+  const {tile,localX,localZ}=nearest;
+  let edgeX=0,edgeZ=0,placedYaw=tile.yaw;
+  if(Math.abs(localX)>Math.abs(localZ)){
+   edgeX=Math.sign(localX||1)*1.5;placedYaw=tile.yaw+Math.PI/2;
+  }else edgeZ=Math.sign(localZ||1)*1.5;
+  const x=tile.x+edgeX*Math.cos(tile.yaw)+edgeZ*Math.sin(tile.yaw);
+  const z=tile.z-edgeX*Math.sin(tile.yaw)+edgeZ*Math.cos(tile.yaw);
+  const occupied=[...state.wallPanels,...state.windowPanels,...state.doorPanels].some(w=>Math.hypot(w.x-x,w.z-z)<2.35);
+  if(occupied){toast("Este lado do piso já possui uma parede ou porta.");return;}
+  const door={x,z,yaw:placedYaw,open:false};
+  state.wood-=8;state.fiber-=3;
+  createDoorPanel(door);state.doorPanels.push(door);
+  updateHUD();saveGame();toast("Porta de madeira instalada! Aproxime-se para abrir ou fechar.");
+ }
+ function createDoorPanel(door){
+  const group=new THREE.Group();
+  const timber=new THREE.MeshStandardMaterial({color:0x805632,roughness:1});
+  const dark=new THREE.MeshStandardMaterial({color:0x49301d,roughness:1});
+  const metal=new THREE.MeshStandardMaterial({color:0x77766b,metalness:.45,roughness:.65});
+  for(const x of [-1.42,1.42]){
+   const post=new THREE.Mesh(new THREE.BoxGeometry(.18,2.45,.18),dark);
+   post.position.set(x,1.225,0);post.castShadow=true;post.receiveShadow=true;group.add(post);
+  }
+  const lintel=new THREE.Mesh(new THREE.BoxGeometry(2.9,.18,.2),dark);
+  lintel.position.set(0,2.34,0);lintel.castShadow=true;group.add(lintel);
+  const pivot=new THREE.Group();pivot.position.set(-1.32,.12,.04);group.add(pivot);
+  const leaf=new THREE.Group();pivot.add(leaf);
+  const panel=new THREE.Mesh(new THREE.BoxGeometry(2.58,2.12,.13),timber);
+  panel.position.set(1.29,1.06,0);panel.castShadow=true;panel.receiveShadow=true;leaf.add(panel);
+  for(const y of [.2,.72,1.4,1.92]){
+   const rail=new THREE.Mesh(new THREE.BoxGeometry(2.58,.1,.16),dark);
+   rail.position.set(1.29,y,0);rail.castShadow=true;leaf.add(rail);
+  }
+  for(let i=0;i<9;i++){
+   const slat=new THREE.Mesh(new THREE.BoxGeometry(.2,2.02,.15),timber);
+   slat.position.set(.17+i*.28,1.06,.075);slat.castShadow=true;leaf.add(slat);
+  }
+  const brace=new THREE.Mesh(new THREE.BoxGeometry(2.45,.12,.15),dark);
+  brace.position.set(1.29,1.06,.12);brace.rotation.z=-.55;brace.castShadow=true;leaf.add(brace);
+  for(const y of [.45,1.65]){
+   const hinge=new THREE.Mesh(new THREE.BoxGeometry(.1,.25,.2),metal);
+   hinge.position.set(.02,y,.12);leaf.add(hinge);
+  }
+  const handle=new THREE.Mesh(new THREE.BoxGeometry(.1,.24,.1),metal);
+  handle.position.set(2.42,1.12,.13);leaf.add(handle);
+  pivot.rotation.y=door.open?-1.35:0;
+  group.position.set(door.x,terrainHeight(door.x,door.z)+.28,door.z);
+  group.rotation.y=door.yaw;scene.add(group);
+  state.doorObjects.push({group,pivot});
+ }
+ function toggleNearbyDoor(){
+  const index=state.nearDoorIndex;
+  if(index<0||!state.doorPanels[index]){toast("Aproxime-se de uma porta.");return;}
+  const door=state.doorPanels[index];door.open=!door.open;
+  const visual=state.doorObjects[index];if(visual)visual.pivot.rotation.y=door.open?-1.35:0;
+  updateHUD();saveGame();toast(door.open?"Porta aberta.":"Porta fechada.");
  }
  function craftFenceSection(){
   if(state.fenceSections.length>=200){toast("Limite de 200 seções de cerca atingido.");return;}
@@ -1356,6 +1436,7 @@ async function start(){
  for(const wall of state.wallPanels)createWallPanel(wall);
  for(const windowPanel of state.windowPanels)createWindowPanel(windowPanel);
  for(const roofTile of state.roofTiles)createRoofTile(roofTile);
+ for(const door of state.doorPanels)createDoorPanel(door);
  for(const gate of state.gates)createGate(gate);
  $("loadingBar").style.width="72%";
  $("loadingText").textContent="Carregando o viajante...";
