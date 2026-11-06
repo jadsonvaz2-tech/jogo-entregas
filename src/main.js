@@ -1916,7 +1916,8 @@ function findFenceConnection(targetX,targetZ,extension){
  }
  
 let activeBuildPlacement=null;
-let buildPreviewGroup=null,buildPreviewMesh=null,buildPreviewMaterial=null,buildPlacementUI=null;
+let buildPreviewGroup=null,buildPreviewMesh=null,buildPreviewMaterial=null,buildPlacementUI=null,buildPlacementToggle=null;
+function toggleBuildPlacementPanel(force){if(!activeBuildPlacement||!buildPlacementUI)return;const show=typeof force==="boolean"?force:buildPlacementUI.style.display==="none";buildPlacementUI.style.display=show?"flex":"none";if(buildPlacementToggle){buildPlacementToggle.textContent=show?"OCULTAR AJUSTES":"AJUSTAR POSIÇÃO";buildPlacementToggle.setAttribute("aria-label",show?"Ocultar controles de posicionamento":"Mostrar controles de posicionamento");}}
 function buildPlacementMessage(msg){toast(msg);}
 function ensureBuildPlacementUI(){
  if(buildPlacementUI)return;
@@ -1937,6 +1938,7 @@ function ensureBuildPlacementUI(){
  const confirm=document.createElement("button");confirm.type="button";confirm.id="buildConfirmButton";confirm.textContent="✓ CONFIRMAR";confirm.style.cssText="flex:1;min-height:44px;border:0;border-radius:9px;background:#628d4b;color:white;font:800 13px system-ui";confirm.addEventListener("click",confirmBuildPlacement);
  const cancel=document.createElement("button");cancel.type="button";cancel.textContent="✕ CANCELAR";cancel.style.cssText="flex:1;min-height:44px;border:1px solid #b99a8d;border-radius:9px;background:#633f38;color:white;font:800 13px system-ui";cancel.addEventListener("click",cancelBuildPlacement);
  actions.append(confirm,cancel);panel.append(label,row,actions);document.body.appendChild(panel);buildPlacementUI=panel;
+  const toggle=document.createElement("button");toggle.type="button";toggle.id="buildPlacementToggle";toggle.textContent="OCULTAR AJUSTES";toggle.style.cssText="position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:91;display:none;min-height:44px;padding:10px 18px;border:1px solid #d2bd8c;border-radius:10px;background:#253528f2;color:#fff1cf;font:800 12px system-ui;letter-spacing:.04em;box-shadow:0 3px 12px #000b;touch-action:manipulation";toggle.addEventListener("click",()=>toggleBuildPlacementPanel());document.body.appendChild(toggle);buildPlacementToggle=toggle;
 }
 function buildPlacementSpec(type){
  const specs={
@@ -2000,7 +2002,7 @@ function beginBuildPlacement(type){
  activeBuildPlacement={type,offsetX:0,offsetZ:0,rotationStep:0,fineAdjust:false,valid:false,placement:null};
  ensureBuildPlacementUI();
  $("buildPlacementLabel").textContent="POSICIONAR: "+spec.label+" · ajuste e confirme";
- buildPlacementUI.style.display="flex";
+ toggleBuildPlacementPanel(true);if(buildPlacementToggle)buildPlacementToggle.style.display="block";
  const mat=new THREE.MeshStandardMaterial({color:0x55e58a,transparent:true,opacity:.42,roughness:.7,metalness:0,depthWrite:false});
  buildPreviewMaterial=mat;buildPreviewMesh=null;
  buildPreviewGroup=createBuildPreviewModel(type,mat,spec.height);
@@ -2179,7 +2181,7 @@ function updateBuildPreview(){
 function cancelBuildPlacement(showMessage=true){
  if(buildPreviewGroup){scene.remove(buildPreviewGroup);buildPreviewGroup.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose();}});}
  buildPreviewGroup=null;buildPreviewMesh=null;buildPreviewMaterial=null;activeBuildPlacement=null;
- if(buildPlacementUI)buildPlacementUI.style.display="none";
+ if(buildPlacementUI)buildPlacementUI.style.display="none";if(buildPlacementToggle)buildPlacementToggle.style.display="none";
  if(showMessage)toast("Construção cancelada. Nenhum material foi consumido.");
 }
 function confirmBuildPlacement(){
@@ -3428,6 +3430,7 @@ function resetJoy(e){if(e.pointerId!==joyPointer)return;joyPointer=null;state.mo
 joy.addEventListener("pointerup",resetJoy);joy.addEventListener("pointercancel",resetJoy);
 const keys={};
 addEventListener("keydown",e=>{
+ if(e.key==="Tab"&&activeBuildPlacement){e.preventDefault();toggleBuildPlacementPanel();return;}
  keys[e.key.toLowerCase()]=true;
  if(e.key.toLowerCase()==="e")collect();
  if(e.key==="Shift")state.running=true;
