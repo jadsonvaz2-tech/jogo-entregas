@@ -328,7 +328,7 @@ async function buildForest(){
  addGrass();
 }
 
-const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false};
+const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,meat:0,cookedMeat:0,hide:0,huntedAnimals:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null};
 function loadGame(){
  try{
   const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
@@ -338,6 +338,7 @@ function loadGame(){
   state.starterKitGranted=saved.starterKitGranted===true;
   state.campfire=saved.campfire===true;
   state.shelter=saved.shelter===true;
+  state.bed=saved.bed===true;
   state.coldCloak=saved.coldCloak===true;
   state.leatherBoots=saved.leatherBoots===true;
   if(Array.isArray(saved.collectedResources))state.collectedResources=saved.collectedResources.filter(v=>typeof v==="string");
@@ -346,13 +347,15 @@ function loadGame(){
   if(Number.isFinite(saved.campfireZ))state.campfireZ=saved.campfireZ;
   if(Number.isFinite(saved.shelterX))state.shelterX=saved.shelterX;
   if(Number.isFinite(saved.shelterZ))state.shelterZ=saved.shelterZ;
+  if(Number.isFinite(saved.bedX))state.bedX=saved.bedX;
+  if(Number.isFinite(saved.bedZ))state.bedZ=saved.bedZ;
   if(Number.isFinite(saved.x))player.position.x=saved.x;
   if(Number.isFinite(saved.z))player.position.z=saved.z;
   player.position.y=terrainHeight(player.position.x,player.position.z);
  }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,huntedAnimals:state.huntedAnimals,starterKitGranted:state.starterKitGranted}));}
+ try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,collectedResources:state.collectedResources,berries:state.berries,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,meat:state.meat,cookedMeat:state.cookedMeat,hide:state.hide,huntedAnimals:state.huntedAnimals,starterKitGranted:state.starterKitGranted}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -391,6 +394,11 @@ function updateHUD(){
  $("craftCampfire").disabled=state.campfire||state.wood<5||state.stone<3;
  $("shelterStatus").textContent=state.shelter?"Abrigo: construído":"Abrigo: não construído";
  $("craftShelter").disabled=state.shelter||state.wood<10||state.stone<4;
+ $("bedStatus").textContent=state.bed?"Cama improvisada: construída":"Cama improvisada: não construída";
+ $("craftBed").disabled=state.bed||state.wood<3||state.fiber<6;
+ const nearBed=state.bed&&Math.hypot(player.position.x-state.bedX,player.position.z-state.bedZ)<3.2;
+ const night=state.timeOfDay>=19||state.timeOfDay<6;
+ $("sleepBtn").hidden=!(nearBed&&night);
  $("collectBtn").disabled=!state.near;
  $("collectBtn").textContent=state.near?(state.near.type==="stone"?"MINERAR":state.near.type==="water"?"BEBER ÁGUA":"COLETAR"):"COLETAR";
  const nearbyAnimal=nearestWildAnimal(5);
@@ -522,6 +530,39 @@ function createCloakVisual(){
 }
 $("craftCloak").addEventListener("click",craftCloak);
 $("craftBoots").addEventListener("click",craftBoots);
+function craftBed(){
+ if(state.bed){toast("Você já construiu sua cama improvisada.");return;}
+ if(state.wood<3||state.fiber<6){toast("Faltam materiais: 3 madeiras e 6 fibras.");return;}
+ state.wood-=3;state.fiber-=6;
+ const x=player.position.x+Math.sin(player.rotation.y)*2.2;
+ const z=player.position.z+Math.cos(player.rotation.y)*2.2;
+ createBed(x,z);updateHUD();saveGame();toast("Cama improvisada construída! Você poderá dormir durante a noite.");
+}
+function createBed(x,z){
+ if(state.bedObject)scene.remove(state.bedObject);
+ const group=new THREE.Group();
+ const wood=new THREE.MeshStandardMaterial({color:0x654329,roughness:1});
+ const straw=new THREE.MeshStandardMaterial({color:0xb2a071,roughness:1});
+ const cloth=new THREE.MeshStandardMaterial({color:0x78634b,roughness:1});
+ const frame=new THREE.Mesh(new THREE.BoxGeometry(1.15,.16,2.05),wood);frame.position.y=.28;frame.castShadow=true;group.add(frame);
+ const mattress=new THREE.Mesh(new THREE.BoxGeometry(1.08,.2,1.9),straw);mattress.position.y=.46;mattress.castShadow=true;group.add(mattress);
+ const blanket=new THREE.Mesh(new THREE.BoxGeometry(1.02,.09,1.12),cloth);blanket.position.set(0,.61,-.28);blanket.castShadow=true;group.add(blanket);
+ const pillow=new THREE.Mesh(new THREE.BoxGeometry(.72,.13,.34),straw);pillow.position.set(0,.62,.72);pillow.castShadow=true;group.add(pillow);
+ for(const px of [-.48,.48])for(const pz of [-.88,.88]){const leg=new THREE.Mesh(new THREE.BoxGeometry(.13,.3,.13),wood);leg.position.set(px,.14,pz);leg.castShadow=true;group.add(leg);}
+ group.position.set(x,terrainHeight(x,z),z);group.rotation.y=player.rotation.y;scene.add(group);
+ state.bedObject=group;state.bed=true;state.bedX=x;state.bedZ=z;
+}
+function sleepAtBed(){
+ const nearBed=state.bed&&Math.hypot(player.position.x-state.bedX,player.position.z-state.bedZ)<3.2;
+ if(!nearBed){toast("Aproxime-se da cama.");return;}
+ if(!(state.timeOfDay>=19||state.timeOfDay<6)){toast("Você só pode dormir durante a noite.");return;}
+ if(state.timeOfDay>=19)state.day++;
+ state.timeOfDay=7;state.energy=100;state.health=Math.min(100,state.health+15);
+ state.hunger=Math.max(0,state.hunger-5);state.thirst=Math.max(0,state.thirst-8);
+ updateHUD();saveGame();toast("Você descansou até o amanhecer. Energia recuperada!");
+}
+$("craftBed").addEventListener("click",craftBed);
+$("sleepBtn").addEventListener("click",sleepAtBed);
 function craftShelter(){
  if(state.shelter){toast("Você já construiu seu abrigo.");return;}
  if(state.wood<10||state.stone<4){toast("Faltam materiais: 10 madeiras e 4 pedras.");return;}
@@ -752,6 +793,7 @@ async function start(){
  await buildForest();
  if(state.campfire&&Number.isFinite(state.campfireX)&&Number.isFinite(state.campfireZ))createCampfire(state.campfireX,state.campfireZ);
  if(state.shelter&&Number.isFinite(state.shelterX)&&Number.isFinite(state.shelterZ))createShelter(state.shelterX,state.shelterZ);
+ if(state.bed&&Number.isFinite(state.bedX)&&Number.isFinite(state.bedZ))createBed(state.bedX,state.bedZ);
  $("loadingBar").style.width="72%";
  $("loadingText").textContent="Carregando o viajante...";
  const loaded=await loadCharacter();
