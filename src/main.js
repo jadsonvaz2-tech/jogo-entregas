@@ -2092,6 +2092,20 @@ function buildRoofModulesOverlap(a,b){
  }
  return true;
 }
+function buildFenceSectionsOverlap(a,b){
+ const dx=b.x-a.x,dz=b.z-a.z;
+ const yawA=Number.isFinite(a.yaw)?a.yaw:0,yawB=Number.isFinite(b.yaw)?b.yaw:0;
+ const halfLength=3.2,halfDepth=.09;
+ const axes=[yawA,yawA+Math.PI/2,yawB,yawB+Math.PI/2];
+ for(const angle of axes){
+  const ax=Math.cos(angle),az=-Math.sin(angle);
+  const distance=Math.abs(dx*ax+dz*az);
+  const radiusA=halfLength*Math.abs(Math.cos(yawA-angle))+halfDepth*Math.abs(Math.sin(yawA-angle));
+  const radiusB=halfLength*Math.abs(Math.cos(yawB-angle))+halfDepth*Math.abs(Math.sin(yawB-angle));
+  if(distance>=radiusA+radiusB-.035)return false;
+ }
+ return true;
+}
 function buildFloorPlacementOccupied(candidate){
  return state.floorTiles.some(tile=>buildFloorModulesOverlap(candidate,tile));
 }
@@ -2113,7 +2127,7 @@ function updateBuildPreview(){
  const floorOccupied=type==="floor"&&buildFloorPlacementOccupied(c);
  const occupiedPanelSlot=(type==="wall"||type==="window"||type==="door")&&[...state.wallPanels,...state.windowPanels,...state.doorPanels].some(t=>Math.hypot(t.x-c.x,t.z-c.z)<0.45);
  const roofOccupied=type==="roof"&&state.roofTiles.some(t=>buildRoofModulesOverlap(c,t));
- const fenceOccupied=type==="fence"&&state.fenceSections.some(t=>Math.hypot(t.x-c.x,t.z-c.z)<5.8);
+ const fenceOccupied=type==="fence"&&state.fenceSections.some(t=>buildFenceSectionsOverlap(c,t));
  const limits={floor:state.floorTiles.length<100,wall:state.wallPanels.length<100,window:state.windowPanels.length<100,door:state.doorPanels.length<100,roof:state.roofTiles.length<100,fence:state.fenceSections.length<200};
  const missingMaterials=state.wood<spec.wood||state.fiber<spec.fiber;
  const terrainCheck=buildPlacementTerrainCheck(type,c,c.yaw);
@@ -2128,7 +2142,7 @@ function updateBuildPreview(){
  if(confirm){confirm.disabled=!valid;confirm.style.opacity=valid?"1":".45";}
  const label=$("buildPlacementLabel");
  if(label){
-  const status=!hasFloor?"PRECISA DE UM PISO":missingMaterials?"FALTAM MATERIAIS":floorOccupied?"ESTE LOCAL JÁ TEM UM PISO":occupiedPanelSlot?"ESTE LADO JÁ TEM UMA PAREDE":roofOccupied?"ESTE PISO JÁ TEM TELHADO":fenceOccupied?"CERCA MUITO PRÓXIMA":!limits[type]?"LIMITE DE CONSTRUÇÃO ATINGIDO":!terrainCheck.level?"TERRENO MUITO INCLINADO":!floorContinuity.ok?"DESNÍVEL ENTRE PISOS":valid?"ENCAIXE LIVRE · PODE CONFIRMAR":"POSIÇÃO INVÁLIDA";
+  const status=!hasFloor?"PRECISA DE UM PISO":missingMaterials?"FALTAM MATERIAIS":floorOccupied?"ESTE LOCAL JÁ TEM UM PISO":occupiedPanelSlot?"ESTE LADO JÁ TEM UMA PAREDE":roofOccupied?"ESTE PISO JÁ TEM TELHADO":fenceOccupied?"ÁREA DA CERCA SOBREPOSTA":!limits[type]?"LIMITE DE CONSTRUÇÃO ATINGIDO":!terrainCheck.level?"TERRENO MUITO INCLINADO":!floorContinuity.ok?"DESNÍVEL ENTRE PISOS":valid?"ENCAIXE LIVRE · PODE CONFIRMAR":"POSIÇÃO INVÁLIDA";
   label.textContent="POSICIONAR: "+spec.label+" · "+status;
  }
 }
