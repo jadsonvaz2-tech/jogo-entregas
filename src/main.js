@@ -1910,12 +1910,13 @@ function ensureBuildPlacementUI(){
  const label=document.createElement("div");label.id="buildPlacementLabel";label.textContent="POSICIONAR CONSTRUÇÃO";label.style.cssText="font-size:13px;letter-spacing:.06em";
  const row=document.createElement("div");row.style.cssText="display:flex;gap:6px;width:100%;justify-content:center;flex-wrap:wrap";
  const make=(id,txt,action,primary=false)=>{const b=document.createElement("button");b.type="button";b.id=id;b.textContent=txt;b.style.cssText="min-height:40px;min-width:58px;padding:8px 12px;border:1px solid #c9b994;border-radius:9px;background:"+(primary?"#527b43":"#4a5046")+";color:white;font:700 12px system-ui;touch-action:manipulation";b.addEventListener("click",e=>{e.preventDefault();e.stopPropagation();action();});row.appendChild(b);return b;};
- const moveStep=()=>{if(!activeBuildPlacement)return 0;return activeBuildPlacement.type==="fence"?1.6:3;};
+ const moveStep=()=>{if(!activeBuildPlacement)return 0;if(activeBuildPlacement.fineAdjust)return activeBuildPlacement.type==="fence"?.4:.5;return activeBuildPlacement.type==="fence"?1.6:3;};
  make("buildLeft","◀ MOVER",()=>{if(activeBuildPlacement){activeBuildPlacement.offsetX-=moveStep();updateBuildPreview();}});
  make("buildForward","▲ MOVER",()=>{if(activeBuildPlacement){activeBuildPlacement.offsetZ+=moveStep();updateBuildPreview();}});
  make("buildBack","▼ MOVER",()=>{if(activeBuildPlacement){activeBuildPlacement.offsetZ-=moveStep();updateBuildPreview();}});
  make("buildRight","MOVER ▶",()=>{if(activeBuildPlacement){activeBuildPlacement.offsetX+=moveStep();updateBuildPreview();}});
  make("buildRotate","GIRAR 90°",()=>{if(activeBuildPlacement){activeBuildPlacement.rotationStep=(activeBuildPlacement.rotationStep+1)%4;updateBuildPreview();}});
+ const fineButton=make("buildFineAdjust","AJUSTE FINO: OFF",()=>{if(activeBuildPlacement){activeBuildPlacement.fineAdjust=!activeBuildPlacement.fineAdjust;fineButton.textContent="AJUSTE FINO: "+(activeBuildPlacement.fineAdjust?"ON":"OFF");toast(activeBuildPlacement.fineAdjust?"Ajuste fino ativado: movimentos de 0,5 m.":"Ajuste normal ativado.");}});
  const actions=document.createElement("div");actions.style.cssText="display:flex;gap:8px;width:100%";
  const confirm=document.createElement("button");confirm.type="button";confirm.id="buildConfirmButton";confirm.textContent="✓ CONFIRMAR";confirm.style.cssText="flex:1;min-height:44px;border:0;border-radius:9px;background:#628d4b;color:white;font:800 13px system-ui";confirm.addEventListener("click",confirmBuildPlacement);
  const cancel=document.createElement("button");cancel.type="button";cancel.textContent="✕ CANCELAR";cancel.style.cssText="flex:1;min-height:44px;border:1px solid #b99a8d;border-radius:9px;background:#633f38;color:white;font:800 13px system-ui";cancel.addEventListener("click",cancelBuildPlacement);
@@ -1980,7 +1981,7 @@ function beginBuildPlacement(type){
  if(type==="wall"||type==="window"||type==="door"||type==="roof"){
   if(!state.floorTiles.length){toast("Construa primeiro um piso modular.");return;}
  }
- activeBuildPlacement={type,offsetX:0,offsetZ:0,rotationStep:0,valid:false,placement:null};
+ activeBuildPlacement={type,offsetX:0,offsetZ:0,rotationStep:0,fineAdjust:false,valid:false,placement:null};
  ensureBuildPlacementUI();
  $("buildPlacementLabel").textContent="POSICIONAR: "+spec.label+" · ajuste e confirme";
  buildPlacementUI.style.display="flex";
