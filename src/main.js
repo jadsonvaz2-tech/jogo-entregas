@@ -996,6 +996,41 @@ function craftTool(type){
 }
 
 const craftToggle=$("craftToggle"),craftPanel=$("craftPanel");
+
+const craftSections=[
+ {title:"SOBREVIVÊNCIA",match:/^(berryStatus|eatBerry|meatStatus|cookMeat|eatMeat|eatCookedMeat|campfireStatus|craftCampfire|shelterStatus|craftShelter|bedStatus|craftBed|drinkWell|wellStatus|craftWell|waterSkinStatus|craftWaterSkin|fillWaterSkin|drinkWaterSkin)$/},
+ {title:"FERRAMENTAS E CAÇA",match:/^(axeStatus|craftAxe|pickaxeStatus|craftPickaxe|bowStatus|huntTargetStatus|craftBow|craftArrows|bandageStatus|craftBandage|useBandage)$/},
+ {title:"CONSTRUÇÕES E ASSENTAMENTO",match:/^(fenceStatus|craftFence|floorTileStatus|craftFloorTile|pathTileStatus|craftPathTile|lanternPostStatus|craftLanternPost|gardenStatus|craftGarden|gardenAction|watchtowerStatus|craftWatchtower|wallPanelStatus|craftWallPanel|windowPanelStatus|craftWindowPanel|roofTileStatus|craftRoofTile|gableStatus|craftGable|ridgeCapStatus|craftRidgeCap|chimneyStatus|craftChimney|doorPanelStatus|craftDoorPanel|shutterStatus|craftShutters|gateStatus|craftGate)$/},
+ {title:"ANIMAIS E CRIAÇÃO",match:/^(coopStatus|craftCoop|collectEggs|eatEgg|apiaryStatus|craftApiary|collectHoney|eatHoney|sheepPenStatus|craftSheepPen|collectWool)$/},
+ {title:"OFÍCIOS E PRODUÇÃO",match:/^(loomStatus|smokehouseStatus|craftSmokehouse|smokeMeat|eatSmokedMeat|craftLoom|craftWoolGarment|tanneryStatus|craftTannery|startTanning|collectLeather|smithyStatus|metalStatus|smeltIron|steelStatus|buildSteelFurnace|startSteelSmelt|collectSteel|craftSmithy|upgradeAxe|upgradePickaxe|herbalistStatus|herbGardenStatus|craftHerbBed|herbGardenAction|craftHerbalistHut|craftSalve)$/},
+ {title:"FEIRA E COMÉRCIO",match:/^(marketStatus|craftMarket|marketActions)$/},
+ {title:"EQUIPAMENTOS E MEDICINA",match:/^(cloakStatus|craftCloak|bootsStatus|craftBoots|useSalve|leatherArmorStatus|craftLeatherArmor|craftIronSword|craftIronHelmet|craftIronChestplate|craftIronAxe|craftIronPickaxe|craftSteelSword|craftSteelHelmet|craftSteelChestplate|craftSteelAxe|craftSteelPickaxe|craftSteelShield|craftSteelSpear)$/},
+ {title:"ARMAZENAMENTO",match:/^(storageChestStatus|craftStorageChest|storageStatus|storeResources|takeResources)$/}
+];
+const originalCraftChildren=[...craftPanel.children];
+const craftBuckets=craftSections.map(section=>({section,nodes:[]}));
+const craftOther=[];
+for(const node of originalCraftChildren){
+ const id=node.id||"";
+ const bucket=craftBuckets.find(item=>item.section.match.test(id));
+ (bucket?bucket.nodes:craftOther).push(node);
+}
+for(const bucket of craftBuckets){
+ if(!bucket.nodes.length)continue;
+ const details=document.createElement("details");
+ details.className="craft-category";
+ details.open=bucket.section.title==="SOBREVIVÊNCIA";
+ const summary=document.createElement("summary");
+ summary.textContent=bucket.section.title+" · "+bucket.nodes.filter(n=>n.tagName==="BUTTON").length+" opções";
+ details.append(summary,...bucket.nodes);
+ craftPanel.appendChild(details);
+}
+if(craftOther.length){
+ const details=document.createElement("details");details.className="craft-category";
+ const summary=document.createElement("summary");summary.textContent="OUTROS";
+ details.append(summary,...craftOther);craftPanel.appendChild(details);
+}
+
 // Backup manual do progresso: usa a mesma chave de salvamento, sem alterar o formato existente.
 const backupArea=document.createElement("div");
 backupArea.style.cssText="display:grid;gap:6px;margin-top:6px;padding-top:8px;border-top:1px solid #c2a76a55";
@@ -1871,14 +1906,15 @@ function ensureBuildPlacementUI(){
  if(buildPlacementUI)return;
  const panel=document.createElement("div");
  panel.id="buildPlacementUI";
- panel.style.cssText="position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:80;display:none;flex-direction:column;align-items:center;gap:8px;width:min(94vw,430px);padding:10px;background:rgba(25,30,24,.92);border:1px solid rgba(230,220,190,.45);border-radius:14px;color:#fff;font:600 12px system-ui;box-shadow:0 4px 20px #0008;touch-action:manipulation";
+ panel.style.cssText="position:fixed;left:50%;top:50%;bottom:auto;transform:translate(-50%,-50%);z-index:90;display:none;flex-direction:column;align-items:center;gap:8px;width:min(94vw,430px);max-height:46vh;overflow:auto;padding:10px;background:rgba(25,30,24,.96);border:1px solid rgba(230,220,190,.65);border-radius:14px;color:#fff;font:600 12px system-ui;box-shadow:0 4px 20px #000b;touch-action:manipulation;pointer-events:auto";
  const label=document.createElement("div");label.id="buildPlacementLabel";label.textContent="POSICIONAR CONSTRUÇÃO";label.style.cssText="font-size:13px;letter-spacing:.06em";
  const row=document.createElement("div");row.style.cssText="display:flex;gap:6px;width:100%;justify-content:center;flex-wrap:wrap";
  const make=(id,txt,action,primary=false)=>{const b=document.createElement("button");b.type="button";b.id=id;b.textContent=txt;b.style.cssText="min-height:40px;min-width:58px;padding:8px 12px;border:1px solid #c9b994;border-radius:9px;background:"+(primary?"#527b43":"#4a5046")+";color:white;font:700 12px system-ui;touch-action:manipulation";b.addEventListener("click",e=>{e.preventDefault();e.stopPropagation();action();});row.appendChild(b);return b;};
- make("buildLeft","◀",()=>{if(activeBuildPlacement){activeBuildPlacement.offsetX-=.5;updateBuildPreview();}});
- make("buildForward","▲",()=>{if(activeBuildPlacement){activeBuildPlacement.offsetZ+=.5;updateBuildPreview();}});
- make("buildBack","▼",()=>{if(activeBuildPlacement){activeBuildPlacement.offsetZ-=.5;updateBuildPreview();}});
- make("buildRight","▶",()=>{if(activeBuildPlacement){activeBuildPlacement.offsetX+=.5;updateBuildPreview();}});
+ const moveStep=()=>activeBuildPlacement&&(activeBuildPlacement.type==="fence"?1.6:3);
+ make("buildLeft","◀ MOVER",()=>{if(activeBuildPlacement){activeBuildPlacement.offsetX-=moveStep();updateBuildPreview();}});
+ make("buildForward","▲ MOVER",()=>{if(activeBuildPlacement){activeBuildPlacement.offsetZ+=moveStep();updateBuildPreview();}});
+ make("buildBack","▼ MOVER",()=>{if(activeBuildPlacement){activeBuildPlacement.offsetZ-=moveStep();updateBuildPreview();}});
+ make("buildRight","MOVER ▶",()=>{if(activeBuildPlacement){activeBuildPlacement.offsetX+=moveStep();updateBuildPreview();}});
  make("buildRotate","GIRAR 90°",()=>{if(activeBuildPlacement){activeBuildPlacement.rotationStep=(activeBuildPlacement.rotationStep+1)%4;updateBuildPreview();}});
  const actions=document.createElement("div");actions.style.cssText="display:flex;gap:8px;width:100%";
  const confirm=document.createElement("button");confirm.type="button";confirm.id="buildConfirmButton";confirm.textContent="✓ CONFIRMAR";confirm.style.cssText="flex:1;min-height:44px;border:0;border-radius:9px;background:#628d4b;color:white;font:800 13px system-ui";confirm.addEventListener("click",confirmBuildPlacement);
@@ -1939,7 +1975,7 @@ function buildPreviewCandidate(){
    z=anchor.z-ox*Math.sin(anchor.yaw)+oz*Math.cos(anchor.yaw);yaw=anchor.yaw;
   }else{x=Math.round(targetX/3)*3;z=Math.round(targetZ/3)*3;}
  }else if(type==="wall"||type==="window"||type==="door"){
-  anchor=nearestBuildFloor(targetX,targetZ,10)||nearestBuildFloor(player.position.x,player.position.z,8);
+  anchor=nearestBuildFloor(targetX,targetZ,4.6);
   if(anchor){
    const dx=targetX-anchor.x,dz=targetZ-anchor.z;
    const lx=dx*Math.cos(anchor.yaw)-dz*Math.sin(anchor.yaw),lz=dx*Math.sin(anchor.yaw)+dz*Math.cos(anchor.yaw);
@@ -1955,7 +1991,7 @@ function buildPreviewCandidate(){
    slot=edges[side];x=anchor.x+slot.ex*Math.cos(anchor.yaw)+slot.ez*Math.sin(anchor.yaw);z=anchor.z-slot.ex*Math.sin(anchor.yaw)+slot.ez*Math.cos(anchor.yaw);yaw=slot.yaw;
   }
  }else if(type==="roof"){
-  anchor=nearestBuildFloor(targetX,targetZ,10)||nearestBuildFloor(player.position.x,player.position.z,8);
+  anchor=nearestBuildFloor(targetX,targetZ,4.6);
   if(anchor){x=anchor.x;z=anchor.z;yaw=anchor.yaw;}
  }else if(type==="fence"){
   yaw=state.cameraYaw+p.rotationStep*Math.PI/2;
