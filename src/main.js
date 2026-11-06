@@ -541,6 +541,7 @@ function updateHUD(){
   $("sellBerries").disabled=!marketNear||state.berries<5;
   $("sellMeat").disabled=!marketNear||state.meat<1;
   $("sellHide").disabled=!marketNear||state.hide<1;
+  $("sellEgg").disabled=!marketNear||state.eggs<1;
   $("craftWatchtower").disabled=state.wood<14||state.fiber<5||state.watchtowers.length>=6;
   $("craftGarden").disabled=state.wood<4||state.fiber<2||state.gardenPlots.length>=8;
   $("craftWell").disabled=state.stone<12||state.wood<5||state.wells.length>=5;
@@ -704,6 +705,7 @@ $("craftStorageChest").addEventListener("click",craftStorageChest);
  $("sellBerries").addEventListener("click",()=>sellMarketGoods("berries"));
  $("sellMeat").addEventListener("click",()=>sellMarketGoods("meat"));
  $("sellHide").addEventListener("click",()=>sellMarketGoods("hide"));
+ $("sellEgg").addEventListener("click",()=>sellMarketGoods("egg"));
  $("gardenAction").addEventListener("click",gardenAction);
  $("drinkWell").addEventListener("click",drinkFromWell);
  $("craftDoorPanel").addEventListener("click",craftDoorPanel);
@@ -959,6 +961,7 @@ function findFenceConnection(targetX,targetZ,extension){
   if(type==="berries"&&state.berries>=5){amount=5;price=10;state.berries-=amount;label="5 frutas silvestres";}
   else if(type==="meat"&&state.meat>=1){amount=1;price=7;state.meat-=amount;label="1 carne crua";}
   else if(type==="hide"&&state.hide>=1){amount=1;price=12;state.hide-=amount;label="1 couro";}
+  else if(type==="egg"&&state.eggs>=1){amount=1;price=5;state.eggs-=amount;label="1 ovo fresco";}
   else{toast("Você não tem quantidade suficiente para esta venda.");return;}
   state.coins+=price;
   updateHUD();saveGame();toast("Venda concluída: "+label+" por "+price+" moedas.");
