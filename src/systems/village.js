@@ -241,11 +241,50 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     if (!summary) return;
     const totals = residents.map(resident => {
       const value = productionTotals[resident.id];
-      return { name: resident.name, total: value.berries + value.wood + value.stone };
-    });
+      return { name: resident.name, berries: value.berries, wood: value.wood, stone: value.stone, total: value.berries + value.wood + value.stone };
+    }).sort((a, b) => b.total - a.total);
     const grandTotal = totals.reduce((sum, item) => sum + item.total, 0);
-    const leader = totals.slice().sort((a, b) => b.total - a.total)[0];
-    summary.textContent = "CONTRIBUIÇÃO DO POVOADO · " + grandTotal + " itens produzidos · DESTAQUE: " + (leader && leader.total > 0 ? leader.name + " (" + leader.total + ")" : "aguardando produção");
+    const resources = totals.reduce((sum, item) => ({
+      berries: sum.berries + item.berries,
+      wood: sum.wood + item.wood,
+      stone: sum.stone + item.stone
+    }), { berries: 0, wood: 0, stone: 0 });
+    summary.replaceChildren();
+    const heading = document.createElement("div");
+    heading.textContent = "CONTRIBUIÇÃO DO POVOADO · " + grandTotal + " ITENS";
+    heading.style.cssText = "font-weight:800;letter-spacing:.35px;margin-bottom:5px";
+    const breakdown = document.createElement("div");
+    breakdown.textContent = resources.berries + " frutas  ·  " + resources.wood + " madeiras  ·  " + resources.stone + " pedras";
+    breakdown.style.cssText = "font-weight:500;color:#d4d0b8;margin-bottom:8px";
+    const rankingTitle = document.createElement("div");
+    rankingTitle.textContent = "RANKING DE CONTRIBUIÇÃO";
+    rankingTitle.style.cssText = "font-size:9px;color:#cbb77e;margin-bottom:5px";
+    summary.append(heading, breakdown, rankingTitle);
+    const maximum = totals.length ? totals[0].total : 0;
+    totals.forEach((item, index) => {
+      const line = document.createElement("div");
+      line.style.cssText = "display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin-top:5px";
+      const label = document.createElement("span");
+      label.textContent = (index + 1) + ". " + item.name + " · " + item.total;
+      label.style.cssText = "font-size:10px;color:#f0e8d2";
+      const percent = maximum ? Math.round(item.total / maximum * 100) : 0;
+      const value = document.createElement("span");
+      value.textContent = percent + "%";
+      value.style.cssText = "font-size:9px;color:#d6c58f";
+      line.append(label, value);
+      const track = document.createElement("div");
+      track.style.cssText = "height:4px;border-radius:4px;background:#ffffff20;overflow:hidden;grid-column:1 / -1";
+      const fill = document.createElement("div");
+      fill.style.cssText = "height:100%;width:" + percent + "%;background:linear-gradient(90deg,#788e5a,#d9c27f);transition:width .25s ease";
+      track.appendChild(fill);
+      summary.append(line, track);
+    });
+    if (!grandTotal) {
+      const empty = document.createElement("div");
+      empty.textContent = "Aguardando as primeiras contribuições dos moradores.";
+      empty.style.cssText = "font-weight:500;color:#d4d0b8;margin-top:5px";
+      summary.appendChild(empty);
+    }
   }
 
   function productionHistoryText(resident) {
