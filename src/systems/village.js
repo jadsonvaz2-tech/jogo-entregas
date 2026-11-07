@@ -242,7 +242,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     if (housesBuilt >= HOUSE_SLOTS.length || (Number(state.wood)||0) < 16 || (Number(state.stone)||0) < 8) return;
     state.wood -= 16; state.stone -= 8;
     buildHouse(housesBuilt); housesBuilt++;
-    saveVillageProgress(); refreshHousingUI(); refreshStockpileUI();
+    saveVillageProgress(); refreshHousingUI(); refreshStockpileUI(); renderWorkPanel();
     if (onSave) onSave();
     onToast("Casa construída! A aldeia central agora pode abrigar mais dois moradores.");
   });
