@@ -2389,6 +2389,19 @@ function findFenceConnection(targetX,targetZ,extension){
   const old=state.gardenObjects[index];if(old)scene.remove(old);
   state.gardenObjects[index]=createGardenPlot(state.gardenPlots[index]);
  }
+ function villageFarmAction(){
+  const ripeIndex=state.gardenPlots.findIndex(plot=>plot.plantedAt>0&&Date.now()-plot.plantedAt>=150000);
+  if(ripeIndex>=0){
+   state.berries+=6;state.gardenPlots[ripeIndex].plantedAt=0;refreshGardenPlot(ripeIndex);
+   updateHUD();saveGame();return "Lina colheu uma horta comunitária: +6 frutas silvestres.";
+  }
+  const emptyIndex=state.gardenPlots.findIndex(plot=>!plot.plantedAt);
+  if(emptyIndex>=0&&state.berries>=3){
+   state.berries-=3;state.gardenPlots[emptyIndex].plantedAt=Date.now();refreshGardenPlot(emptyIndex);
+   updateHUD();saveGame();return "Lina plantou 3 frutas em uma horta comunitária.";
+  }
+  return null;
+ }
  function gardenAction(){
   const index=state.nearGardenIndex;
   if(index<0||!state.gardenPlots[index]){toast("Aproxime-se de uma horta comunitária.");return;}
@@ -4280,7 +4293,7 @@ async function start(){
  const loaded=await loadCharacter();
  if(!loaded)toast("Modelo do viajante indisponível: usando personagem provisório.");
  storyEncounter=createStoryEncounter({THREE,scene,player,terrainHeight,state,onSave:saveGame,onToast:toast});
- villageResidents=createVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,onSave:saveGame});
+ villageResidents=createVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,onSave:saveGame,onFarmAction:villageFarmAction});
  $("loadingBar").style.width="100%";
  updateHUD();
  setTimeout(()=>{$("loading").style.opacity="0";setTimeout(()=>$("loading").remove(),700);},350);

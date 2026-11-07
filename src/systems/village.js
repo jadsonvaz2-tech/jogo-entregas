@@ -3,7 +3,7 @@ import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
 
 const SAVE_KEY = "cronicas-floresta-village-v1";
 
-export function createVillageResidents({ THREE, scene, player, terrainHeight, state, onToast, onSave }) {
+export function createVillageResidents({ THREE, scene, player, terrainHeight, state, onToast, onSave, onFarmAction }) {
   const loader = new GLTFLoader();
   const saved = (() => {
     try {
@@ -102,7 +102,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   dialog.querySelector("#village-dialog-done").addEventListener("click", closeDialog);
 
   const professions = {
-    farmer: { label: "Agricultora", resource: "berries", resourceLabel: "frutas", amount: 2 },
+    farmer: { label: "Agricultora", resource: "berries", resourceLabel: "frutas", amount: 2, detail: "Cuida das hortas: planta 3 frutas e colhe 6 quando amadurecem." },
     lumberjack: { label: "Lenhador", resource: "wood", resourceLabel: "madeiras", amount: 1 },
     mason: { label: "Pedreiro", resource: "stone", resourceLabel: "pedras", amount: 1 },
     idle: { label: "Sem tarefa", resource: null, resourceLabel: "—", amount: 0 }
@@ -166,7 +166,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       production.className = "production";
       const job = professions[resident.profession];
       production.textContent = job.resource
-        ? "Produz " + job.amount + " " + job.resourceLabel + " por ciclo de trabalho."
+        ? (job.detail || ("Produz " + job.amount + " " + job.resourceLabel + " por ciclo de trabalho."))
         : "Sem produção atribuída.";
       row.append(head, select, toggle, production);
       workList.appendChild(row);
@@ -362,9 +362,16 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
         workElapsed[resident.id] += Math.max(0, dt);
         if (workElapsed[resident.id] >= 45) {
           workElapsed[resident.id] -= 45;
-          state[job.resource] = Math.max(0, Number(state[job.resource]) || 0) + job.amount;
-          onSave();
-          onToast(resident.name + " produziu " + job.amount + " " + job.resourceLabel + ".");
+          const farmMessage = resident.profession === "farmer" && typeof onFarmAction === "function"
+            ? onFarmAction()
+            : null;
+          if (farmMessage) {
+            onToast(farmMessage);
+          } else {
+            state[job.resource] = Math.max(0, Number(state[job.resource]) || 0) + job.amount;
+            onSave();
+            onToast(resident.name + " produziu " + job.amount + " " + job.resourceLabel + ".");
+          }
         }
       }
     }
