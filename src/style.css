@@ -186,3 +186,7 @@
 .route-waypoint{fill:#d8c28e;stroke:#fff0c4;stroke-width:.6}
 .expedition-diary-map-caption{padding:4px 2px 2px;text-align:center;color:#d8c18e;font:800 9px system-ui;letter-spacing:.8px}
 @media(max-width:420px){.expedition-diary-route{height:94px}.expedition-diary-illustration{min-height:58px}}
+
+
+/* Camadas de trilhas, locais visitados e descobertas raras no mapa. */
+.map-legend{gap:8px 13px;line-height:1.5}.map-legend span{white-space:nowrap}.exploration-site-button.rare-site-marker{border-color:#e6ca69;background:linear-gradient(135deg,#65502a,#382f1b);color:#ffe8a0}

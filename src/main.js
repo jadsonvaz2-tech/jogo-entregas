@@ -7,7 +7,7 @@ import { createWorldSettlements, WORLD_ROAD_PATHS } from "./systems/settlements.
 import { createExpandedWorld } from "./systems/world-expansion.js?v=underground-exploration-2026-11-07-1";
 import { createDistantVillageResidents } from "./systems/distant-village-residents.js";
 import { createSettlementEconomy } from "./systems/settlement-economy.js";
-import { createCommunityExpeditions } from "./systems/community-expeditions.js?v=community-expedition-diary-illustrated-2026-11-07-1";
+import { createCommunityExpeditions } from "./systems/community-expeditions.js?v=expedition-world-routes-2026-11-07-1";
 let villageResidents=null;
 let distantVillageResidents=null;
 let settlementEconomy=null;
@@ -4554,7 +4554,18 @@ function paintWorldMap(canvas,ctx,full=false){
  const marker=(x,z,color,r)=>{ctx.beginPath();ctx.fillStyle=color;ctx.arc(px(x),py(z),Math.max(3,r*scale),0,Math.PI*2);ctx.fill();ctx.strokeStyle="#f5e8c9";ctx.lineWidth=1.4;ctx.stroke();};
  marker(0,0,"#d9b56c",2.6);marker(142,-112,"#9bd5e2",2.4);marker(166,-151,"#d8a65c",2.4);
  if(full){ctx.font="bold 13px Arial";ctx.textAlign="center";ctx.fillStyle="#f5edcf";ctx.shadowColor="#142016";ctx.shadowBlur=4;ctx.fillText("VILA CENTRAL",px(0),py(0)-12);ctx.fillText("CAVERNA",px(142),py(-112)-10);ctx.fillText("MINA",px(166),py(-151)-10);ctx.fillText("PRADARIAS",px(-151),py(151));ctx.fillText("MANGUE",px(151),py(91));ctx.fillText("SERRA",px(165),py(-184)-12);ctx.shadowBlur=0;}
- if(distantExploration){for(const point of distantExploration.getMapMarkers()){const x=px(point.x),y=py(point.z);ctx.beginPath();ctx.fillStyle=point.color;ctx.arc(x,y,full?7:5,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#f5e8c9";ctx.lineWidth=1.6;ctx.stroke();if(full){ctx.font="bold 12px Arial";ctx.textAlign="center";ctx.fillStyle="#fff4d6";ctx.shadowColor="#172016";ctx.shadowBlur=4;ctx.fillText(point.symbol+" "+point.label,x,y-11);ctx.shadowBlur=0;}}}
+ if(distantExploration){
+  for(const route of (distantExploration.getMapRoutes?.()||[])){
+   if(!Array.isArray(route.points)||route.points.length<2)continue;
+   ctx.save();ctx.beginPath();ctx.strokeStyle=full?"#f3d27cdd":"#f3d27c99";ctx.lineWidth=full?3.5:2;ctx.setLineDash(full?[8,5]:[4,4]);ctx.lineCap="round";ctx.lineJoin="round";
+   route.points.forEach((point,index)=>{if(index===0)ctx.moveTo(px(point[0]),py(point[1]));else ctx.lineTo(px(point[0]),py(point[1]));});ctx.stroke();ctx.setLineDash([]);
+   if(full){const end=route.points[route.points.length-1];ctx.fillStyle="#f4d77e";ctx.beginPath();ctx.arc(px(end[0]),py(end[1]),4,0,Math.PI*2);ctx.fill();}ctx.restore();
+  }
+  for(const point of distantExploration.getMapMarkers()){
+   const x=px(point.x),y=py(point.z);ctx.beginPath();ctx.fillStyle=point.color;ctx.arc(x,y,point.kind==="rare"?(full?8:6):(full?7:5),0,Math.PI*2);ctx.fill();ctx.strokeStyle=point.kind==="rare"?"#fff1a8":"#f5e8c9";ctx.lineWidth=point.kind==="rare"?2.4:1.6;ctx.stroke();
+   if(full){ctx.font=point.kind==="rare"?"bold 15px Arial":"bold 12px Arial";ctx.textAlign="center";ctx.fillStyle=point.kind==="rare"?"#fff1a8":"#fff4d6";ctx.shadowColor="#172016";ctx.shadowBlur=4;ctx.fillText(point.symbol+" "+point.label,x,y-11);ctx.shadowBlur=0;}
+  }
+ }
  const ux=px(player.position.x),uy=py(player.position.z);
  ctx.beginPath();ctx.fillStyle="#f7e27d";ctx.arc(ux,uy,full?7:6,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#382b16";ctx.lineWidth=2;ctx.stroke();
  ctx.beginPath();ctx.strokeStyle="#fff0a0";ctx.lineWidth=full?3:2;ctx.moveTo(ux,uy);ctx.lineTo(ux+Math.sin(state.cameraYaw)*(full?18:13),uy-Math.cos(state.cameraYaw)*(full?18:13));ctx.stroke();

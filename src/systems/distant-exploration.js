@@ -11,6 +11,9 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
  const data=raw||backup||{discovered:[],camps:[],sites:{},selectedId:null};
  if(!Array.isArray(data.discovered))data.discovered=[];
  if(!Array.isArray(data.camps))data.camps=[];
+ if(!Array.isArray(data.routes))data.routes=[];
+ if(!Array.isArray(data.rareMarkers))data.rareMarkers=[];
+ if(!Array.isArray(data.visited))data.visited=[];
  if(!data.sites||typeof data.sites!=="object")data.sites={};
  let lastUI=0,nearby=null;
  const groups=new Map();
@@ -94,24 +97,66 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
   if(remaining>0){onToast("Este local precisa de mais "+Math.ceil(remaining/60000)+" min para recuperar recursos.");return;}
   addResources(site);
  };
- const select=id=>{const exists=discoveredSites().some(s=>s.id===id)||allCamps().some(c=>c.id===id);if(!exists)return false;data.selectedId=id;save();renderDetails();return true;};
+ const rareFor=id=>data.rareMarkers.find(marker=>marker.id===id)||null;
+ const select=id=>{const exists=discoveredSites().some(s=>s.id===id)||allCamps().some(c=>c.id===id)||!!rareFor(id);if(!exists)return false;data.selectedId=id;save();renderDetails();return true;};
  const selectAtWorld=(x,z)=>{
-  const candidates=[...discoveredSites(),...allCamps()].map(p=>({...p,distance:Math.hypot(p.x-x,p.z-z)})).sort((a,b)=>a.distance-b.distance);
+  const candidates=[...discoveredSites(),...allCamps(),...data.rareMarkers].map(p=>({...p,distance:Math.hypot(x-p.x,z-p.z)})).sort((a,b)=>a.distance-b.distance);
   if(!candidates.length||candidates[0].distance>12)return false;
   return select(candidates[0].id);
  };
+ const routeFor=id=>{
+  const site=SITE_DEFS[id]||SITE_DEFS.mines;
+  const bend=id==="mines"?[42,-28]:id==="marsh"?[48,20]:[-35,-34];
+  const mid2=id==="mines"?[104,-92]:id==="marsh"?[98,58]:[-82,-86];
+  return [[0,0],bend,mid2,[site.x,site.z]];
+ };
+ const archive=safeParse(localStorage.getItem("cronicas-floresta-community-expeditions-v1"));
+ if(Array.isArray(archive?.history)){
+  archive.history.forEach((record,index)=>{
+   const id=record.destinationId||({ "Serra das Minas":"mines","Ruínas do Norte":"ruins","Pântano Antigo":"marsh" }[record.destination])||"";
+   const site=SITE_DEFS[id];
+   if(!site)return;
+   if(!data.visited.includes(id))data.visited.push(id);
+   const routeId="legacy-"+String(record.at||index);
+   if(!data.routes.some(route=>route.id===routeId)){
+    const bend=id==="mines"?[42,-28]:id==="marsh"?[48,20]:[-35,-34];
+    const mid2=id==="mines"?[104,-92]:id==="marsh"?[98,58]:[-82,-86];
+    data.routes.push({id:routeId,destination:id,label:site.label,points:[[0,0],bend,mid2,[site.x,site.z]],completedAt:Number(record.at)||Date.now(),members:(record.memberNames||[]).slice(),legacy:true});
+   }
+   if(record.rareDiscovery){
+    const markerId="rare-"+routeId;
+    if(!data.rareMarkers.some(marker=>marker.id===markerId)){
+     data.rareMarkers.push({id:markerId,label:"Achado raro",description:record.rareDiscovery,x:site.x,z:site.z,symbol:"✦",color:"#ffe17a",discoveredAt:Number(record.at)||Date.now(),destination:id});
+    }
+   }
+  });
+  data.routes=data.routes.slice(0,24);
+  data.rareMarkers=data.rareMarkers.slice(0,40);
+ }
  const discoverFromExpedition=info=>{
-  const id=info?.destination;
+  const id=info?.destination,site=SITE_DEFS[id]||SITE_DEFS.mines;
   if(SITE_DEFS[id]&&!data.discovered.includes(id)){data.discovered.push(id);createSiteVisual(SITE_DEFS[id]);onToast("Novo ponto de interesse descoberto: "+SITE_DEFS[id].label+".");}
+  if(id&&!data.visited.includes(id))data.visited.push(id);
+  const routeId=String(info?.routeId||info?.completedAt||Date.now());
+  if(!data.routes.some(route=>route.id===routeId)){
+   data.routes.unshift({id:routeId,destination:id||"mines",label:site.label,points:routeFor(id||"mines"),completedAt:Number(info?.completedAt)||Date.now(),members:(info?.memberNames||[]).slice()});
+   data.routes=data.routes.slice(0,24);
+  }
   if(info?.eventType==="camp"&&info.eventResolved){
-   const base=SITE_DEFS[id]||SITE_DEFS.mines,index=data.camps.length;
-   const angle=(index*2.399+1.1),radius=7+(index%3)*2;
-   const camp={id:"camp-"+(index+1),label:"Acampamento temporário "+(index+1),x:base.x+Math.cos(angle)*radius,z:base.z+Math.sin(angle)*radius,yaw:angle};
+   const index=data.camps.length,angle=(index*2.399+1.1),radius=7+(index%3)*2;
+   const camp={id:"camp-"+(index+1),label:"Acampamento temporário "+(index+1),x:site.x+Math.cos(angle)*radius,z:site.z+Math.sin(angle)*radius,yaw:angle,discoveredAt:Number(info?.completedAt)||Date.now()};
    data.camps.push(camp);createTemporaryCamp(camp);onToast("O grupo registrou um acampamento temporário no mapa.");
   }
   if(info?.eventType==="ruins"&&id!=="ruins"&&info.eventResolved&&!data.discovered.includes("ruins")){
-   // A descoberta das ruínas fica associada ao ponto de interesse original, sem criar uma cópia sobre a vila.
    data.discovered.push("ruins");createSiteVisual(SITE_DEFS.ruins);onToast("Os moradores registraram ruínas antigas em seus mapas.");
+  }
+  if(info?.rareDiscovery){
+   const markerId="rare-"+routeId;
+   if(!data.rareMarkers.some(marker=>marker.id===markerId)){
+    const offset=data.rareMarkers.length;
+    data.rareMarkers.unshift({id:markerId,label:"Achado raro",description:info.rareDiscovery,x:site.x+(offset%3-1)*5,z:site.z+(offset%2?5:-5),symbol:"✦",color:"#ffe17a",discoveredAt:Number(info?.completedAt)||Date.now(),destination:id});
+    data.rareMarkers=data.rareMarkers.slice(0,40);
+   }
   }
   if(!data.selectedId&&SITE_DEFS[id])data.selectedId=id;
   save();renderDetails();
@@ -119,11 +164,11 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
  const infoRoot=document.getElementById("explorationSiteInfo"),listRoot=document.getElementById("explorationSiteList");
  const renderDetails=()=>{
   if(!infoRoot||!listRoot)return;
-  const sites=discoveredSites(),camps=allCamps(),selected=sites.find(s=>s.id===data.selectedId)||camps.find(c=>c.id===data.selectedId);
-  infoRoot.textContent=selected?(selected.description||"Um acampamento temporário marcado pelos exploradores."):"Locais descobertos: "+sites.length+" · Acampamentos registrados: "+camps.length+". Toque em um símbolo do mapa para ver detalhes.";
+  const sites=discoveredSites(),camps=allCamps(),rares=data.rareMarkers,selected=sites.find(s=>s.id===data.selectedId)||camps.find(c=>c.id===data.selectedId)||rareFor(data.selectedId);
+  infoRoot.textContent=selected?(selected.description||"Um acampamento temporário marcado pelos exploradores."):"Locais descobertos: "+sites.length+" · visitados: "+data.visited.length+" · acampamentos: "+camps.length+" · achados raros: "+rares.length+". Toque em um símbolo do mapa para ver detalhes.";
   listRoot.innerHTML="";
-  for(const point of [...sites,...camps]){
-   const button=document.createElement("button");button.type="button";button.className="exploration-site-button";button.textContent=(point.symbol||"⛺")+" "+point.label;button.addEventListener("click",()=>{select(point.id);});listRoot.append(button);
+  for(const point of [...sites,...camps,...rares]){
+   const button=document.createElement("button");button.type="button";button.className="exploration-site-button"+(point.id.startsWith("rare-")?" rare-site-marker":"");button.textContent=(point.symbol||"⛺")+" "+point.label;button.addEventListener("click",()=>{select(point.id);});listRoot.append(button);
   }
   if(selected&&sites.some(s=>s.id===selected.id)){
    const site=sites.find(s=>s.id===selected.id),distance=Math.hypot(player.position.x-site.x,player.position.z-site.z);
@@ -135,9 +180,12 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
   }
  };
  const getMapMarkers=()=>[
-  ...discoveredSites().map(site=>({id:site.id,x:site.x,z:site.z,label:site.label,symbol:site.symbol,color:site.color})),
-  ...allCamps().map(camp=>({id:camp.id,x:camp.x,z:camp.z,label:camp.label,symbol:"⛺",color:"#d7b97b"}))
+  ...discoveredSites().map(site=>({id:site.id,x:site.x,z:site.z,label:site.label,symbol:site.symbol,color:site.color,visited:data.visited.includes(site.id),kind:"site"})),
+  ...allCamps().map(camp=>({id:camp.id,x:camp.x,z:camp.z,label:camp.label,symbol:"⛺",color:"#d7b97b",kind:"camp"})),
+  ...data.rareMarkers.map(marker=>({...marker,kind:"rare"}))
  ];
+ const getMapRoutes=()=>data.routes.slice().reverse();
+ const getMapStatus=()=>({discovered:discoveredSites().length,visited:data.visited.length,camps:allCamps().length,rare:data.rareMarkers.length,routes:data.routes.length});
  const update=()=>{
   const next=nearestSite(player.position.x,player.position.z,7);
   nearby=next;
@@ -152,5 +200,5 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
  for(const id of data.discovered){const site=SITE_DEFS[id];if(site)createSiteVisual({...site,...(data.sites[id]||{})});}
  for(const camp of allCamps())createTemporaryCamp(camp);
  renderDetails();
- return {update,getMapMarkers,selectAtWorld,discoverFromExpedition,getStatus:()=>({discovered:discoveredSites().length,camps:allCamps().length})};
+ return {update,getMapMarkers,getMapRoutes,selectAtWorld,discoverFromExpedition,getStatus:getMapStatus};
 }

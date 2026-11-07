@@ -208,7 +208,7 @@ export function createCommunityExpeditions({villageResidents,state,onToast,onDis
    const stored=villageResidents.depositToStockpile(find.key,find.amount);
    if(stored){rareDiscovery=find.label;rewards.push(stored+" "+find.key+" (achado raro)");}
   }
-  try{onDiscovery?.({destination:mission.destination,eventType:mission.event?.type||null,eventResolved:!!mission.eventResolved,memberNames:mission.memberNames||[]});}catch(error){console.warn("Não foi possível registrar a descoberta da expedição.",error);}
+  try{onDiscovery?.({destination:mission.destination,eventType:mission.event?.type||null,eventResolved:!!mission.eventResolved,memberNames:mission.memberNames||[],routeId:String(mission.departedAt),completedAt:Date.now(),rareDiscovery});}catch(error){console.warn("Não foi possível registrar a descoberta da expedição.",error);}
   villageResidents.setExpeditionAway?.(mission.members,false);
   saved.completed++;
   const eventNames={creature:"Encontro com criatura",ruins:"Ruínas antigas encontradas",camp:"Acampamento temporário"};
