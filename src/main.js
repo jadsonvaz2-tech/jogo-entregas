@@ -4319,8 +4319,8 @@ function animate(now){
 }
 addEventListener("keydown",e=>{if(e.key==="Escape"&&activeBuildPlacement)cancelBuildPlacement();});
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));});
+let startupStage="preparando o mundo";
 async function start(){
- let startupStage="preparando o mundo";
  const startOptional=(label,create)=>{
   startupStage=label;
   try{return create();}
