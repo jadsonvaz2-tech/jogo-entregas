@@ -800,7 +800,8 @@ async function buildForest(){
   loadTree("CommonTree_1"),loadTree("Pine_1"),loadTree("TwistedTree_1"),loadTree("Rock_Medium_1"),
   loadTree("Grass_Common_Short"),loadTree("Grass_Common_Tall"),loadTree("Grass_Wispy_Short"),loadTree("Grass_Wispy_Tall"),
   loadTree("RockPath_Round_Small_1"),loadTree("RockPath_Round_Small_2"),
-  loadTree("Bush_Common_Flowers"),loadTree("Fern_1"),loadTree("Clover_1"),loadTree("Flower_3_Group")
+  loadTree("Bush_Common_Flowers"),loadTree("Fern_1"),loadTree("Clover_1"),loadTree("Flower_3_Group"),
+  loadTree("Mushroom_Common"),loadTree("Mushroom_Laetiporus")
  ]);
  const choices=[common,pine,twisted];
  // Vegetação real do pacote de assets: tufos distribuídos nas encostas e clareiras, sem cobrir o acampamento inicial.
@@ -861,6 +862,24 @@ async function buildForest(){
    const radius=patch.minRadius+worldRandom()*(patch.maxRadius-patch.minRadius);
    const x=Math.cos(angle)*radius,z=Math.sin(angle)*radius;
    scatterModel(patch.model,x,z,patch.minScale+worldRandom()*(patch.maxScale-patch.minScale));
+  }
+ }
+ // Cogumelos coletáveis: gerados depois dos recursos antigos para preservar
+ // posições e IDs já gravados no cronicas-floresta-save.
+ const mushroomSpots=[
+  {model:mushroomCommon,count:16,minScale:.42,maxScale:.62},
+  {model:mushroomGolden,count:10,minScale:.38,maxScale:.56}
+ ];
+ for(const patch of mushroomSpots){
+  if(!patch.model)continue;
+  let placed=0,attempts=0;
+  while(placed<patch.count&&attempts<patch.count*12){
+   attempts++;
+   const angle=worldRandom()*Math.PI*2,radius=14+worldRandom()*72;
+   const x=Math.cos(angle)*radius,z=Math.sin(angle)*radius;
+   if(terrainHeight(x,z)>1.8)continue;
+   const mushroom=scatterModel(patch.model,x,z,patch.minScale+worldRandom()*(patch.maxScale-patch.minScale));
+   if(mushroom){registerResource({object:mushroom,x,z,type:"mushroom",active:true});placed++;}
   }
  }
 }
@@ -1205,7 +1224,7 @@ function updateHUD(){
  $("collectBtn").disabled=!state.near;
  $("collectBtn").textContent=state.near?(state.near.type==="stone"?"MINERAR":state.near.type==="water"?"BEBER ÁGUA":"COLETAR"):"COLETAR";
  const nearbyAnimal=nearestWildAnimal(5);
- $("hint").textContent=nearbyAnimal?"Veado por perto. Aproxime-se e toque em ATACAR.":state.near?(state.near.type==="water"?"Fonte de água encontrada. Toque em BEBER ÁGUA.":["stone","ironOre","coal"].includes(state.near.type)?"Use a picareta para minerar.":state.near.type==="wood"?"Use o machado para cortar madeira.":state.near.type==="branch"?"Galho encontrado. Toque em COLETAR.":state.near.type==="berries"?"Frutas silvestres encontradas. Toque em COLETAR.":state.near.type==="fiber"?"Planta fibrosa encontrada. Toque em COLETAR.":"Pedra solta encontrada. Toque em COLETAR."):"Procure recursos e arbustos de frutas pela floresta.";
+ $("hint").textContent=nearbyAnimal?"Veado por perto. Aproxime-se e toque em ATACAR.":state.near?(state.near.type==="water"?"Fonte de água encontrada. Toque em BEBER ÁGUA.":["stone","ironOre","coal"].includes(state.near.type)?"Use a picareta para minerar.":state.near.type==="wood"?"Use o machado para cortar madeira.":state.near.type==="branch"?"Galho encontrado. Toque em COLETAR.":state.near.type==="berries"?"Frutas silvestres encontradas. Toque em COLETAR.":state.near.type==="fiber"?"Planta fibrosa encontrada. Toque em COLETAR.":state.near.type==="mushroom"?"Cogumelo medicinal encontrado. Toque em COLETAR.":"Pedra solta encontrada. Toque em COLETAR."):"Procure recursos, cogumelos e arbustos de frutas pela floresta.";
 }
 function collect(){
  if(!state.near)return;
@@ -1220,6 +1239,7 @@ function collect(){
  if(resource.type==="branch"){state.wood+=1;toast("Você recolheu 1 galho.");}
  else if(resource.type==="berries"){state.berries+=3;toast("Você recolheu 3 frutas silvestres.");}
  else if(resource.type==="fiber"){state.fiber+=2;toast("Você recolheu fibras vegetais.");}
+ else if(resource.type==="mushroom"){state.herbs+=1;toast("Cogumelo medicinal coletado: +1 erva.");}
  else if(resource.type==="carcass"){const wolfCarcass=!!(resource.animalId&&resource.animalId.startsWith("wolf-"));state.meat+=2;state.hide+=wolfCarcass?2:1;if(resource.animalId&&resource.animalId.startsWith("deer-")){const deerId=resource.animalId;state.huntedAnimals=state.huntedAnimals.filter(v=>v!==deerId);const deerIndex=Number(deerId.slice(5));const deerX=resource.x,deerZ=resource.z;setTimeout(()=>{if(!wildAnimals.some(a=>a.id===deerId&&a.alive)){createDeer(deerX,deerZ,deerIndex);updateHUD();saveGame();}},45000);}toast(wolfCarcass?"Você aproveitou a carcaça do lobo: 2 carnes e 2 peles.":"Você recolheu 2 carnes e 1 pele. Um novo veado poderá voltar à floresta.");}
  else if(resource.type==="looseStone"){state.stone+=1;toast("Você recolheu 1 pedra solta.");}
  else if(resource.type==="stone"){const amount=state.steelPickaxe?9:state.ironPickaxe?6:state.reinforcedPickaxe?4:2;state.stone+=amount;toast("Você minerou "+amount+" pedras.");}
