@@ -1293,6 +1293,11 @@ const cameraTarget=new THREE.Vector3();
 let last=performance.now(),toastTimer=0,lastSave=0;
 const flyingArrows=[];
 function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>$("toast").classList.remove("show"),1900);}
+const CARRY_CAPACITY=50;
+function getCarryWeight(){
+ const weight={wood:.8,stone:1.1,ironOre:1.4,coal:.6,ironIngots:1.3,steelIngots:1.5,fiber:.12,berries:.15,herbs:.12,meat:.8,cookedMeat:.65,smokedMeat:.65,healingSalve:.25,hide:.8,leather:.6,bandages:.15,honey:.35,wool:.6,eggs:.2,arrows:.08};
+ return Object.entries(weight).reduce((total,[resource,unit])=>total+Math.max(0,Number(state[resource])||0)*unit,0);
+}
 function updateHUD(){
   const milestones=[
    {done:state.axe,title:"Fabricar um machado",detail:"Reúna 3 madeiras e 2 pedras na floresta."},
@@ -1313,6 +1318,11 @@ function updateHUD(){
   $("objectiveStep").textContent=current?"JORNADA · ETAPA "+(completed+1)+"/"+milestones.length:"JORNADA CONCLUÍDA";
   $("objectiveTitle").textContent=current?current.title:"Você está pronto para explorar e expandir seu assentamento.";
   $("objectiveDetail").textContent=current?current.detail:"Continue sobrevivendo, explorando e construindo sua aldeia.";
+ const carryWeight=getCarryWeight();
+ const carryRatio=Math.min(1,carryWeight/CARRY_CAPACITY);
+ const carryText=$("carryLoadText"),carryFill=$("carryLoadFill");
+ if(carryText){carryText.textContent="CARGA · "+carryWeight.toFixed(1)+" / "+CARRY_CAPACITY+" KG";carryText.classList.toggle("heavy",carryRatio>=.75);}
+ if(carryFill)carryFill.style.width=(carryRatio*100).toFixed(1)+"%";
  $("bowStatus").textContent=state.bow?"Arco: fabricado · Flechas: "+state.arrows:"Arco: não fabricado · Madeira: "+state.wood+"/2 · Fibras: "+state.fiber+"/2";
   const deerTarget=nearestWildAnimal(16);
   // Wolves are threats before they enter pursuit range; surface them up to 24m.
@@ -4196,7 +4206,7 @@ function update(dt){
  const ky=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0);
  const mx=THREE.MathUtils.clamp(state.moveX+kx,-1,1),my=THREE.MathUtils.clamp(state.moveY+ky,-1,1);
  const moving=!activeBuildPlacement&&Math.hypot(mx,my)>.08;
- const fast=(state.running||keys.shift)&&state.energy>0;
+ const carryWeight=getCarryWeight();\n const carryRatio=carryWeight/CARRY_CAPACITY;\n const loadFactor=carryRatio>=1 ? .68 : carryRatio>=.9 ? .78 : carryRatio>=.75 ? .88 : 1;\n const fast=(state.running||keys.shift)&&state.energy>0&&carryRatio<1;
  if(moving){
   const direction=new THREE.Vector3(mx,0,my).normalize();
   const angle=state.cameraYaw;
@@ -4210,7 +4220,7 @@ function update(dt){
   // As botas de couro oferecem aderência extra em subidas e descidas íngremes.
    const bootGrip=state.leatherBoots?.78:1;
    const slopeSpeed=THREE.MathUtils.clamp(1-terrainRise*.24*bootGrip,.78,1.12);
-  const speed=(fast?7.1:3.6)*slopeSpeed;
+  const speed=(fast?7.1:3.6)*slopeSpeed*loadFactor;
   player.position.x+=dx*speed*dt;player.position.z+=dz*speed*dt;
   state.yaw=Math.atan2(dx,dz);player.rotation.y=state.yaw;
   // Subidas íngremes exigem esforço; descidas suaves ajudam a recuperar o fôlego.
