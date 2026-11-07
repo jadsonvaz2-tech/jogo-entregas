@@ -16,6 +16,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   })();
 
   const savedJobs = saved.jobs && typeof saved.jobs === "object" ? saved.jobs : {};
+  const stockpile = { wood: Math.max(0, Number(saved.stockpile?.wood) || 0), stone: Math.max(0, Number(saved.stockpile?.stone) || 0), berries: Math.max(0, Number(saved.stockpile?.berries) || 0) };
   const residents = [
     {
       id: "lina", name: "Lina", role: "Agricultora", profession: "farmer", model: "Worker_Female.gltf",
@@ -78,9 +79,12 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   document.head.appendChild(workStyle);
   const workPanel = document.createElement("section");
   workPanel.id = "village-work";
-  workPanel.innerHTML = '<strong>GESTÃO DO POVOADO</strong><div class="work-list"></div><div class="production">Produção acumulada durante o horário de trabalho.</div>';
+  workPanel.innerHTML = '<strong>GESTÃO DO POVOADO</strong><div class="work-list"></div><div id="village-stockpile" class="production"></div><button id="village-collect-stockpile" type="button">RECOLHER PRODUÇÃO</button><div id="village-work-summary" class="production"></div>';
   document.body.appendChild(workPanel);
   const workList = workPanel.querySelector(".work-list");
+  const stockpileDisplay = workPanel.querySelector("#village-stockpile");
+  const collectStockpileButton = workPanel.querySelector("#village-collect-stockpile");
+  const workSummary = workPanel.querySelector("#village-work-summary");
 
   const talkButton = document.createElement("button");
   talkButton.id = "village-talk-button";
@@ -113,11 +117,32 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     try {
       const jobs = {};
       for (const resident of residents) jobs[resident.id] = { profession: resident.profession, enabled: resident.enabled };
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs }));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile }));
     } catch (error) {
       console.warn("Não foi possível salvar o progresso dos moradores.", error);
     }
   }
+
+  function refreshStockpileUI() {
+    stockpileDisplay.textContent = "DEPÓSITO COMUNITÁRIO · " + stockpile.wood + " madeira · " + stockpile.stone + " pedra · " + stockpile.berries + " frutas";
+    const total = stockpile.wood + stockpile.stone + stockpile.berries;
+    collectStockpileButton.disabled = total < 1;
+    workSummary.textContent = residents.filter(r => r.enabled && r.profession !== "idle").length + "/3 moradores em atividade · produção guardada no depósito.";
+  }
+
+  collectStockpileButton.addEventListener("click", () => {
+    const amounts = { ...stockpile };
+    const total = amounts.wood + amounts.stone + amounts.berries;
+    if (!total) { onToast("O depósito comunitário está vazio."); return; }
+    state.wood = Math.max(0, Number(state.wood) || 0) + amounts.wood;
+    state.stone = Math.max(0, Number(state.stone) || 0) + amounts.stone;
+    state.berries = Math.max(0, Number(state.berries) || 0) + amounts.berries;
+    stockpile.wood = 0; stockpile.stone = 0; stockpile.berries = 0;
+    saveVillageProgress();
+    onSave();
+    refreshStockpileUI();
+    onToast("Você recolheu a produção comunitária: " + amounts.wood + " madeiras, " + amounts.stone + " pedras e " + amounts.berries + " frutas.");
+  });
 
   function renderWorkPanel() {
     workList.innerHTML = "";
@@ -171,6 +196,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       row.append(head, select, toggle, production);
       workList.appendChild(row);
     }
+    refreshStockpileUI();
   }
   function makeNameTag(name, role) {
     const canvas = document.createElement("canvas");
@@ -362,15 +388,21 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
         workElapsed[resident.id] += Math.max(0, dt);
         if (workElapsed[resident.id] >= 45) {
           workElapsed[resident.id] -= 45;
-          const farmMessage = resident.profession === "farmer" && typeof onFarmAction === "function"
+          const farmResult = resident.profession === "farmer" && typeof onFarmAction === "function"
             ? onFarmAction()
             : null;
-          if (farmMessage) {
-            onToast(farmMessage);
+          if (farmResult && typeof farmResult === "object" && farmResult.resource && Number(farmResult.amount) > 0) {
+            stockpile[farmResult.resource] = (stockpile[farmResult.resource] || 0) + Number(farmResult.amount);
+            saveVillageProgress();
+            refreshStockpileUI();
+            onToast(farmResult.message || "Lina armazenou a colheita no depósito comunitário.");
+          } else if (farmResult) {
+            onToast(farmResult);
           } else {
-            state[job.resource] = Math.max(0, Number(state[job.resource]) || 0) + job.amount;
-            onSave();
-            onToast(resident.name + " produziu " + job.amount + " " + job.resourceLabel + ".");
+            stockpile[job.resource] = (stockpile[job.resource] || 0) + job.amount;
+            saveVillageProgress();
+            refreshStockpileUI();
+            onToast(resident.name + " armazenou " + job.amount + " " + job.resourceLabel + " no depósito comunitário.");
           }
         }
       }

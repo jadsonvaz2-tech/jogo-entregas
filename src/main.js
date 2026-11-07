@@ -2392,8 +2392,8 @@ function findFenceConnection(targetX,targetZ,extension){
  function villageFarmAction(){
   const ripeIndex=state.gardenPlots.findIndex(plot=>plot.plantedAt>0&&Date.now()-plot.plantedAt>=150000);
   if(ripeIndex>=0){
-   state.berries+=6;state.gardenPlots[ripeIndex].plantedAt=0;refreshGardenPlot(ripeIndex);
-   updateHUD();saveGame();return "Lina colheu uma horta comunitária: +6 frutas silvestres.";
+   state.gardenPlots[ripeIndex].plantedAt=0;refreshGardenPlot(ripeIndex);
+   saveGame();return {resource:"berries",amount:6,message:"Lina colheu 6 frutas e guardou a produção no depósito comunitário."};
   }
   const emptyIndex=state.gardenPlots.findIndex(plot=>!plot.plantedAt);
   if(emptyIndex>=0&&state.berries>=3){
