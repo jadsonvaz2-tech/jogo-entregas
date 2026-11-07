@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
 import { createStoryEncounter } from "./systems/story.js";
-import { createVillageResidents } from "./systems/village.js?v=visible-save-diagnostics-1";
+import { createVillageResidents } from "./systems/village.js?v=community-metal-stockpile-2026-11-07-1";
 import { createWorldSettlements, WORLD_ROAD_PATHS } from "./systems/settlements.js?v=natural-road-relief-2026-11-07-1";
 import { createExpandedWorld } from "./systems/world-expansion.js?v=underground-exploration-2026-11-07-1";
 import { createDistantVillageResidents } from "./systems/distant-village-residents.js";
@@ -1483,7 +1483,15 @@ function updateHUD(){
   $("collectLeather").hidden=!state.nearTannery;
   $("collectLeather").disabled=!state.nearTannery||!(state.tannery?.startedAt>0&&Date.now()-state.tannery.startedAt>=120000);
   $("smithyStatus").textContent=state.smithy?"Forja comunitária construída · "+(state.reinforcedAxe?"Machado reforçado":"Machado comum")+" · "+(state.reinforcedPickaxe?"Picareta reforçada":"Picareta comum"):"Forja comunitária: não construída";
-  $("metalStatus").textContent="Minério: "+state.ironOre+" · Carvão: "+state.coal+" · Lingotes: "+state.ironIngots+" · Espada: "+(state.ironSword?"fabricada":"não fabricada")+" · Capacete: "+(state.ironHelmet?"fabricado":"não fabricado")+" · Couraça: "+(state.ironChestplate?"fabricada":"não fabricada")+" · Machado de ferro: "+(state.ironAxe?"sim":"não")+" · Picareta de ferro: "+(state.ironPickaxe?"sim":"não");
+  const communalIronOre=villageResidents?.getStockpile?.("ironOre")||0;
+  const communalCoal=villageResidents?.getStockpile?.("coal")||0;
+  const communalIron=villageResidents?.getStockpile?.("ironIngots")||0;
+  const communalSteel=villageResidents?.getStockpile?.("steelIngots")||0;
+  const communalMetalTotal=communalIronOre+communalCoal+communalIron+communalSteel;
+  $("metalStatus").textContent="Mochila · minério: "+state.ironOre+" · carvão: "+state.coal+" · ferro: "+state.ironIngots+" · aço: "+state.steelIngots+" | Depósito da aldeia · minério: "+communalIronOre+" · carvão: "+communalCoal+" · ferro: "+communalIron+" · aço: "+communalSteel;
+  $("withdrawVillageMetals").hidden=!state.nearSmithy;
+  $("withdrawVillageMetals").disabled=!state.nearSmithy||!villageResidents||communalMetalTotal<1;
+  $("withdrawVillageMetals").textContent="📦 RETIRAR METAIS DO DEPÓSITO · "+communalMetalTotal+" unidades";
    $("steelStatus").textContent="Alto-forno: "+(state.steelFurnace?"construído":"não construído")+" · Aço: "+state.steelIngots+" lingotes"+(state.steelSword?" · Espada de aço":"")+(state.steelHelmet?" · Capacete de aço":"")+(state.steelChestplate?" · Couraça de aço":"")+(state.steelAxe?" · Machado de aço":"")+(state.steelPickaxe?" · Picareta de aço":"");
   $("craftIronHelmet").hidden=!state.nearSmithy;
   $("craftIronHelmet").disabled=!state.nearSmithy||state.ironHelmet||state.ironIngots<4||state.leather<2;
@@ -1847,6 +1855,7 @@ $("craftStorageChest").addEventListener("click",craftStorageChest);
  $("collectLeather").addEventListener("click",collectLeather);
  $("craftLeatherArmor").addEventListener("click",craftLeatherArmor);
  $("craftSmithy").addEventListener("click",craftSmithy);
+  $("withdrawVillageMetals").addEventListener("click",withdrawVillageMetals);
  $("smeltIron").addEventListener("click",smeltIron);
  $("craftIronSword").addEventListener("click",craftIronSword);
  $("craftIronHelmet").addEventListener("click",craftIronHelmet);
@@ -3739,6 +3748,19 @@ function createSmithy(data){
  const horn=new THREE.Mesh(new THREE.ConeGeometry(.13,.35,8),iron);horn.rotation.z=-Math.PI/2;horn.position.set(1.12,1.0,.2);g.add(horn);
  for(let i=0;i<4;i++){const stoneBlock=new THREE.Mesh(new THREE.BoxGeometry(.34,.26,.32),stone);stoneBlock.position.set(-1.05+i*.38,.3,-1.1);g.add(stoneBlock);}
  g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});g.position.set(data.x,terrainHeight(data.x,data.z),data.z);g.rotation.y=data.yaw;scene.add(g);state.smithyObject=g;
+}
+function withdrawVillageMetals(){
+ if(!state.nearSmithy||!state.smithy){toast("Aproxime-se da forja comunitária para retirar os metais.");return;}
+ if(!villageResidents||typeof villageResidents.getStockpile!=="function"||typeof villageResidents.takeFromStockpile!=="function"){
+  toast("O depósito comunitário ainda não está disponível.");return;
+ }
+ let total=0;
+ for(const resource of ["ironOre","coal","ironIngots","steelIngots"]){
+  const amount=Math.max(0,Math.floor(villageResidents.getStockpile(resource)||0));
+  if(amount>0&&villageResidents.takeFromStockpile(resource,amount)){state[resource]+=amount;total+=amount;}
+ }
+ if(total<1){toast("Não há minério, carvão ou lingotes guardados pela aldeia.");return;}
+ updateHUD();saveGame();toast("Metais retirados do depósito comunitário: "+total+" unidades. Agora podem ser usados na forja.");
 }
 function smeltIron(){
  if(!state.nearSmithy){toast("Aproxime-se da forja comunitária.");return;}

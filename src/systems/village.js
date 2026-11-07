@@ -65,7 +65,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   const COMMUNAL_MEAL_POLICIES = ["auto","berries","meat"];
   let communalMealPolicy = COMMUNAL_MEAL_POLICIES.includes(saved.communalMealPolicy) ? saved.communalMealPolicy : "auto";
   let protectFoodReserve = saved.protectFoodReserve === true;
-  const stockpile = Object.fromEntries(["wood","stone","berries","meat","herbs","hide","fiber","wool","honey"].map(key => [key, Math.max(0, Number(saved.stockpile?.[key]) || 0)]));
+  // Metais compartilham o depósito, sem entrar nas metas de produção dos moradores.
+  const stockpile = Object.fromEntries(["wood","stone","berries","meat","herbs","hide","fiber","wool","honey","ironOre","coal","ironIngots","steelIngots"].map(key => [key, Math.max(0, Number(saved.stockpile?.[key]) || 0)]));
   const RESOURCE_KEYS = ["wood","stone","berries","meat","herbs","hide","fiber","wool","honey"];
   const resourceTargets = Object.fromEntries(RESOURCE_KEYS.map(key => [
     key, Math.max(0, Math.min(200, Math.floor(Number(saved.resourceTargets?.[key]) || 0)))
@@ -985,7 +986,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const resources = [
       ["🪵","Madeira","wood"],["🪨","Pedra","stone"],["🫐","Frutas","berries"],
       ["🥩","Carne","meat"],["🌿","Ervas","herbs"],["🟤","Peles","hide"],
-      ["🧵","Fibras","fiber"],["🐑","Lã","wool"],["🍯","Mel","honey"]
+      ["🧵","Fibras","fiber"],["🐑","Lã","wool"],["🍯","Mel","honey"],
+      ["⛏️","Minério de ferro","ironOre"],["⚫","Carvão","coal"],["🔩","Lingotes de ferro","ironIngots"],["⚙️","Lingotes de aço","steelIngots"]
     ];
     const total = stockpileTotal();
     stockpileDisplay.innerHTML = '<div class="stockpile-heading">DEPÓSITO COMUNITÁRIO · RECURSOS DA ALDEIA</div>' +
