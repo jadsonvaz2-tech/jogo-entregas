@@ -51,10 +51,15 @@ for(let i=0;i<pos.count;i++){
  pos.setY(i,height);
  // Variação de solo acompanha as elevações: gramado nos baixios, terra exposta nas encostas e musgo em manchas suaves.
  const slopeExposure=THREE.MathUtils.clamp((height-1.8)/6.8,0,.62);
- const patch=(Math.sin(x*.073+Math.cos(z*.061)*1.7)+Math.cos(z*.087-x*.039)+Math.sin((x+z)*.052)) / 3;
+ const broadPatch=(Math.sin(x*.073+Math.cos(z*.061)*1.7)+Math.cos(z*.087-x*.039)+Math.sin((x+z)*.052)) / 3;
+ const finePatch=(Math.sin(x*.19+Math.cos(z*.16)*1.2)+Math.cos(z*.23-x*.11)+Math.sin((x-z)*.14)) / 3;
+ const patch=broadPatch*.78+finePatch*.22;
  const color=meadowColor.clone().lerp(soilColor,slopeExposure);
- color.lerp(mossColor,THREE.MathUtils.clamp((patch-.18)*.34,0,.22));
- color.multiplyScalar(.94+patch*.075);
+ color.lerp(mossColor,THREE.MathUtils.clamp((patch-.10)*.38,0,.27));
+ // Pequenas variações de terra e relva quebram o aspecto uniforme sem criar placas ou alterar a altura do terreno.
+ const earthSpeckle=Math.max(0,Math.sin(x*.37+Math.sin(z*.29))*Math.cos(z*.33-x*.17));
+ color.lerp(soilColor,earthSpeckle*.055);
+ color.multiplyScalar(.925+patch*.09+finePatch*.018);
  groundColors.push(color.r,color.g,color.b);
 }
 groundGeo.setAttribute("color",new THREE.Float32BufferAttribute(groundColors,3));
@@ -331,17 +336,34 @@ function addRock(x,z,s=1,collectible=false){
  return rock;
 }
 function addGrass(){
- const geo=new THREE.BufferGeometry(), verts=[];
+ // Touceiras leves com três lâminas cruzadas: decoração visual, sem colisão ou dados de salvamento.
+ // Mantém exatamente as três chamadas ao RNG do mundo por tentativa, preservando a sequência dos recursos.
+ const geo=new THREE.BufferGeometry(), verts=[], colors=[];
+ const palette=[new THREE.Color(0x788d4c),new THREE.Color(0x91a45a),new THREE.Color(0x647d40),new THREE.Color(0xa1a968)];
  for(let i=0;i<1600;i++){
   const x=(worldRandom()-.5)*210,z=(worldRandom()-.5)*210;
   if(Math.hypot(x,z)<8)continue;
   const h=.18+worldRandom()*.35,w=.035;
-  const y=terrainHeight(x,z)+.015;
-  verts.push(x-w,y,z,x+w,y,z,x,y+h,z);
+  const y=terrainHeight(x,z)+.018;
+  // Variação local determinística: não consome o RNG compartilhado do mundo.
+  const seed=Math.abs(Math.sin(x*12.9898+z*78.233+i*37.719)*43758.5453)%1;
+  const lean=(seed-.5)*.16;
+  const tuftHeight=h*(.78+seed*.38);
+  for(let blade=0;blade<3;blade++){
+   const angle=seed*6.2831853+blade*2.0943951;
+   const dx=Math.cos(angle),dz=Math.sin(angle);
+   const px=-dz*w*(.72+seed*.35),pz=dx*w*(.72+seed*.35);
+   const tipX=x+dx*(.045+lean),tipZ=z+dz*(.045+lean);
+   verts.push(x-px,y,z-pz,x+px,y,z+pz,tipX,y+tuftHeight,tipZ);
+   const shade=palette[(i+blade)%palette.length].clone().multiplyScalar(.88+seed*.2);
+   colors.push(shade.r*.78,shade.g*.78,shade.b*.78,shade.r*.9,shade.g*.9,shade.b*.9,shade.r,shade.g,shade.b);
+  }
  }
  geo.setAttribute("position",new THREE.Float32BufferAttribute(verts,3));
- const mesh=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x9aa66b,side:THREE.DoubleSide}));
- scene.add(mesh);
+ geo.setAttribute("color",new THREE.Float32BufferAttribute(colors,3));
+ geo.computeVertexNormals();
+ const mesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,side:THREE.DoubleSide}));
+ mesh.castShadow=false;mesh.receiveShadow=true;scene.add(mesh);
 }
 let resources=[];
 const wildAnimals=[];
