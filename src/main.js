@@ -4332,7 +4332,7 @@ async function start(){
  const startOptional=(label,create)=>{
   startupStage=label;
   try{return create();}
-  catch(error){console.error("Falha ao iniciar "+label+":",error);toast("Aviso: "+label+" não pôde ser carregado. O restante do mundo continuará.");return null;}
+  catch(error){const detail=error?.message||String(error);console.error("Falha ao iniciar "+label+":",error);toast("ERRO "+label+": "+detail);const panel=$("loadingText");if(panel)panel.textContent="Aviso: "+label+" não carregado ("+detail+").";return null;}
  };
  $("loadingText").textContent="Criando o terreno e a floresta...";
  $("loadingBar").style.width="20%";
