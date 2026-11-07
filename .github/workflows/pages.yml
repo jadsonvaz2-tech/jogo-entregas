@@ -37,7 +37,12 @@ jobs:
             "assets/3d/RockPath_Round_Small_2.gltf",
             "assets/3d/RockPath_Round_Small_3.gltf",
             "assets/3d/RockPath_Round_Thin.gltf",
-            "assets/3d/RockPath_Round_Wide.gltf"
+            "assets/3d/RockPath_Round_Wide.gltf",
+            "assets/3d/DeadTree_1.gltf",
+            "assets/3d/DeadTree_2.gltf",
+            "assets/3d/DeadTree_3.gltf",
+            "assets/3d/DeadTree_4.gltf",
+            "assets/3d/DeadTree_5.gltf"
           ];
           for (const file of models) {
             const gltf = JSON.parse(readFileSync(file, "utf8"));
