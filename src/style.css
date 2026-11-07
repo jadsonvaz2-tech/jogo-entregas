@@ -169,3 +169,20 @@
 .expedition-diary-line span{color:#e2e5d8}
 .expedition-diary-empty{margin:7px 0;color:#bbc6b3;font-size:10px;line-height:1.5}
 @media(max-width:420px){.expedition-diary-entry{padding:8px}.expedition-diary-line{grid-template-columns:76px minmax(0,1fr)}.expedition-diary-entry-top{flex-wrap:wrap}}
+
+
+/* Páginas ilustradas e mapa esquemático do diário de expedições. */
+.expedition-diary-entry{overflow:hidden}
+.expedition-diary-illustration{display:flex;align-items:center;gap:12px;min-height:66px;margin:8px 0;padding:9px 12px;border:1px solid #b99b5c88;border-radius:8px;background:radial-gradient(ellipse at 18% 55%,#64734a,#26382a 58%,#18241c)}
+.expedition-diary-illustration span{font-size:34px;filter:drop-shadow(0 3px 3px #0009)}
+.expedition-diary-illustration strong{font:800 10px system-ui;letter-spacing:1.2px;color:#f0d49a}
+.expedition-diary-story{margin:8px 1px;color:#e6e0cd;font:italic 11px/1.6 Georgia,serif}
+.expedition-diary-map{margin:8px 0;padding:6px;border:1px solid #77835e;border-radius:8px;background:linear-gradient(145deg,#263c2b,#17251c)}
+.expedition-diary-route{display:block;width:100%;height:112px}
+.route-grid{fill:none;stroke:#d4d5aa;stroke-opacity:.12;stroke-width:.6;stroke-dasharray:2 3}
+.route-line{fill:none;stroke:#e3c47c;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:4 2}
+.route-origin{fill:#9ac77d;stroke:#eff5d9;stroke-width:1}
+.route-destination{fill:#e5b45e;stroke:#fff0c4;stroke-width:1}
+.route-waypoint{fill:#d8c28e;stroke:#fff0c4;stroke-width:.6}
+.expedition-diary-map-caption{padding:4px 2px 2px;text-align:center;color:#d8c18e;font:800 9px system-ui;letter-spacing:.8px}
+@media(max-width:420px){.expedition-diary-route{height:94px}.expedition-diary-illustration{min-height:58px}}

@@ -105,6 +105,8 @@ export function createCommunityExpeditions({villageResidents,state,onToast,onDis
    const span=document.createElement("span");span.textContent=String(value);
    line.append(strong,span);card.append(line);
   };
+  const eventArt={creature:["🐺","Encontro na trilha"],ruins:["🏛️","Vestígios antigos"],camp:["⛺","Acampamento na mata"],rare:["✨","Achado extraordinário"]};
+  const routePoints={mines:[[18,78],[31,65],[44,70],[58,42],[82,22]],ruins:[[18,78],[29,57],[45,60],[54,34],[82,22]],marsh:[[18,78],[35,84],[48,62],[68,69],[82,22]]};
   for(const item of saved.history){
    const card=document.createElement("article");card.className="expedition-diary-entry";
    const top=document.createElement("div");top.className="expedition-diary-entry-top";
@@ -114,8 +116,29 @@ export function createCommunityExpeditions({villageResidents,state,onToast,onDis
    date.textContent=timestamp?new Date(timestamp).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"}):"Registro anterior";
    top.append(destination,date);card.append(top);
    const names=Array.isArray(item.memberNames)&&item.memberNames.length?item.memberNames.join(", "):(item.members?item.members+" moradores":"Grupo não informado");
+   const artKey=item.rareDiscovery?"rare":(item.eventType||(item.destinationId==="ruins"?"ruins":null));
+   const art=eventArt[artKey]||eventArt[item.eventType]||["🌲","Jornada pela floresta"];
+   const illustration=document.createElement("div");illustration.className="expedition-diary-illustration";
+   const icon=document.createElement("span");icon.textContent=art[0];
+   const caption=document.createElement("strong");caption.textContent=item.rareDiscovery?"DESCOBERTA RARA":art[1];
+   illustration.append(icon,caption);card.append(illustration);
+   const story=document.createElement("p");story.className="expedition-diary-story";
+   story.textContent=item.narrative||("Ao partir para "+(item.destination||"uma região distante")+", "+names+" seguiram pelas trilhas da floresta. "+(item.discovery||"O grupo observou a região e alcançou seu destino.")+" Ao final, retornaram à Vila Central.");
+   card.append(story);
+   const map=document.createElementNS("http://www.w3.org/2000/svg","svg");
+   map.setAttribute("viewBox","0 0 100 100");map.setAttribute("role","img");map.setAttribute("aria-label","Mapa esquemático do trajeto da expedição");
+   map.classList.add("expedition-diary-route");
+   for(let y=20;y<100;y+=20){const grid=document.createElementNS(map.namespaceURI,"path");grid.setAttribute("d","M0 "+y+" H100");grid.setAttribute("class","route-grid");map.append(grid);}
+   for(let x=20;x<100;x+=20){const grid=document.createElementNS(map.namespaceURI,"path");grid.setAttribute("d","M"+x+" 0 V100");grid.setAttribute("class","route-grid");map.append(grid);}
+   const route=routePoints[item.destinationId]||routePoints.ruins;
+   const path=document.createElementNS(map.namespaceURI,"polyline");path.setAttribute("points",route.map(point=>point.join(",")).join(" "));path.setAttribute("class","route-line");map.append(path);
+   route.forEach((point,index)=>{const dot=document.createElementNS(map.namespaceURI,"circle");dot.setAttribute("cx",point[0]);dot.setAttribute("cy",point[1]);dot.setAttribute("r",index===0||index===route.length-1?"3.5":"2");dot.setAttribute("class",index===0?"route-origin":index===route.length-1?"route-destination":"route-waypoint");map.append(dot);});
+   const routeWrap=document.createElement("div");routeWrap.className="expedition-diary-map";
+   const mapCaption=document.createElement("div");mapCaption.className="expedition-diary-map-caption";mapCaption.textContent="⌖ VILA CENTRAL  →  "+(item.destination||"DESTINO");
+   routeWrap.append(map,mapCaption);card.append(routeWrap);
    addLine(card,"Grupo:",names);
    addLine(card,"Descoberta:",item.discovery||item.eventResult||"Percurso concluído sem descoberta especial registrada.");
+   if(item.rareDiscovery)addLine(card,"Achado raro:",item.rareDiscovery);
    const rewardText=Array.isArray(item.rewardDetails)&&item.rewardDetails.length?item.rewardDetails.join(", "):(item.result||"Nenhuma recompensa adicional");
    addLine(card,"Recompensas:",rewardText);
    addLine(card,"Resultado:",item.outcome||item.eventResult||"Grupo retornou à aldeia em segurança.");
@@ -177,13 +200,24 @@ export function createCommunityExpeditions({villageResidents,state,onToast,onDis
   for(const key of mission.gearItems||[])villageResidents.depositToStockpile(key,1);
   for(const [key,min,max] of d.rewards){const amount=min+Math.floor(Math.random()*(max-min+1));const stored=villageResidents.depositToStockpile(key,amount);if(stored)rewards.push(stored+" "+key);}
   for(const item of mission.bonusRewards||[]){const stored=villageResidents.depositToStockpile(item.key,item.amount);if(stored)rewards.push(stored+" "+item.key+" (evento)");}
-  if(mission.event&&!mission.eventResolved)mission.eventResult="O grupo preferiu não se arriscar e seguiu viagem."; 
+  if(mission.event&&!mission.eventResolved)mission.eventResult="O grupo preferiu não se arriscar e seguiu viagem.";
+  let rareDiscovery=null;
+  if(Math.random()<.14){
+   const rarePool=mission.destination==="mines"?[{key:"ironIngots",amount:2,label:"Veio de ferro puro · 2 lingotes de ferro"},{key:"honey",amount:2,label:"Colmeia silvestre preservada · 2 méis"}]:mission.destination==="marsh"?[{key:"leather",amount:2,label:"Couro raro encontrado entre as raízes · 2 couros"},{key:"honey",amount:2,label:"Mel dourado da clareira · 2 méis"}]:[{key:"ironIngots",amount:1,label:"Relíquia metálica antiga · 1 lingote de ferro"},{key:"honey",amount:3,label:"Câmara secreta de mel · 3 méis"}];
+   const find=rarePool[Math.floor(Math.random()*rarePool.length)];
+   const stored=villageResidents.depositToStockpile(find.key,find.amount);
+   if(stored){rareDiscovery=find.label;rewards.push(stored+" "+find.key+" (achado raro)");}
+  }
   try{onDiscovery?.({destination:mission.destination,eventType:mission.event?.type||null,eventResolved:!!mission.eventResolved,memberNames:mission.memberNames||[]});}catch(error){console.warn("Não foi possível registrar a descoberta da expedição.",error);}
   villageResidents.setExpeditionAway?.(mission.members,false);
   saved.completed++;
   const eventNames={creature:"Encontro com criatura",ruins:"Ruínas antigas encontradas",camp:"Acampamento temporário"};
-  const discovery=mission.event?((eventNames[mission.event.type]||"Acontecimento na trilha")+(mission.eventResolved?": "+(mission.eventResult||"evento concluído"):"; grupo seguiu viagem")):"Trilha explorada e destino alcançado.";
-  const record={destination:d.label,members:mission.members.length,memberNames:(mission.memberNames||[]).slice(),result:rewards.join(", ")||"retorno sem carga adicional",rewardDetails:rewards.slice(),discovery,eventResult:mission.eventResolved?(mission.eventResult||"Acontecimento concluído"):"",outcome:mission.eventResolved?(mission.eventResult||"Grupo retornou à aldeia."):"Grupo retornou à aldeia em segurança.",at:Date.now(),departedAt:mission.departedAt,load:mission.load};
+  const discovery=mission.event?((eventNames[mission.event.type]||"Acontecimento na trilha")+(mission.eventResolved?": "+(mission.eventResult||"evento concluído"): "; grupo seguiu viagem")):"Trilha explorada e destino alcançado.";
+  const narrativeOpen={mines:"A subida pela Serra das Minas exigiu passos cuidadosos entre pedras soltas e antigas marcas de mineração.",ruins:"Entre raízes e pedras cobertas de musgo, o grupo encontrou vestígios de uma povoação esquecida.",marsh:"Atravessando a névoa baixa do Pântano Antigo, os moradores seguiram por passagens úmidas e clareiras silenciosas."};
+  const narrativeEvent=mission.eventResolved?(mission.eventResult||"O grupo superou um acontecimento inesperado."):"A viagem transcorreu sem confronto; os batedores observaram o caminho e mantiveram a formação.";
+  const narrativeRare=rareDiscovery?" Durante a busca, uma descoberta extraordinária surpreendeu os moradores: "+rareDiscovery+".":"";
+  const narrative="Partindo da Vila Central, "+(mission.memberNames||[]).join(", ")+" seguiram rumo a "+d.label+". "+(narrativeOpen[mission.destination]||"O grupo percorreu trilhas pouco conhecidas.")+" "+narrativeEvent+narrativeRare+" Com os suprimentos reunidos, todos regressaram à aldeia.";
+  const record={destination:d.label,destinationId:mission.destination,eventType:mission.event?.type||null,members:mission.members.length,memberNames:(mission.memberNames||[]).slice(),result:rewards.join(", ")||"retorno sem carga adicional",rewardDetails:rewards.slice(),discovery,eventResult:mission.eventResolved?(mission.eventResult||"Acontecimento concluído"):"",outcome:mission.eventResolved?(mission.eventResult||"Grupo retornou à aldeia."):"Grupo retornou à aldeia em segurança.",narrative,rareDiscovery,at:Date.now(),departedAt:mission.departedAt,load:mission.load};
   saved.history.unshift(record);saved.history=saved.history.slice(0,8);active=null;persist();makeRoster();refresh();
   onToast("Expedição concluída! "+record.result+". Os moradores voltaram à aldeia.");
  };
