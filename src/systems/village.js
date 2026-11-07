@@ -453,6 +453,14 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     return Math.min(stockpile.meat, Math.floor(excessRations / 2));
   }
 
+  function canServeCommunalMeal(resource) {
+    const amount = resource === "berries" ? 5 : 3;
+    if (stockpile[resource] < amount) return false;
+    if (!protectFoodReserve) return true;
+    const remainingRations = stockpile.berries + stockpile.meat * 2 - (resource === "berries" ? 5 : 6);
+    return remainingRations >= foodReserveTargetDays * dailyFoodNeed();
+  }
+
   function consumeDailyRation() {
     let needed = dailyFoodNeed();
     let berriesUsed = 0;
@@ -611,8 +619,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const nextThreshold = [0,3,8,15,24][level] ?? 24;
     const progress = level >= 5 ? "MAIOR NÍVEL ALCANÇADO" : (nextThreshold - prosperityXp) + " contribuição(ões) para o próximo nível";
     workPanel.querySelector("#village-prosperity").textContent = "PROSPERIDADE · NÍVEL " + level + "/5 · " + progress + " · refeições e dias abastecidos fortalecem a aldeia.";
-    const canServeBerries = stockpile.berries >= 5;
-    const canServeMeat = stockpile.meat >= 3;
+    const canServeBerries = canServeCommunalMeal("berries");
+    const canServeMeat = canServeCommunalMeal("meat");
     const mealUsesBerries = communalMealPolicy === "berries" || (communalMealPolicy === "auto" && (canServeBerries || !canServeMeat));
     const mealAvailable = mealUsesBerries ? canServeBerries : canServeMeat;
     communalMealPolicySelect.value = communalMealPolicy;
@@ -681,12 +689,12 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   communalMealButton.addEventListener("click", () => {
     if (morale >= 100) return;
     const previousProsperityLevel = prosperityLevel();
-    const canServeBerries = stockpile.berries >= 5;
-    const canServeMeat = stockpile.meat >= 3;
+    const canServeBerries = canServeCommunalMeal("berries");
+    const canServeMeat = canServeCommunalMeal("meat");
     const useBerries = communalMealPolicy === "berries" || (communalMealPolicy === "auto" && (canServeBerries || !canServeMeat));
     if (useBerries && canServeBerries) stockpile.berries -= 5;
     else if (!useBerries && canServeMeat) stockpile.meat -= 3;
-    else { onToast("Não há ingredientes suficientes para a opção de refeição escolhida."); return; }
+    else { onToast(protectFoodReserve ? "A reserva protegida precisa permanecer intacta; não há excedente suficiente para essa refeição." : "Não há ingredientes suficientes para a opção de refeição escolhida."); return; }
     morale = Math.min(100, morale + 15);
     prosperityXp += 2;
     saveVillageProgress();
