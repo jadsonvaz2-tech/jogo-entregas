@@ -146,8 +146,8 @@ export function createCommunityExpeditions({villageResidents,state,onToast,root=
   onToast("Expedição concluída! "+record.result+". Os moradores voltaram à aldeia.");
  };
  const update=()=>{
-  if(active&&!active.event&&Date.now()>=active.eventAt)showEvent();
   if(active&&Date.now()>=active.returnAt)finish();
+  else if(active&&!active.event&&Date.now()>=active.eventAt)showEvent();
   if(Date.now()-lastRender>900){refresh();lastRender=Date.now();}
  };
  if(active){
