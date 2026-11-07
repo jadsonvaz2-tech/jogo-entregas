@@ -570,7 +570,24 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     }
   });
   saveDiagnostics.append(diagnosticTitle,diagnosticOutput,copyDiagnosticButton,diagnosticHint);
-  workPanel.insertBefore(saveDiagnostics, housingStatus);
+  // Acesso independente da categoria ALDEIA CENTRAL, que pode permanecer recolhida.
+  const diagnosticsCategory = document.createElement("details");
+  diagnosticsCategory.id = "village-save-diagnostics-category";
+  diagnosticsCategory.className = "craft-category";
+  const diagnosticsHeading = document.createElement("summary");
+  diagnosticsHeading.textContent = "DIAGNÓSTICO E CÓPIA DE SEGURANÇA · SOMENTE LEITURA";
+  diagnosticsCategory.append(diagnosticsHeading, saveDiagnostics);
+  const managementMenu = managementRoot && managementRoot.closest("#craftPanel");
+  const villageCategory = managementRoot && managementRoot.closest("#playerVillageManagement");
+  if (managementMenu) {
+    if (villageCategory && villageCategory.parentNode === managementMenu) {
+      villageCategory.insertAdjacentElement("afterend", diagnosticsCategory);
+    } else {
+      managementMenu.appendChild(diagnosticsCategory);
+    }
+  } else {
+    workPanel.appendChild(diagnosticsCategory);
+  }
   renderSaveDiagnostics();
 
   const housingRosterDisplay = workPanel.querySelector("#village-housing-roster");
