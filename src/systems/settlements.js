@@ -143,7 +143,8 @@ export function createWorldSettlements({ THREE, scene, terrainHeight }) {
           for (let row = 0; row < 2; row++) {
             const a = i * 3 + row;
             const b = (i + 1) * 3 + row;
-            indices.push(a, b, a + 1, a + 1, b, b + 1);
+            // Ordem anti-horária vista de cima: normais voltadas para cima (Three.js).
+            indices.push(a, a + 1, b, a + 1, b + 1, b);
           }
         }
       }
