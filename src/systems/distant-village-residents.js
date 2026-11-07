@@ -123,22 +123,21 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
     scene.add(stall);
   }
 
-  function makeTag(resident, townName) {
+  function makeTag(resident) {
     const canvas = document.createElement("canvas");
-    canvas.width = 512; canvas.height = 132;
+    canvas.width = 256; canvas.height = 64;
     const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "rgba(22,31,24,.9)";
-    ctx.beginPath(); ctx.roundRect(8, 8, 496, 116, 20); ctx.fill();
-    ctx.strokeStyle = "#c6a96b"; ctx.lineWidth = 4; ctx.stroke();
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillStyle = "#f4e7c9"; ctx.font = "bold 43px Georgia";
-    ctx.fillText(resident.name.toUpperCase(), 256, 49);
-    ctx.fillStyle = "#c4cfaa"; ctx.font = "bold 22px Arial";
-    ctx.fillText(resident.role.toUpperCase() + " · " + townName.toUpperCase(), 256, 91);
+    ctx.font = "bold 28px Georgia";
+    ctx.lineWidth = 5; ctx.strokeStyle = "rgba(16,24,17,.88)";
+    ctx.strokeText(resident.name, 128, 32);
+    ctx.fillStyle = "#fff0c9";
+    ctx.fillText(resident.name, 128, 32);
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false }));
-    sprite.position.y = 2.72; sprite.scale.set(3.05, .78, 1);
+    sprite.position.y = 2.38; sprite.scale.set(1.18, .3, 1);
+    sprite.visible = false;
     return sprite;
   }
 
@@ -209,7 +208,7 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
     resident.group.position.set(home[0], terrainHeight(home[0], home[1]), home[1]);
     scene.add(resident.group);
     resident.fallback = makeFallback(resident.group, data.color);
-    resident.tag = makeTag(resident, town.name);
+    resident.tag = makeTag(resident);
     resident.group.add(resident.tag);
     residents.push(resident);
     loadModel(resident);
@@ -377,6 +376,7 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
     let nearestDistance = 4.5;
     for (const resident of residents) {
       const distance = Math.hypot(player.position.x - resident.group.position.x, player.position.z - resident.group.position.z);
+      if (resident.tag) resident.tag.visible = distance <= 5.5 && resident.group.visible;
       if (distance < nearestDistance) { nearest = resident; nearestDistance = distance; }
     }
     talkButton.hidden = !nearest || !dialog.hidden;
@@ -397,7 +397,7 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
     if (!resident || !jobs[role]) return false;
     resident.role=role; resident.work=jobs[role]; resident.routeKey=""; resident.target=null;
     if(resident.tag)resident.group.remove(resident.tag);
-    resident.tag=makeTag(resident,resident.town.name);resident.group.add(resident.tag);
+    resident.tag=makeTag(resident);resident.group.add(resident.tag);
     save(); return true;
   }
   function residentsForTown(townId) { return residents.filter(resident => resident.town.id===townId); }

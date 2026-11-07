@@ -771,7 +771,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     resident.fallback = makeFallback(resident.group,0x80694d);
     skills[resident.id] = {xp:0,level:1};
     workElapsed[resident.id] = 0;
-    resident.nameTag = makeNameTag(resident.name,resident.role,skills[resident.id].level);
+    resident.nameTag = makeNameTag(resident.name);
     resident.group.add(resident.nameTag);
     resident.actions = {}; resident.mixer = null; resident.moving = false; resident.target = null;
     resident.routeKey = ""; resident.routeIndex = 0; resident.idleAction = null; resident.walkAction = null;
@@ -1666,37 +1666,27 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     refreshStockpileUI();
     refreshSecurityUI();
   }
-  function makeNameTag(name, role, level) {
+  function makeNameTag(name) {
     const canvas = document.createElement("canvas");
-    canvas.width = 512;
-    canvas.height = 128;
+    canvas.width = 256;
+    canvas.height = 64;
     const context = canvas.getContext("2d");
-    if (!context) {
-      const marker = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0xe6c979, transparent: true, opacity: .9 }));
-      marker.position.y = 2.55;
-      marker.scale.set(.55, .55, 1);
-      return marker;
-    }
-    context.fillStyle = "rgba(24,34,25,.9)";
-    context.beginPath();
-    if (typeof context.roundRect === "function") context.roundRect(8, 8, 496, 112, 22);
-    else context.rect(8, 8, 496, 112);
-    context.fill();
-    context.strokeStyle = "#c7ad6a";
-    context.lineWidth = 4;
-    context.stroke();
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0xe6c979, transparent: true, opacity: .9 }));
+    sprite.position.y = 2.38;
+    sprite.scale.set(1.18, .3, 1);
+    sprite.visible = false;
+    if (!context) return sprite;
     context.textAlign = "center";
     context.textBaseline = "middle";
-    context.fillStyle = "#f3e8c9";
-    context.font = "bold 42px Georgia";
-    context.fillText(String(name || "Morador").toUpperCase(), 256, 49);
-    context.fillStyle = "#c4cfaa";
-    context.font = "bold 21px Arial";
-    context.fillText((String(role || "Aldeão") + " · NÍVEL " + (level || 1)).toUpperCase(), 256, 88);
+    context.font = "bold 28px Georgia";
+    context.lineWidth = 5;
+    context.strokeStyle = "rgba(16,24,17,.88)";
+    context.strokeText(String(name || "Morador"), 128, 32);
+    context.fillStyle = "#fff0c9";
+    context.fillText(String(name || "Morador"), 128, 32);
     const texture = new THREE.CanvasTexture(canvas);
-    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false }));
-    sprite.position.y = 2.65;
-    sprite.scale.set(2.8, .7, 1);
+    sprite.material.map = texture;
+    sprite.material.needsUpdate = true;
     return sprite;
   }
 
@@ -1813,7 +1803,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     scene.add(resident.group);
     const color = resident.id === "lina" ? 0x6b8050 : resident.id === "odo" ? 0x79563a : 0x777d82;
     resident.fallback = makeFallback(resident.group, color);
-    resident.nameTag = makeNameTag(resident.name, resident.role, skills[resident.id]?.level || 1);
+    resident.nameTag = makeNameTag(resident.name);
     resident.group.add(resident.nameTag);
     resident.actions = {};
     resident.mixer = null;
@@ -1859,7 +1849,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       resident.nameTag.material.map?.dispose();
       resident.nameTag.material.dispose();
     }
-    resident.nameTag = makeNameTag(resident.name, resident.role, skills[resident.id].level);
+    resident.nameTag = makeNameTag(resident.name);
     resident.group.add(resident.nameTag);
   }
 
@@ -2132,6 +2122,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     let closestDistance = 4.3;
     for (const resident of residents) {
       const distance = Math.hypot(player.position.x - resident.group.position.x, player.position.z - resident.group.position.z);
+      if (resident.nameTag) resident.nameTag.visible = distance <= 5.5 && resident.group.visible && !expeditionAwayIds.has(resident.id);
       if (distance < closestDistance) {
         closest = resident;
         closestDistance = distance;
