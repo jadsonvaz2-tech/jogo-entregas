@@ -9,8 +9,11 @@ const GOODS = {
 };
 
 const TOWNS = [
-  { id: "vale", name: "Aldeia do Vale", x: 57, z: 31, market: [57, 35], production: { wood: 7, berries: 10 } },
-  { id: "colina", name: "Povoado da Colina", x: -59, z: -39, market: [-59, -35], production: { meat: 4, hide: 2, wool: 3 } }
+  // Os IDs vale/colina permanecem iguais para preservar os estoques existentes.
+  { id: "vale", name: "Vila da Pradaria", x: -150, z: 112, market: [-150, 116], production: { wood: 4, berries: 12, wool: 2 } },
+  { id: "colina", name: "Vila do Norte", x: 151, z: -128, market: [151, -124], production: { meat: 4, hide: 2, wool: 3, wood: 3 } },
+  { id: "mangue", name: "Vila do Mangue", x: 151, z: 48, market: [151, 52], production: { berries: 8, meat: 3, hide: 4 } },
+  { id: "oeste", name: "Vila do Oeste", x: -132, z: -125, market: [-132, -121], production: { wood: 9, hide: 2, meat: 2 } }
 ];
 
 export function createSettlementEconomy({ player, state, onToast, onChange }) {

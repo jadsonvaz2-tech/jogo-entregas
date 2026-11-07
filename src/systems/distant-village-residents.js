@@ -9,19 +9,35 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
   const loader = new GLTFLoader();
   const towns = [
     {
-      id: "vale", name: "Aldeia do Vale", x: 57, z: 31,
+      id: "vale", name: "Vila da Pradaria", x: -150, z: 112,
       residents: [
-        { id: "vale-ana", name: "Ana", role: "Agricultora", model: "Worker_Female.gltf", color: 0x788d55, home: [-8, -7], work: [[-13, 11], [-10, 13]], greeting: "Cuido das hortas da Aldeia do Vale. Pela manhã preparo os canteiros e acompanho as plantações; depois descanso perto de casa." },
-        { id: "vale-bento", name: "Bento", role: "Lenhador", model: "Worker_Male.gltf", color: 0x79583b, home: [8, -7], work: [[19, -9], [22, -13]], greeting: "Sou lenhador. Trabalho na mata além das últimas casas e separo troncos para as construções da aldeia." },
-        { id: "vale-marta", name: "Marta", role: "Comerciante", model: "Casual_Female.gltf", color: 0x8b6d91, home: [-8, 8], work: [[0, 3], [3, 4]], greeting: "Mantenho o pequeno mercado da aldeia. Troco alimentos, ferramentas e materiais com quem chega pela estrada." }
+        { id: "vale-ana", name: "Ana", role: "Agricultora", model: "Worker_Female.gltf", color: 0x788d55, home: [-8, -7], work: [[-13, 11], [-10, 13]], greeting: "Cuido das hortas da Vila da Pradaria. Os campos abertos ajudam nossas plantações." },
+        { id: "vale-bento", name: "Bento", role: "Lenhador", model: "Worker_Male.gltf", color: 0x79583b, home: [8, -7], work: [[19, -9], [22, -13]], greeting: "Trabalho na mata próxima e preparo madeira para as construções." },
+        { id: "vale-marta", name: "Marta", role: "Comerciante", model: "Casual_Female.gltf", color: 0x8b6d91, home: [-8, 8], work: [[0, 3], [3, 4]], greeting: "Mantenho o mercado da pradaria e recebo viajantes." }
       ]
     },
     {
-      id: "colina", name: "Povoado da Colina", x: -59, z: -39,
+      id: "colina", name: "Vila do Norte", x: 151, z: -128,
       residents: [
-        { id: "colina-joana", name: "Joana", role: "Pastora", model: "Worker_Female.gltf", color: 0x9a8051, home: [-7, -7], work: [[-17, 1], [-18, 5]], greeting: "Sou pastora. Levo os animais para pastar durante o dia e volto ao povoado antes do anoitecer." },
-        { id: "colina-gil", name: "Gil", role: "Caçador", model: "Cowboy_Male.gltf", color: 0x7a5940, home: [7, -7], work: [[-19, -11], [-23, -15]], greeting: "Conheço as trilhas e os rastros da floresta. Passo o dia procurando caça e observando os arredores." },
-        { id: "colina-rute", name: "Rute", role: "Mercadora", model: "Casual2_Female.gltf", color: 0x826b9b, home: [7, 8], work: [[0, 3], [3, 4]], greeting: "Viajo entre as comunidades levando notícias e mercadorias. O caminho entre as povoações precisa continuar seguro." }
+        { id: "colina-joana", name: "Joana", role: "Pastora", model: "Worker_Female.gltf", color: 0x9a8051, home: [-7, -7], work: [[-17, 1], [-18, 5]], greeting: "Sou pastora. Conheço os pastos frios e as encostas do Norte." },
+        { id: "colina-gil", name: "Gil", role: "Caçador", model: "Cowboy_Male.gltf", color: 0x7a5940, home: [7, -7], work: [[-19, -11], [-23, -15]], greeting: "Conheço as trilhas entre os pinheiros e as rochas." },
+        { id: "colina-rute", name: "Rute", role: "Mercadora", model: "Casual2_Female.gltf", color: 0x826b9b, home: [7, 8], work: [[0, 3], [3, 4]], greeting: "Levo mercadorias e notícias pelas rotas do Norte." }
+      ]
+    },
+    {
+      id: "mangue", name: "Vila do Mangue", x: 151, z: 48,
+      residents: [
+        { id: "mangue-lia", name: "Lia", role: "Pescadora", model: "Worker_Female.gltf", color: 0x658b83, home: [-8, -7], work: [[-13, 11], [-10, 13]], greeting: "Vivo entre as águas e as raízes do mangue. Pesco e recolho alimentos." },
+        { id: "mangue-tom", name: "Tom", role: "Coletor", model: "Worker_Male.gltf", color: 0x8b7449, home: [8, -7], work: [[19, -9], [22, -13]], greeting: "Recolho fibras, madeira úmida e materiais úteis nas margens." },
+        { id: "mangue-iris", name: "Íris", role: "Comerciante", model: "Casual_Female.gltf", color: 0x718a9b, home: [-8, 8], work: [[0, 3], [3, 4]], greeting: "Meu pequeno mercado atende pescadores e viajantes." }
+      ]
+    },
+    {
+      id: "oeste", name: "Vila do Oeste", x: -132, z: -125,
+      residents: [
+        { id: "oeste-cael", name: "Cael", role: "Lenhador", model: "Worker_Male.gltf", color: 0x76513a, home: [-8, -7], work: [[-13, 11], [-10, 13]], greeting: "Trabalho na fronteira oeste, cortando madeira para a vila." },
+        { id: "oeste-ena", name: "Ena", role: "Artesã", model: "Worker_Female.gltf", color: 0x8c6c86, home: [8, -7], work: [[19, -9], [22, -13]], greeting: "Transformo os materiais da floresta em ferramentas e utensílios." },
+        { id: "oeste-raul", name: "Raul", role: "Comerciante", model: "Casual2_Male.gltf", color: 0x8b805c, home: [-8, 8], work: [[0, 3], [3, 4]], greeting: "Mantenho a rota comercial que liga o Oeste às outras comunidades." }
       ]
     }
   ];

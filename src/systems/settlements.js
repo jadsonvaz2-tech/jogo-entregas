@@ -1,7 +1,9 @@
 // Núcleos de povoação estáticos e determinísticos: não alteram nem migram os salvamentos existentes.
 export const WORLD_ROAD_PATHS = [
-  [[0, 0], [10, 3], [21, 5], [31, 12], [43, 19], [57, 31]],
-  [[0, 0], [-11, -7], [-22, -13], [-34, -20], [-47, -29], [-59, -39]]
+  [[0, 0], [-34, 24], [-72, 52], [-112, 83], [-150, 112]],
+  [[0, 0], [34, 8], [72, 24], [112, 39], [151, 48]],
+  [[0, 0], [38, -30], [78, -65], [116, -98], [151, -128]],
+  [[0, 0], [-36, -30], [-72, -65], [-105, -96], [-132, -125]]
 ];
 
 export function createWorldSettlements({ THREE, scene, terrainHeight }) {
@@ -20,8 +22,10 @@ export function createWorldSettlements({ THREE, scene, terrainHeight }) {
     fence: new THREE.MeshStandardMaterial({ color: 0x60452d, roughness: 1 })
   };
   const centers = [
-    { name: "Aldeia do Vale", x: 57, z: 31, radius: 17, kind: "vale" },
-    { name: "Povoado da Colina", x: -59, z: -39, radius: 16, kind: "colina" }
+    { id: "vale", name: "Vila da Pradaria", x: -150, z: 112, radius: 19, kind: "prairie" },
+    { id: "colina", name: "Vila do Norte", x: 151, z: -128, radius: 19, kind: "north" },
+    { id: "mangue", name: "Vila do Mangue", x: 151, z: 48, radius: 19, kind: "mangrove" },
+    { id: "oeste", name: "Vila do Oeste", x: -132, z: -125, radius: 19, kind: "west" }
   ];
   const paths = WORLD_ROAD_PATHS;
 
