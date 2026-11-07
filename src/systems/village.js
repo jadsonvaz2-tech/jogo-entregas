@@ -189,6 +189,12 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     #village-work .stockpile-item{display:flex;justify-content:space-between;align-items:center;gap:4px;padding:6px;background:#293b2d;border:1px solid #65714d;border-radius:6px;color:#eee5cf;font-size:11px}
     #village-work .stockpile-item b{color:#f5d98c;font-size:13px}
     #village-work .stockpile-capacity{margin-top:7px;padding:7px;background:#3a482f;border-radius:6px;color:#f0d58a;font-weight:800;text-align:center}
+    #village-work #village-housing-roster{margin:6px 0 9px;padding:7px;border:1px solid #65714d;border-radius:7px;background:#202d22}
+    #village-work .housing-card{padding:5px 0;border-top:1px solid #ffffff20}
+    #village-work .housing-card:first-child{border-top:0}
+    #village-work .housing-card strong{display:block;color:#f0d58a;font-size:10px}
+    #village-work .housing-bed{display:flex;justify-content:space-between;gap:6px;padding:2px 0;color:#d8dfc5;font-size:10px}
+    #village-work .housing-bed[data-occupied="false"] span:last-child{color:#b9d48d}
     #village-work .resource-target-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:6px 0}
     #village-work .resource-target{display:flex;align-items:center;justify-content:space-between;gap:4px;padding:4px 5px;background:#29372a;border-radius:5px;font-size:10px}
     #village-work .resource-target input{width:48px;min-width:0;padding:4px;text-align:center}
@@ -204,7 +210,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   document.head.appendChild(workStyle);
   const workPanel = document.createElement("section");
   workPanel.id = "village-work";
-  workPanel.innerHTML = '<strong>ADMINISTRAÇÃO DA ALDEIA CENTRAL</strong><label class="production" for="village-work-shift">JORNADA DOS MORADORES</label><select id="village-work-shift" aria-label="Jornada de trabalho da aldeia"><option value="reduced">Jornada reduzida · 7h–17h</option><option value="normal">Jornada normal · 6h–19h30</option><option value="extended">Jornada estendida · 5h–21h</option></select><div id="village-shift-detail" class="production"></div><label class="production" for="village-food-reserve-target">META DE RESERVA DE ALIMENTOS</label><select id="village-food-reserve-target" aria-label="Meta de dias de reserva de alimentos"><option value="1">1 dia · economia de espaço</option><option value="3">3 dias · equilibrado</option><option value="5">5 dias · segurança</option><option value="7">7 dias · grande reserva</option></select><div id="village-food-priority" class="production"></div><label class="production" for="village-protect-food-reserve"><input id="village-protect-food-reserve" type="checkbox"> PROTEGER RESERVA DE ALIMENTOS</label><div id="village-food-protection-detail" class="production"></div><label class="production" for="village-ration-policy">POLÍTICA DE DISTRIBUIÇÃO DE ALIMENTOS</label><select id="village-ration-policy" aria-label="Política de distribuição de alimentos"><option value="berries-first">Frutas primeiro · preservar carne</option><option value="meat-first">Carne primeiro · preservar frutas</option></select><div id="village-ration-policy-detail" class="production"></div><div class="stockpile-heading">METAS DE ESTOQUE DA ALDEIA</div><div class="production">Defina quanto deseja manter de cada recurso. A profissão responsável recebe prioridade enquanto o estoque estiver abaixo da meta.</div><div id="village-resource-targets" class="resource-target-grid"></div><div id="village-material-priority" class="production"></div><div id="village-housing-status" class="production"></div><div id="village-security-status" class="production"></div><div id="village-alerts" aria-live="polite"><strong>CONDIÇÃO DA ALDEIA</strong></div><div class="village-management-actions"><button id="village-build-house" type="button">🏠 CONSTRUIR CASA · 16 MADEIRAS + 8 PEDRAS</button><button id="village-recruit" type="button">👥 RECRUTAR · 25 MOEDAS</button></div><div class="work-list"></div><div id="village-morale" class="production"></div><div id="village-prosperity" class="production"></div><label class="production" for="village-communal-meal-policy">INGREDIENTE DA REFEIÇÃO COMUNITÁRIA</label><select id="village-communal-meal-policy" aria-label="Escolher ingrediente da refeição comunitária"><option value="auto">Automático · frutas primeiro</option><option value="berries">Somente frutas · 5 unidades</option><option value="meat">Somente carne · 3 unidades</option></select><button id="village-communal-meal" type="button">PREPARAR REFEIÇÃO · 5 FRUTAS</button><div id="village-stockpile" class="production"></div><button id="village-upgrade-storage" type="button">MELHORAR DEPÓSITO</button><button id="village-collect-stockpile" type="button">RECOLHER PRODUÇÃO</button><div id="village-work-summary" class="production"></div><div id="village-food-report" class="production"></div><div id="village-production-report" class="production"></div>';
+  workPanel.innerHTML = '<strong>ADMINISTRAÇÃO DA ALDEIA CENTRAL</strong><label class="production" for="village-work-shift">JORNADA DOS MORADORES</label><select id="village-work-shift" aria-label="Jornada de trabalho da aldeia"><option value="reduced">Jornada reduzida · 7h–17h</option><option value="normal">Jornada normal · 6h–19h30</option><option value="extended">Jornada estendida · 5h–21h</option></select><div id="village-shift-detail" class="production"></div><label class="production" for="village-food-reserve-target">META DE RESERVA DE ALIMENTOS</label><select id="village-food-reserve-target" aria-label="Meta de dias de reserva de alimentos"><option value="1">1 dia · economia de espaço</option><option value="3">3 dias · equilibrado</option><option value="5">5 dias · segurança</option><option value="7">7 dias · grande reserva</option></select><div id="village-food-priority" class="production"></div><label class="production" for="village-protect-food-reserve"><input id="village-protect-food-reserve" type="checkbox"> PROTEGER RESERVA DE ALIMENTOS</label><div id="village-food-protection-detail" class="production"></div><label class="production" for="village-ration-policy">POLÍTICA DE DISTRIBUIÇÃO DE ALIMENTOS</label><select id="village-ration-policy" aria-label="Política de distribuição de alimentos"><option value="berries-first">Frutas primeiro · preservar carne</option><option value="meat-first">Carne primeiro · preservar frutas</option></select><div id="village-ration-policy-detail" class="production"></div><div class="stockpile-heading">METAS DE ESTOQUE DA ALDEIA</div><div class="production">Defina quanto deseja manter de cada recurso. A profissão responsável recebe prioridade enquanto o estoque estiver abaixo da meta.</div><div id="village-resource-targets" class="resource-target-grid"></div><div id="village-material-priority" class="production"></div><div id="village-housing-status" class="production"></div><div id="village-housing-roster" aria-live="polite"></div><div id="village-security-status" class="production"></div><div id="village-alerts" aria-live="polite"><strong>CONDIÇÃO DA ALDEIA</strong></div><div class="village-management-actions"><button id="village-build-house" type="button">🏠 CONSTRUIR CASA · 16 MADEIRAS + 8 PEDRAS</button><button id="village-recruit" type="button">👥 RECRUTAR · 25 MOEDAS</button></div><div class="work-list"></div><div id="village-morale" class="production"></div><div id="village-prosperity" class="production"></div><label class="production" for="village-communal-meal-policy">INGREDIENTE DA REFEIÇÃO COMUNITÁRIA</label><select id="village-communal-meal-policy" aria-label="Escolher ingrediente da refeição comunitária"><option value="auto">Automático · frutas primeiro</option><option value="berries">Somente frutas · 5 unidades</option><option value="meat">Somente carne · 3 unidades</option></select><button id="village-communal-meal" type="button">PREPARAR REFEIÇÃO · 5 FRUTAS</button><div id="village-stockpile" class="production"></div><button id="village-upgrade-storage" type="button">MELHORAR DEPÓSITO</button><button id="village-collect-stockpile" type="button">RECOLHER PRODUÇÃO</button><div id="village-work-summary" class="production"></div><div id="village-food-report" class="production"></div><div id="village-production-report" class="production"></div>';
   if (managementRoot) managementRoot.appendChild(workPanel);
   else document.body.appendChild(workPanel);
   const workList = workPanel.querySelector(".work-list");
@@ -365,6 +371,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     guard: [[-12,-12],[12,-12],[12,12],[-12,12]]
   };
   const housingStatus = workPanel.querySelector("#village-housing-status");
+  const housingRosterDisplay = workPanel.querySelector("#village-housing-roster");
   const villageAlerts = workPanel.querySelector("#village-alerts");
   const securityDisplay = workPanel.querySelector("#village-security-status");
   const buildHouseButton = workPanel.querySelector("#village-build-house");
@@ -411,6 +418,50 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
         : "🏠 CONSTRUIR CASA · 16 MADEIRAS + 8 PEDRAS";
     recruitButton.disabled = residents.length >= capacity || (Number(state.coins)||0) < 25;
     recruitButton.textContent = residents.length >= capacity ? "CONSTRUA UMA CASA PARA MAIS VAGAS" : "👥 RECRUTAR · 25 MOEDAS";
+    const slots = housingSlots();
+    const cards = [
+      ...Object.entries(ORIGINAL_HOMES).map(([id]) => ({
+        title: "Moradia original · " + ({lina:"Lina",odo:"Odo",toma:"Tomé"}[id]),
+        beds: slots.filter(slot => slot.id === "original-" + id)
+      })),
+      ...Array.from({length:housesBuilt},(_,house)=>({
+        title:"Casa " + (house + 1),
+        beds:slots.filter(slot=>slot.id.startsWith("house-" + house + "-"))
+      }))
+    ];
+    housingRosterDisplay.replaceChildren();
+    const heading=document.createElement("strong");
+    heading.className="stockpile-heading";
+    heading.textContent="OCUPAÇÃO DAS MORADIAS";
+    housingRosterDisplay.appendChild(heading);
+    for (const cardData of cards) {
+      const card=document.createElement("div");
+      card.className="housing-card";
+      const title=document.createElement("strong");
+      const occupants=cardData.beds.filter(slot=>residents.some(person=>person.homeSlot===slot.id)).length;
+      title.textContent=cardData.title+" · "+occupants+"/"+cardData.beds.length+" cama(s)";
+      card.appendChild(title);
+      for (const slot of cardData.beds) {
+        const occupant=residents.find(person=>person.homeSlot===slot.id);
+        const line=document.createElement("div");
+        line.className="housing-bed";
+        line.dataset.occupied=String(Boolean(occupant));
+        const bed=document.createElement("span");
+        bed.textContent=slot.label.replace("Moradia original · ","").replace("Casa "+(Number((/^house-(\\d+)-/.exec(slot.id)||[])[1]||0)+1)+" · ","Cama ");
+        const name=document.createElement("span");
+        name.textContent=occupant ? occupant.name : "Vaga livre";
+        line.append(bed,name);
+        card.appendChild(line);
+      }
+      housingRosterDisplay.appendChild(card);
+    }
+    const unassigned=residents.filter(person=>!slots.some(slot=>slot.id===person.homeSlot));
+    if(unassigned.length){
+      const warning=document.createElement("div");
+      warning.className="housing-bed";
+      warning.textContent="Sem cama atribuída: "+unassigned.map(person=>person.name).join(", ");
+      housingRosterDisplay.appendChild(warning);
+    }
   }
   function addRecruit() {
     const capacity = 3 + housesBuilt * 2;
