@@ -219,6 +219,19 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   const residentSearchInput = workPanel.querySelector("#village-resident-search");
   const residentProfessionFilter = workPanel.querySelector("#village-resident-filter");
   const residentFilterCount = workPanel.querySelector("#village-resident-filter-count");
+  const RESIDENT_STATUS_FILTERS = ["all","working","paused"];
+  let residentStatusFilter = RESIDENT_STATUS_FILTERS.includes(saved.residentStatusFilter) ? saved.residentStatusFilter : "all";
+  const residentStatusLabel = document.createElement("label");
+  residentStatusLabel.className = "production";
+  residentStatusLabel.htmlFor = "village-resident-status-filter";
+  residentStatusLabel.textContent = "FILTRAR POR SITUAÇÃO";
+  const residentStatusSelect = document.createElement("select");
+  residentStatusSelect.id = "village-resident-status-filter";
+  residentStatusSelect.setAttribute("aria-label", "Filtrar moradores por situação");
+  residentStatusSelect.innerHTML = '<option value="all">Todos os moradores</option><option value="working">Trabalhando</option><option value="paused">Pausados ou sem tarefa</option>';
+  residentStatusSelect.value = residentStatusFilter;
+  residentFilterCount.parentNode.insertBefore(residentStatusLabel,residentFilterCount);
+  residentFilterCount.parentNode.insertBefore(residentStatusSelect,residentFilterCount);
   const RESIDENT_SORTS = ["name","level","production","profession"];
   let residentSort = RESIDENT_SORTS.includes(saved.residentSort) ? saved.residentSort : "name";
   const residentSortSelect = document.createElement("select");
@@ -612,7 +625,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       for (const resident of residents) jobs[resident.id] = { profession: resident.profession, enabled: resident.enabled, priority: resident.priority || "normal", ...(resident.patrolRoute ? { patrolRoute: resident.patrolRoute } : {}) };
       const recruits = residents.filter(r => r.isRecruit).map(r => ({ id:r.id, name:r.name, role:r.role, profession:r.profession, model:r.model, start:r.start, home:r.home, homeSlot:r.homeSlot, work:r.work, greeting:r.greeting }));
       const homes = Object.fromEntries(residents.map(r => [r.id,{slot:r.homeSlot,position:r.home}]));
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, prosperityXp, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes, storageLevel, workShift, foodReserveTargetDays, foodRationPolicy, communalMealPolicy, protectFoodReserve, productionReport, foodReport, resourceTargets, nextRecruitProfession, residentSort }));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, prosperityXp, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes, storageLevel, workShift, foodReserveTargetDays, foodRationPolicy, communalMealPolicy, protectFoodReserve, productionReport, foodReport, resourceTargets, nextRecruitProfession, residentSort, residentStatusFilter }));
     } catch (error) {
       console.warn("Não foi possível salvar o progresso dos moradores.", error);
     }
@@ -1027,17 +1040,26 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const query=residentSearchInput.value.trim().toLocaleLowerCase("pt-BR");
     const profession=residentProfessionFilter.value;
     let visible=0;
+    const working=residents.filter(resident=>resident.enabled && resident.profession!=="idle").length;
+    const paused=residents.length-working;
     for(const row of workList.children){
       const name=(row.dataset.residentName||"").toLocaleLowerCase("pt-BR");
       const matchesName=!query || name.includes(query);
       const matchesProfession=profession==="all" || row.dataset.profession===profession;
-      row.hidden=!(matchesName && matchesProfession);
+      const matchesStatus=residentStatusFilter==="all" || row.dataset.workStatus===residentStatusFilter;
+      row.hidden=!(matchesName && matchesProfession && matchesStatus);
       if(!row.hidden) visible++;
     }
-    residentFilterCount.textContent=visible+" de "+residents.length+" morador(es) exibido(s).";
+    residentFilterCount.textContent=visible+" de "+residents.length+" morador(es) exibido(s) · "+working+" trabalhando · "+paused+" pausado(s).";
   }
   residentSearchInput.addEventListener("input",applyResidentFilters);
   residentProfessionFilter.addEventListener("change",applyResidentFilters);
+  residentStatusSelect.addEventListener("change",()=>{
+    if(!RESIDENT_STATUS_FILTERS.includes(residentStatusSelect.value)){residentStatusSelect.value=residentStatusFilter;return;}
+    residentStatusFilter=residentStatusSelect.value;
+    saveVillageProgress();
+    applyResidentFilters();
+  });
   residentSortSelect.addEventListener("change",()=>{
     if(!RESIDENT_SORTS.includes(residentSortSelect.value)){residentSortSelect.value=residentSort;return;}
     residentSort=residentSortSelect.value;
@@ -1061,6 +1083,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       row.dataset.residentId = resident.id;
       row.dataset.residentName = resident.name;
       row.dataset.profession = resident.profession;
+      row.dataset.workStatus = resident.enabled && resident.profession !== "idle" ? "working" : "paused";
       const head = document.createElement("div");
       head.className = "work-head";
       const name = document.createElement("b");
