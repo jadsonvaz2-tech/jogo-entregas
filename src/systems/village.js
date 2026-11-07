@@ -17,6 +17,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
 
   const savedJobs = saved.jobs && typeof saved.jobs === "object" ? saved.jobs : {};
   let morale = Math.min(100, Math.max(0, Number(saved.morale ?? 50) || 0));
+  let prosperityXp = Math.max(0, Math.floor(Number(saved.prosperityXp) || 0));
   let lastUpkeepDay = Number.isFinite(Number(saved.lastUpkeepDay)) ? Math.max(1, Number(saved.lastUpkeepDay)) : Math.max(1, Number(state.day) || 1);
   const stockpile = Object.fromEntries(["wood","stone","berries","meat","herbs","hide","fiber","wool","honey"].map(key => [key, Math.max(0, Number(saved.stockpile?.[key]) || 0)]));
   const residents = [
@@ -125,7 +126,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   document.head.appendChild(workStyle);
   const workPanel = document.createElement("section");
   workPanel.id = "village-work";
-  workPanel.innerHTML = '<strong>ADMINISTRAÇÃO DA ALDEIA CENTRAL</strong><div id="village-housing-status" class="production"></div><div class="village-management-actions"><button id="village-build-house" type="button">🏠 CONSTRUIR CASA · 16 MADEIRAS + 8 PEDRAS</button><button id="village-recruit" type="button">👥 RECRUTAR · 25 MOEDAS</button></div><div class="work-list"></div><div id="village-morale" class="production"></div><button id="village-communal-meal" type="button">PREPARAR REFEIÇÃO · 5 FRUTAS</button><div id="village-stockpile" class="production"></div><button id="village-collect-stockpile" type="button">RECOLHER PRODUÇÃO</button><div id="village-work-summary" class="production"></div>';
+  workPanel.innerHTML = '<strong>ADMINISTRAÇÃO DA ALDEIA CENTRAL</strong><div id="village-housing-status" class="production"></div><div class="village-management-actions"><button id="village-build-house" type="button">🏠 CONSTRUIR CASA · 16 MADEIRAS + 8 PEDRAS</button><button id="village-recruit" type="button">👥 RECRUTAR · 25 MOEDAS</button></div><div class="work-list"></div><div id="village-morale" class="production"></div><div id="village-prosperity" class="production"></div><button id="village-communal-meal" type="button">PREPARAR REFEIÇÃO · 5 FRUTAS</button><div id="village-stockpile" class="production"></div><button id="village-collect-stockpile" type="button">RECOLHER PRODUÇÃO</button><div id="village-work-summary" class="production"></div>';
   if (managementRoot) managementRoot.appendChild(workPanel);
   else document.body.appendChild(workPanel);
   const workList = workPanel.querySelector(".work-list");
@@ -254,10 +255,27 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       for (const resident of residents) jobs[resident.id] = { profession: resident.profession, enabled: resident.enabled };
       const recruits = residents.filter(r => r.isRecruit).map(r => ({ id:r.id, name:r.name, role:r.role, profession:r.profession, model:r.model, start:r.start, home:r.home, homeSlot:r.homeSlot, work:r.work, greeting:r.greeting }));
       const homes = Object.fromEntries(residents.map(r => [r.id,{slot:r.homeSlot,position:r.home}]));
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes }));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, prosperityXp, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes }));
     } catch (error) {
       console.warn("Não foi possível salvar o progresso dos moradores.", error);
     }
+  }
+
+  function prosperityLevel() {
+    if (prosperityXp >= 24) return 5;
+    if (prosperityXp >= 15) return 4;
+    if (prosperityXp >= 8) return 3;
+    if (prosperityXp >= 3) return 2;
+    return 1;
+  }
+
+  function gainProsperity(amount) {
+    const previous = prosperityLevel();
+    prosperityXp += Math.max(0, Math.floor(Number(amount) || 0));
+    const current = prosperityLevel();
+    saveVillageProgress();
+    refreshStockpileUI();
+    if (current > previous) onToast("A aldeia central prosperou! Nível " + current + " alcançado: os moradores trabalham com mais eficiência.");
   }
 
   function moraleDescription() {
@@ -289,6 +307,10 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const total = Object.values(stockpile).reduce((sum,value)=>sum+value,0);
     collectStockpileButton.disabled = total < 1;
     moraleDisplay.textContent = "ÂNIMO DO POVOADO · " + Math.round(morale) + "/100 · " + moraleDescription();
+    const level = prosperityLevel();
+    const nextThreshold = [0,3,8,15,24][level] ?? 24;
+    const progress = level >= 5 ? "MAIOR NÍVEL ALCANÇADO" : (nextThreshold - prosperityXp) + " contribuição(ões) para o próximo nível";
+    workPanel.querySelector("#village-prosperity").textContent = "PROSPERIDADE · NÍVEL " + level + "/5 · " + (level >= 5 ? progress : progress) + " · refeições e dias abastecidos fortalecem a aldeia.";
     const canServeBerries = stockpile.berries >= 5;
     const canServeMeat = stockpile.meat >= 3;
     communalMealButton.disabled = (!canServeBerries && !canServeMeat) || morale >= 100;
@@ -317,12 +339,15 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
 
   communalMealButton.addEventListener("click", () => {
     if (morale >= 100) return;
+    const previousProsperityLevel = prosperityLevel();
     if (stockpile.berries >= 5) stockpile.berries -= 5;
     else if (stockpile.meat >= 3) stockpile.meat -= 3;
     else return;
     morale = Math.min(100, morale + 15);
+    prosperityXp += 2;
     saveVillageProgress();
     refreshStockpileUI();
+    if (prosperityLevel() > previousProsperityLevel) onToast("A aldeia central avançou para o nível " + prosperityLevel() + " de prosperidade!");
     onToast("Refeição comunitária servida! O ânimo do povoado aumentou para " + Math.round(morale) + "/100.");
   });
 
@@ -668,6 +693,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     if (currentDay > lastUpkeepDay) {
       let fedDays = 0;
       let missedDays = 0;
+      const previousProsperityLevel = prosperityLevel();
       while (lastUpkeepDay < currentDay) {
         lastUpkeepDay++;
         const ration = consumeDailyRation();
@@ -679,8 +705,10 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
           missedDays++;
         }
       }
+      prosperityXp += fedDays;
       saveVillageProgress();
       refreshStockpileUI();
+      if (prosperityLevel() > previousProsperityLevel) onToast("A aldeia central alcançou o nível " + prosperityLevel() + " de prosperidade graças às refeições diárias.");
       if (fedDays && missedDays) onToast("O povoado recebeu " + fedDays + " refeição(ões), mas faltou comida em " + missedDays + " dia(s).");
       else if (fedDays) onToast("Os moradores fizeram suas refeições diárias. O ânimo melhorou.");
       else onToast("Faltaram frutas para alimentar o povoado. O ânimo dos moradores diminuiu.");
@@ -721,7 +749,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       const job = professions[resident.profession];
       if (resident.enabled && job && job.resource && workingTime) {
         workElapsed[resident.id] += Math.max(0, dt);
-        const workCycle = morale >= 75 ? 40 : morale < 25 ? 55 : 45;
+        const baseWorkCycle = morale >= 75 ? 40 : morale < 25 ? 55 : 45;
+        const workCycle = Math.max(30, baseWorkCycle - (prosperityLevel() - 1) * 3);
         if (workElapsed[resident.id] >= workCycle) {
           workElapsed[resident.id] -= workCycle;
           const leveledUp = awardWorkExperience(resident);
