@@ -116,8 +116,8 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
  const createSecretNpc=secret=>{
   const def=SECRET_NPCS[secret.id],site=groups.get("secret-"+secret.id);if(!def||!site||site.userData.npcCreated)return;
   const npc=new THREE.Group(),spirit=secret.id==="spring",echo=secret.id==="watch";
-  const robe=new THREE.MeshStandardMaterial({color:spirit?0x62bcae:echo?0x9caeaa:secret.id==="shrine"?0x344c36:0x72513a,roughness:.8,transparent:spirit||echo,opacity:spirit?.76:echo?.62});
-  const skin=new THREE.MeshStandardMaterial({color:echo?0xc5d2c7:spirit?0x9fe8d8:0xc99b76,roughness:.85,transparent:spirit||echo,opacity:spirit?.8:echo?.65});
+  const robe=new THREE.MeshStandardMaterial({color:spirit?0x62bcae:echo?0x9caeaa:secret.id==="shrine"?0x344c36:0x72513a,roughness:.8,transparent:spirit||echo,opacity:spirit ? 0.76 : echo ? 0.62 : 1});
+  const skin=new THREE.MeshStandardMaterial({color:echo?0xc5d2c7:spirit?0x9fe8d8:0xc99b76,roughness:.85,transparent:spirit||echo,opacity:spirit ? 0.8 : echo ? 0.65 : 1});
   const hood=new THREE.Mesh(new THREE.ConeGeometry(.48,1.25,8),robe);hood.position.y=.72;hood.castShadow=true;npc.add(hood);
   const body=new THREE.Mesh(new THREE.CylinderGeometry(.22,.42,1.05,9),robe);body.position.y=.82;body.castShadow=true;npc.add(body);
   const head=new THREE.Mesh(new THREE.SphereGeometry(.25,12,10),skin);head.position.set(0,1.55,.02);head.castShadow=true;npc.add(head);
@@ -126,7 +126,7 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
   if(secret.id==="shrine"){const staff=cylinder(npc,.04,.05,1.9,mats.wood,.58,.98,.05,7);staff.rotation.z=-.08;sphere(npc,.13,mats.moss,.58,1.95,.05,.8,1.2,.8);}
   if(spirit){const aura=new THREE.Mesh(new THREE.TorusGeometry(.62,.045,6,24),new THREE.MeshBasicMaterial({color:0x8ee9d6,transparent:true,opacity:.7}));aura.rotation.x=Math.PI/2;aura.position.y=.15;npc.add(aura);head.scale.set(1.05,1.05,1.05);}
   if(echo){const glow=new THREE.PointLight(0xb8d9c9,1.1,5);glow.position.set(0,1.3,0);npc.add(glow);}
-  npc.position.set(secret.id==="spring"?2.65:2.8,0,secret.id==="watch"?.85:1.15);npc.rotation.y=-.35;site.add(npc);site.userData.npcCreated=true;
+  npc.position.set(secret.id==="spring"?2.65:2.8,0,secret.id==="watch" ? 0.85 : 1.15);npc.rotation.y=-.35;site.add(npc);site.userData.npcCreated=true;
  };
  const showSideQuestReward=secret=>{
   const site=groups.get("secret-"+secret.id);if(!site||site.userData.sideRewardShown)return;
