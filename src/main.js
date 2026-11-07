@@ -1594,14 +1594,14 @@ function craftTool(type){
 const craftToggle=$("craftToggle"),craftPanel=$("craftPanel");
 
 const craftSections=[
- {title:"SOBREVIVÊNCIA",match:/^(berryStatus|eatBerry|meatStatus|cookMeat|eatMeat|eatCookedMeat|campfireStatus|craftCampfire|shelterStatus|craftShelter|bedStatus|craftBed|drinkWell|wellStatus|craftWell|waterSkinStatus|craftWaterSkin|fillWaterSkin|drinkWaterSkin)$/},
+ {title:"RECURSOS E SOBREVIVÊNCIA",match:/^(berryStatus|eatBerry|meatStatus|cookMeat|eatMeat|eatCookedMeat|campfireStatus|craftCampfire|shelterStatus|craftShelter|bedStatus|craftBed|drinkWell|wellStatus|craftWell|waterSkinStatus|craftWaterSkin|fillWaterSkin|drinkWaterSkin)$/},
  {title:"FERRAMENTAS E CAÇA",match:/^(axeStatus|craftAxe|pickaxeStatus|craftPickaxe|bowStatus|huntTargetStatus|craftBow|craftArrows|bandageStatus|craftBandage|useBandage)$/},
- {title:"CONSTRUÇÕES E ASSENTAMENTO",match:/^(fenceStatus|craftFence|floorTileStatus|craftFloorTile|pathTileStatus|craftPathTile|lanternPostStatus|craftLanternPost|gardenStatus|craftGarden|gardenAction|watchtowerStatus|craftWatchtower|wallPanelStatus|craftWallPanel|windowPanelStatus|craftWindowPanel|roofTileStatus|craftRoofTile|gableStatus|craftGable|ridgeCapStatus|craftRidgeCap|chimneyStatus|craftChimney|doorPanelStatus|craftDoorPanel|shutterStatus|craftShutters|gateStatus|craftGate)$/},
- {title:"ANIMAIS E CRIAÇÃO",match:/^(coopStatus|craftCoop|collectEggs|eatEgg|apiaryStatus|craftApiary|collectHoney|eatHoney|sheepPenStatus|craftSheepPen|collectWool)$/},
- {title:"OFÍCIOS E PRODUÇÃO",match:/^(loomStatus|smokehouseStatus|craftSmokehouse|smokeMeat|eatSmokedMeat|craftLoom|craftWoolGarment|tanneryStatus|craftTannery|startTanning|collectLeather|smithyStatus|metalStatus|smeltIron|steelStatus|buildSteelFurnace|startSteelSmelt|collectSteel|craftSmithy|upgradeAxe|upgradePickaxe|herbalistStatus|herbGardenStatus|craftHerbBed|herbGardenAction|craftHerbalistHut|craftSalve)$/},
- {title:"FEIRA E COMÉRCIO",match:/^(marketStatus|craftMarket|marketActions)$/},
+ {title:"CONSTRUÇÕES E MORADIAS",match:/^(fenceStatus|craftFence|floorTileStatus|craftFloorTile|pathTileStatus|craftPathTile|lanternPostStatus|craftLanternPost|gardenStatus|craftGarden|gardenAction|watchtowerStatus|craftWatchtower|wallPanelStatus|craftWallPanel|windowPanelStatus|craftWindowPanel|roofTileStatus|craftRoofTile|gableStatus|craftGable|ridgeCapStatus|craftRidgeCap|chimneyStatus|craftChimney|doorPanelStatus|craftDoorPanel|shutterStatus|craftShutters|gateStatus|craftGate)$/},
+ {title:"AGRICULTURA E ANIMAIS",match:/^(coopStatus|craftCoop|collectEggs|eatEgg|apiaryStatus|craftApiary|collectHoney|eatHoney|sheepPenStatus|craftSheepPen|collectWool)$/},
+ {title:"OFICINAS E PRODUÇÃO",match:/^(loomStatus|smokehouseStatus|craftSmokehouse|smokeMeat|eatSmokedMeat|craftLoom|craftWoolGarment|tanneryStatus|craftTannery|startTanning|collectLeather|smithyStatus|metalStatus|smeltIron|steelStatus|buildSteelFurnace|startSteelSmelt|collectSteel|craftSmithy|upgradeAxe|upgradePickaxe|herbalistStatus|herbGardenStatus|craftHerbBed|herbGardenAction|craftHerbalistHut|craftSalve)$/},
+ {title:"ECONOMIA E COMÉRCIO",match:/^(marketStatus|craftMarket|marketActions)$/},
  {title:"EQUIPAMENTOS E MEDICINA",match:/^(cloakStatus|craftCloak|bootsStatus|craftBoots|useSalve|leatherArmorStatus|craftLeatherArmor|craftIronSword|craftIronHelmet|craftIronChestplate|craftIronAxe|craftIronPickaxe|craftSteelSword|craftSteelHelmet|craftSteelChestplate|craftSteelAxe|craftSteelPickaxe|craftSteelShield|craftSteelSpear)$/},
- {title:"ARMAZENAMENTO",match:/^(storageChestStatus|craftStorageChest|storageStatus|storeResources|takeResources)$/}
+ {title:"ARMAZÉM E ESTOQUES",match:/^(storageChestStatus|craftStorageChest|storageStatus|storeResources|takeResources)$/}
 ];
 const originalCraftChildren=[...craftPanel.children];
 const craftBuckets=craftSections.map(section=>({section,nodes:[]}));
@@ -1706,7 +1706,7 @@ exportBackupButton.addEventListener("click",downloadSaveBackup);
 importBackupButton.addEventListener("click",()=>backupFileInput.click());
 backupFileInput.addEventListener("change",()=>{const file=backupFileInput.files?.[0];restoreSaveBackup(file);backupFileInput.value="";});
 
-craftToggle.addEventListener("click",()=>{const open=craftPanel.classList.toggle("open");craftToggle.textContent=open?"FECHAR OFICINA":"FABRICAR";});
+craftToggle.addEventListener("click",()=>{const open=craftPanel.classList.toggle("open");craftToggle.textContent=open?"FECHAR GESTÃO":"GESTÃO";});
 $("resetBuiltStructures").addEventListener("click",resetBuiltStructures);
 $("craftAxe").addEventListener("click",()=>craftTool("axe"));
 $("craftPickaxe").addEventListener("click",()=>craftTool("pickaxe"));

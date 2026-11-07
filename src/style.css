@@ -87,3 +87,14 @@
 
 /* Moradores iniciais do povoado e seus diálogos. */
 #village-talk-button,#village-dialog button{touch-action:manipulation}
+
+
+/* Painel GESTÃO: categorias organizadas em uma janela sobre o mundo, sem pausar a simulação. */
+#craftToggle{z-index:42;right:14px;top:calc(112px + env(safe-area-inset-top,0px));min-height:42px;padding:10px 16px;border-radius:9px;font-size:11px;letter-spacing:1px;background:linear-gradient(145deg,#80633a,#4d3b25);box-shadow:0 4px 16px #000b}
+#craftPanel{position:fixed;z-index:41;left:50%;top:50%;bottom:auto;transform:translate(-50%,-50%);width:min(92vw,520px);max-height:min(78dvh,720px);overflow-y:auto;overscroll-behavior:contain;padding:16px;background:linear-gradient(155deg,#1e3024f7,#101812f7);border:1px solid #d0ad62;border-radius:14px;box-shadow:0 18px 60px #000d;backdrop-filter:blur(9px)}
+#craftPanel>strong{display:block;font:700 15px Georgia,serif;letter-spacing:1.2px;color:#e8ce91}
+#craftPanel>p{margin:4px 0 8px;color:#c7cbb8;font:11px/1.45 Arial,sans-serif}
+#craftPanel>.craft-category{margin:2px 0;background:#202c22dd;border-color:#b99b5b77}
+#craftPanel>.craft-category>summary{padding:13px 12px;font-size:12px}
+#craftPanel>.craft-category>*:not(summary){margin-left:7px;width:calc(100% - 14px)}
+@media(min-width:800px){#craftPanel{left:50%;bottom:auto}}
