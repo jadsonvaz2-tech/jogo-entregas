@@ -493,7 +493,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const primary = readSave(SAVE_KEY);
     const backup = readSave(SAVE_KEY + "-backup");
     const status = item => !item.exists ? "não encontrado" : !item.valid ? "inválido" : item.residents + " moradores · " + item.houses + " casas · " + item.homes + " vínculos de moradia";
-    saveDiagnostics.textContent = "DIAGNÓSTICO DE SALVAMENTO · somente leitura\\nAtual: " + status(primary) + "\\nCópia: " + status(backup) + "\\n" + (localStorage.getItem(SAVE_KEY + "-recovery-used") ? "A cópia foi selecionada na recuperação desta sessão." : "Nenhuma recuperação automática registrada nesta sessão.");
+    saveDiagnostics.textContent = "DIAGNÓSTICO DE SALVAMENTO · somente leitura · Atual: " + status(primary) + " · Cópia: " + status(backup) + " · " + (localStorage.getItem(SAVE_KEY + "-recovery-used") ? "Recuperação automática já registrada neste navegador." : "Nenhuma recuperação automática registrada.");
   };
   saveDiagnostics.setAttribute("aria-live","polite");
   workPanel.insertBefore(saveDiagnostics, housingStatus);
