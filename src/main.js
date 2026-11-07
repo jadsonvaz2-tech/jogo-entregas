@@ -1473,6 +1473,10 @@ function updateHUD(){
   $("watchtowerStatus").textContent="Torres de vigia: "+state.watchtowers.length+"/6";
    $("expeditionTentStatus").textContent="Tendas de expedição: "+state.expeditionTents.length+"/4";
   $("fieldKitStatus").textContent="Kits de campo: "+state.fieldKits+" · "+(state.paddedGambeson?"gibão reforça a recuperação":"recuperação padrão");
+  const communalCloth=villageResidents?.getStockpile?.("cloth")||0,communalLeather=villageResidents?.getStockpile?.("leather")||0,communalHerbs=villageResidents?.getStockpile?.("herbs")||0;
+  $("communalExpeditionStatus").textContent="Depósito comunitário · Tecidos: "+communalCloth+" · Couro curtido: "+communalLeather+" · Ervas: "+communalHerbs;
+  $("craftCommunalFieldKit").hidden=state.nearExpeditionTentIndex<0;
+  $("craftCommunalFieldKit").disabled=state.nearExpeditionTentIndex<0||communalCloth<2||communalLeather<1||communalHerbs<2;
   $("craftFieldKit").hidden=state.nearExpeditionTentIndex<0;
   $("craftFieldKit").disabled=state.nearExpeditionTentIndex<0||state.cloth<2||state.leather<1||state.herbs<2;
   $("useFieldKit").disabled=state.fieldKits<1||(state.health>=100&&state.energy>=100);
@@ -1869,6 +1873,7 @@ $("craftStorageChest").addEventListener("click",craftStorageChest);
   $("craftGambeson").addEventListener("click",craftGambeson);
   $("craftExpeditionTent").addEventListener("click",craftExpeditionTent);
   $("craftFieldKit").addEventListener("click",craftFieldKit);
+  $("craftCommunalFieldKit").addEventListener("click",craftCommunalFieldKit);
   $("useFieldKit").addEventListener("click",useFieldKit);
  $("craftSmithy").addEventListener("click",craftSmithy);
   $("withdrawVillageMetals").addEventListener("click",withdrawVillageMetals);
@@ -2444,6 +2449,15 @@ function findFenceConnection(targetX,targetZ,extension){
   if(state.cloth<2||state.leather<1||state.herbs<2){toast("O kit de campo exige 2 tecidos, 1 couro curtido e 2 ervas.");return;}
   state.cloth-=2;state.leather-=1;state.herbs-=2;state.fieldKits++;
   updateHUD();saveGame();toast("Kit de campo preparado e guardado na mochila.");
+ }
+ function craftCommunalFieldKit(){
+  if(state.nearExpeditionTentIndex<0){toast("Aproxime-se de uma tenda de expedição.");return;}
+  if(!villageResidents||typeof villageResidents.getStockpile!=="function"||typeof villageResidents.takeFromStockpile!=="function"){toast("O depósito comunitário ainda não está disponível.");return;}
+  const cloth=villageResidents.getStockpile("cloth"),leather=villageResidents.getStockpile("leather"),herbs=villageResidents.getStockpile("herbs");
+  if(cloth<2||leather<1||herbs<2){toast("O depósito precisa de 2 tecidos, 1 couro curtido e 2 ervas.");return;}
+  if(!villageResidents.takeFromStockpile("cloth",2)||!villageResidents.takeFromStockpile("leather",1)||!villageResidents.takeFromStockpile("herbs",2)){toast("Não foi possível reservar os materiais comunitários.");return;}
+  state.fieldKits++;updateHUD();saveGame();
+  toast(state.paddedGambeson?"A comunidade preparou um kit reforçado pelo seu gibão acolchoado.":"Kit de campo preparado com materiais do depósito comunitário.");
  }
  function useFieldKit(){
   if(state.fieldKits<1){toast("Você não possui kit de campo.");return;}
