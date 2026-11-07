@@ -4389,10 +4389,39 @@ function update(dt){
   updateHUD();
  if(state.hunger<=0||state.thirst<=0||state.temperature<=0){state.health=Math.max(0,state.health-dt*.7*(state.leatherArmor?.65:1)*(state.steelHelmet?.55:state.ironHelmet?.75:1)*(state.steelChestplate?.35:state.ironChestplate?.55:1)*(state.steelShield?(state.steelShieldGuarding?.4:.8):1));}
 }
+
+const miniMapCanvas=$("miniMapCanvas"),fullMapCanvas=$("fullMapCanvas");
+const miniMapContext=miniMapCanvas.getContext("2d"),fullMapContext=fullMapCanvas.getContext("2d");
+let fullMapOpen=false,lastMapDraw=0;
+function paintWorldMap(canvas,ctx,full=false){
+ if(!canvas||!ctx)return;
+ const w=canvas.width,h=canvas.height,span=full?416:76;
+ const cx=full?0:player.position.x,cz=full?0:player.position.z,scale=Math.min(w,h)/span;
+ const px=x=>w/2+(x-cx)*scale,py=z=>h/2+(z-cz)*scale;
+ ctx.clearRect(0,0,w,h);ctx.fillStyle="#405b3c";ctx.fillRect(0,0,w,h);
+ const regions=[[-151,151,38,"#526d43"],[151,91,43,"#526d50"],[165,-184,45,"#66634e"],[-105,-120,44,"#5b7042"],[0,0,52,"#617447"]];
+ for(const [x,z,r,color] of regions){ctx.beginPath();ctx.fillStyle=color;ctx.globalAlpha=.72;ctx.arc(px(x),py(z),r*scale,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
+ ctx.strokeStyle="#4e9db0";ctx.lineWidth=Math.max(2,3.2*scale);ctx.lineCap="round";ctx.beginPath();
+ for(let z=-205;z<=205;z+=4){const x=112+14*Math.sin((z+190)*.009);if(z===-205)ctx.moveTo(px(x),py(z));else ctx.lineTo(px(x),py(z));}ctx.stroke();
+ for(const [x,z,r] of [[-118,-104,17],[82,126,15]]){ctx.beginPath();ctx.fillStyle="#4e9db0";ctx.arc(px(x),py(z),Math.max(2,r*scale),0,Math.PI*2);ctx.fill();}
+ ctx.strokeStyle="#c4b58c";ctx.lineWidth=Math.max(1.5,2.1*scale);ctx.lineJoin="round";ctx.lineCap="round";
+ for(const path of WORLD_ROAD_PATHS){ctx.beginPath();path.forEach((p,i)=>{if(i===0)ctx.moveTo(px(p[0]),py(p[1]));else ctx.lineTo(px(p[0]),py(p[1]));});ctx.stroke();}
+ const marker=(x,z,color,r)=>{ctx.beginPath();ctx.fillStyle=color;ctx.arc(px(x),py(z),Math.max(3,r*scale),0,Math.PI*2);ctx.fill();ctx.strokeStyle="#f5e8c9";ctx.lineWidth=1.4;ctx.stroke();};
+ marker(0,0,"#d9b56c",2.6);marker(142,-112,"#9bd5e2",2.4);marker(166,-151,"#d8a65c",2.4);
+ if(full){ctx.font="bold 13px Arial";ctx.textAlign="center";ctx.fillStyle="#f5edcf";ctx.shadowColor="#142016";ctx.shadowBlur=4;ctx.fillText("VILA CENTRAL",px(0),py(0)-12);ctx.fillText("CAVERNA",px(142),py(-112)-10);ctx.fillText("MINA",px(166),py(-151)-10);ctx.fillText("PRADARIAS",px(-151),py(151));ctx.fillText("MANGUE",px(151),py(91));ctx.fillText("SERRA",px(165),py(-184)-12);ctx.shadowBlur=0;}
+ const ux=px(player.position.x),uy=py(player.position.z);
+ ctx.beginPath();ctx.fillStyle="#f7e27d";ctx.arc(ux,uy,full?7:6,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#382b16";ctx.lineWidth=2;ctx.stroke();
+ ctx.beginPath();ctx.strokeStyle="#fff0a0";ctx.lineWidth=full?3:2;ctx.moveTo(ux,uy);ctx.lineTo(ux+Math.sin(state.cameraYaw)*(full?18:13),uy-Math.cos(state.cameraYaw)*(full?18:13));ctx.stroke();
+ if(full){ctx.strokeStyle="#ffffff18";ctx.lineWidth=1;for(let x=0;x<=w;x+=w/8){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}for(let y=0;y<=h;y+=h/8){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}}
+}
+function setFullMap(open){fullMapOpen=open;$("fullMapPanel").hidden=!open;$("mapWidget").style.display=open?"none":"block";if(open)requestAnimationFrame(()=>paintWorldMap(fullMapCanvas,fullMapContext,true));}
+$("miniMapButton").addEventListener("click",()=>setFullMap(true));
+$("closeMapButton").addEventListener("click",()=>setFullMap(false));
+
 function animate(now){
  requestAnimationFrame(animate);
  const dt=Math.min((now-last)/1000,.05);last=now;
- update(dt);if(storyEncounter)storyEncounter.update();if(villageResidents)villageResidents.update(dt);if(distantVillageResidents)distantVillageResidents.update(dt);if(settlementEconomy)settlementEconomy.update(dt);updateWindEnvironment(dt,now*.001);updateForestAudio();if(activeBuildPlacement)updateBuildPreview();if(now-lastSave>5000){saveGame();if(distantVillageResidents)distantVillageResidents.save();lastSave=now;}renderer.render(scene,camera);
+ update(dt);if(performance.now()-lastMapDraw>180){paintWorldMap(miniMapCanvas,miniMapContext,false);if(fullMapOpen)paintWorldMap(fullMapCanvas,fullMapContext,true);lastMapDraw=performance.now();}if(storyEncounter)storyEncounter.update();if(villageResidents)villageResidents.update(dt);if(distantVillageResidents)distantVillageResidents.update(dt);if(settlementEconomy)settlementEconomy.update(dt);updateWindEnvironment(dt,now*.001);updateForestAudio();if(activeBuildPlacement)updateBuildPreview();if(now-lastSave>5000){saveGame();if(distantVillageResidents)distantVillageResidents.save();lastSave=now;}renderer.render(scene,camera);
 }
 addEventListener("keydown",e=>{if(e.key==="Escape"&&activeBuildPlacement)cancelBuildPlacement();});
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));});

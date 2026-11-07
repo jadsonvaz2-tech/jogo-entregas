@@ -108,3 +108,17 @@
 #playerVillageManagementSlot .village-management-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:8px 0}
 #playerVillageManagementSlot .village-management-actions button{min-height:42px;padding:8px;border:1px solid #b99b5c;border-radius:7px;background:#42583a;color:#fff1cc;font:700 10px system-ui;white-space:normal}
 #playerVillageManagementSlot .village-management-actions button:disabled{opacity:.42}
+
+/* Mapa do mundo e minimapa móvel. */
+#mapWidget{position:absolute;z-index:16;right:14px;top:calc(205px + env(safe-area-inset-top,0px));pointer-events:auto}
+#miniMapButton{position:relative;display:block;width:116px;height:116px;padding:0;border:2px solid #d2b477;border-radius:12px;overflow:hidden;background:#101812e8;box-shadow:0 4px 16px #000b;touch-action:manipulation}
+#miniMapCanvas{display:block;width:100%;height:100%}
+#miniMapButton span{position:absolute;right:5px;bottom:4px;padding:3px 6px;border-radius:4px;background:#101812d9;color:#f5e6c4;font:700 9px Arial,sans-serif;letter-spacing:1px}
+#fullMapPanel{position:fixed;z-index:60;inset:env(safe-area-inset-top,8px) 8px calc(8px + env(safe-area-inset-bottom,0px));padding:12px;background:#101812f5;border:1px solid #d2b477;border-radius:13px;box-shadow:0 12px 50px #000e;display:flex;flex-direction:column;gap:8px;pointer-events:auto}
+#fullMapPanel[hidden]{display:none}
+.map-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#e8ce91;font:700 14px Georgia,serif;letter-spacing:1px}
+.map-heading button{border:1px solid #c2a76a;background:#354631;color:#fff0cb;border-radius:7px;padding:9px 12px;font:700 10px Arial,sans-serif}
+#fullMapCanvas{display:block;width:100%;height:100%;min-height:0;flex:1;border:1px solid #7d805d;border-radius:8px;background:#344b35}
+.map-legend{display:flex;justify-content:center;flex-wrap:wrap;gap:14px;color:#e8e0c9;font:10px Arial,sans-serif}
+@media(max-width:520px){#mapWidget{right:10px;top:calc(205px + env(safe-area-inset-top,0px))}#miniMapButton{width:100px;height:100px}}
+@media(min-width:800px){#mapWidget{right:24px;top:260px}#miniMapButton{width:150px;height:150px}#fullMapPanel{inset:24px 8vw}}
