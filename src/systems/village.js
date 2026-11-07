@@ -18,6 +18,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   const savedJobs = saved.jobs && typeof saved.jobs === "object" ? saved.jobs : {};
   let morale = Math.min(100, Math.max(0, Number(saved.morale ?? 50) || 0));
   let prosperityXp = Math.max(0, Math.floor(Number(saved.prosperityXp) || 0));
+  let storageLevel = Math.max(0, Math.min(3, Math.floor(Number(saved.storageLevel) || 0)));
+  const legacyStorageFloor = Object.values(stockpile).reduce((sum, amount) => sum + amount, 0);
   let lastUpkeepDay = Number.isFinite(Number(saved.lastUpkeepDay)) ? Math.max(1, Number(saved.lastUpkeepDay)) : Math.max(1, Number(state.day) || 1);
   const stockpile = Object.fromEntries(["wood","stone","berries","meat","herbs","hide","fiber","wool","honey"].map(key => [key, Math.max(0, Number(saved.stockpile?.[key]) || 0)]));
   const residents = [
@@ -126,12 +128,13 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   document.head.appendChild(workStyle);
   const workPanel = document.createElement("section");
   workPanel.id = "village-work";
-  workPanel.innerHTML = '<strong>ADMINISTRAÇÃO DA ALDEIA CENTRAL</strong><div id="village-housing-status" class="production"></div><div class="village-management-actions"><button id="village-build-house" type="button">🏠 CONSTRUIR CASA · 16 MADEIRAS + 8 PEDRAS</button><button id="village-recruit" type="button">👥 RECRUTAR · 25 MOEDAS</button></div><div class="work-list"></div><div id="village-morale" class="production"></div><div id="village-prosperity" class="production"></div><button id="village-communal-meal" type="button">PREPARAR REFEIÇÃO · 5 FRUTAS</button><div id="village-stockpile" class="production"></div><button id="village-collect-stockpile" type="button">RECOLHER PRODUÇÃO</button><div id="village-work-summary" class="production"></div>';
+  workPanel.innerHTML = '<strong>ADMINISTRAÇÃO DA ALDEIA CENTRAL</strong><div id="village-housing-status" class="production"></div><div class="village-management-actions"><button id="village-build-house" type="button">🏠 CONSTRUIR CASA · 16 MADEIRAS + 8 PEDRAS</button><button id="village-recruit" type="button">👥 RECRUTAR · 25 MOEDAS</button></div><div class="work-list"></div><div id="village-morale" class="production"></div><div id="village-prosperity" class="production"></div><button id="village-communal-meal" type="button">PREPARAR REFEIÇÃO · 5 FRUTAS</button><div id="village-stockpile" class="production"></div><button id="village-upgrade-storage" type="button">MELHORAR DEPÓSITO</button><button id="village-collect-stockpile" type="button">RECOLHER PRODUÇÃO</button><div id="village-work-summary" class="production"></div>';
   if (managementRoot) managementRoot.appendChild(workPanel);
   else document.body.appendChild(workPanel);
   const workList = workPanel.querySelector(".work-list");
   const stockpileDisplay = workPanel.querySelector("#village-stockpile");
   const collectStockpileButton = workPanel.querySelector("#village-collect-stockpile");
+  const upgradeStorageButton = workPanel.querySelector("#village-upgrade-storage");
   const workSummary = workPanel.querySelector("#village-work-summary");
   const upkeepStatus = document.createElement("div");
   upkeepStatus.className = "production";
@@ -255,7 +258,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       for (const resident of residents) jobs[resident.id] = { profession: resident.profession, enabled: resident.enabled };
       const recruits = residents.filter(r => r.isRecruit).map(r => ({ id:r.id, name:r.name, role:r.role, profession:r.profession, model:r.model, start:r.start, home:r.home, homeSlot:r.homeSlot, work:r.work, greeting:r.greeting }));
       const homes = Object.fromEntries(residents.map(r => [r.id,{slot:r.homeSlot,position:r.home}]));
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, prosperityXp, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes }));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, prosperityXp, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes, storageLevel }));
     } catch (error) {
       console.warn("Não foi possível salvar o progresso dos moradores.", error);
     }
@@ -302,10 +305,42 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     return { fed: needed <= 0, berriesUsed, meatUsed };
   }
 
+  function stockpileTotal() {
+    return Object.values(stockpile).reduce((sum, amount) => sum + amount, 0);
+  }
+
+  function storageCapacity() {
+    return Math.max(100 + storageLevel * 100, legacyStorageFloor);
+  }
+
+  function storeResource(resource, amount) {
+    const requested = Math.max(0, Math.floor(Number(amount) || 0));
+    const accepted = Math.min(requested, Math.max(0, storageCapacity() - stockpileTotal()));
+    if (accepted > 0) stockpile[resource] = (stockpile[resource] || 0) + accepted;
+    return accepted;
+  }
+
+  function storageUpgradeCost() {
+    return [{wood:30,stone:20},{wood:55,stone:40},{wood:80,stone:60}][storageLevel] || null;
+  }
+
+  function refreshStorageUpgradeUI() {
+    const cost = storageUpgradeCost();
+    if (!cost) {
+      upgradeStorageButton.disabled = true;
+      upgradeStorageButton.textContent = "DEPÓSITO NO NÍVEL MÁXIMO";
+      return;
+    }
+    upgradeStorageButton.disabled = (Number(state.wood) || 0) < cost.wood || (Number(state.stone) || 0) < cost.stone;
+    upgradeStorageButton.textContent = "AMPLIAR DEPÓSITO · NÍVEL " + (storageLevel + 1) + " · " + cost.wood + " MADEIRAS + " + cost.stone + " PEDRAS";
+  }
+
   function refreshStockpileUI() {
     stockpileDisplay.textContent = "DEPÓSITO · " + stockpile.wood + " madeira · " + stockpile.stone + " pedra · " + stockpile.berries + " frutas · " + stockpile.meat + " carne · " + stockpile.herbs + " ervas · " + stockpile.hide + " peles · " + stockpile.fiber + " fibras · " + stockpile.wool + " lã · " + stockpile.honey + " mel";
-    const total = Object.values(stockpile).reduce((sum,value)=>sum+value,0);
+    const total = stockpileTotal();
+    stockpileDisplay.textContent += " · CAPACIDADE " + total + "/" + storageCapacity();
     collectStockpileButton.disabled = total < 1;
+    refreshStorageUpgradeUI();
     moraleDisplay.textContent = "ÂNIMO DO POVOADO · " + Math.round(morale) + "/100 · " + moraleDescription();
     const level = prosperityLevel();
     const nextThreshold = [0,3,8,15,24][level] ?? 24;
@@ -336,6 +371,18 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
 
   refreshHousingUI();
   refreshStockpileUI();
+
+  upgradeStorageButton.addEventListener("click", () => {
+    const cost = storageUpgradeCost();
+    if (!cost || (Number(state.wood) || 0) < cost.wood || (Number(state.stone) || 0) < cost.stone) return;
+    state.wood -= cost.wood;
+    state.stone -= cost.stone;
+    storageLevel++;
+    saveVillageProgress();
+    if (onSave) onSave();
+    refreshStockpileUI();
+    onToast("Depósito comunitário ampliado! Capacidade agora: " + storageCapacity() + " unidades.");
+  });
 
   communalMealButton.addEventListener("click", () => {
     if (morale >= 100) return;
@@ -773,21 +820,21 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
           } else {
             updateSkillProgressUI(resident);
           }
-          const farmResult = resident.profession === "farmer" && typeof onFarmAction === "function" ? onFarmAction() : null;
+          const farmResult = resident.profession === "farmer" && typeof onFarmAction === "function" && stockpileTotal() < storageCapacity() ? onFarmAction() : null;
           if (farmResult && typeof farmResult === "object" && farmResult.resource && Number(farmResult.amount) > 0) {
             const produced = Number(farmResult.amount) + bonus;
-            stockpile[farmResult.resource] = (stockpile[farmResult.resource] || 0) + produced;
+            const stored = storeResource(farmResult.resource, produced);
             saveVillageProgress();
             refreshStockpileUI();
-            onToast((farmResult.message || "Lina armazenou a colheita no depósito comunitário.") + (bonus ? " Bônus de experiência: +" + bonus + " unidade(s)." : ""));
+            onToast((farmResult.message || "Lina trabalhou na horta.") + (stored < produced ? " Depósito cheio: " + stored + "/" + produced + " unidades armazenadas." : (bonus ? " Bônus de experiência: +" + bonus + " unidade(s)." : "")));
           } else if (farmResult) {
             onToast(farmResult);
           } else {
             const produced = job.amount + bonus;
-            stockpile[job.resource] = (stockpile[job.resource] || 0) + produced;
+            const stored = storeResource(job.resource, produced);
             saveVillageProgress();
             refreshStockpileUI();
-            onToast(resident.name + " armazenou " + produced + " " + job.resourceLabel + " no depósito comunitário.");
+            onToast(stored > 0 ? resident.name + " armazenou " + stored + " " + job.resourceLabel + " no depósito comunitário." + (stored < produced ? " O depósito está cheio; amplie-o em GESTÃO." : "") : "Depósito comunitário cheio! Amplie a capacidade em GESTÃO para retomar a produção.");
           }
         }
       }
