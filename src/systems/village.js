@@ -255,12 +255,34 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   const villageAlerts = workPanel.querySelector("#village-alerts");
   const buildHouseButton = workPanel.querySelector("#village-build-house");
   const recruitButton = workPanel.querySelector("#village-recruit");
+  function availableConstructionResource(resource) {
+    return Math.max(0, Math.floor(Number(state[resource]) || 0))
+      + Math.max(0, Math.floor(Number(stockpile[resource]) || 0))
+      + Math.max(0, Math.floor(Number(state.storage?.[resource]) || 0));
+  }
+  function takeConstructionResource(resource, amount) {
+    let remaining = amount;
+    const backpack = Math.min(remaining, Math.max(0, Math.floor(Number(state[resource]) || 0)));
+    state[resource] = Math.max(0, Math.floor(Number(state[resource]) || 0)) - backpack;
+    remaining -= backpack;
+    const communal = Math.min(remaining, Math.max(0, Math.floor(Number(stockpile[resource]) || 0)));
+    stockpile[resource] -= communal;
+    remaining -= communal;
+    if (remaining > 0 && state.storage) {
+      const stored = Math.min(remaining, Math.max(0, Math.floor(Number(state.storage[resource]) || 0)));
+      state.storage[resource] -= stored;
+      remaining -= stored;
+    }
+    return remaining === 0;
+  }
   function refreshHousingUI() {
     const capacity = 3 + housesBuilt * 2;
     const assigned = residents.filter(r => r.homeSlot && housingSlots().some(slot => slot.id === r.homeSlot)).length;
-    housingStatus.textContent = "MORADORES · " + residents.length + "/" + capacity + " vagas · MORADIAS ATRIBUÍDAS · " + assigned + "/" + residents.length + " · CASAS · " + housesBuilt + "/6";
-    buildHouseButton.disabled = housesBuilt >= HOUSE_SLOTS.length || (Number(state.wood)||0) < 16 || (Number(state.stone)||0) < 8;
-    buildHouseButton.textContent = housesBuilt >= HOUSE_SLOTS.length ? "LIMITE DE CASAS ATINGIDO" : "🏠 CASA · 16 MADEIRAS + 8 PEDRAS";
+    const woodAvailable = availableConstructionResource("wood");
+    const stoneAvailable = availableConstructionResource("stone");
+    housingStatus.textContent = "MORADORES · " + residents.length + "/" + capacity + " vagas · MORADIAS ATRIBUÍDAS · " + assigned + "/" + residents.length + " · CASAS · " + housesBuilt + "/6 · MATERIAIS PARA CASA · " + woodAvailable + "/16 madeiras · " + stoneAvailable + "/8 pedras";
+    buildHouseButton.disabled = housesBuilt >= HOUSE_SLOTS.length || woodAvailable < 16 || stoneAvailable < 8;
+    buildHouseButton.textContent = housesBuilt >= HOUSE_SLOTS.length ? "LIMITE DE CASAS ATINGIDO" : "🏠 CONSTRUIR CASA · 16 MADEIRAS + 8 PEDRAS";
     recruitButton.disabled = residents.length >= capacity || (Number(state.coins)||0) < 25;
     recruitButton.textContent = residents.length >= capacity ? "CONSTRUA UMA CASA PARA MAIS VAGAS" : "👥 RECRUTAR · 25 MOEDAS";
   }
@@ -307,8 +329,17 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     onToast(name + " chegou à aldeia central como " + professions[profession].label + ".");
   }
   buildHouseButton.addEventListener("click",() => {
-    if (housesBuilt >= HOUSE_SLOTS.length || (Number(state.wood)||0) < 16 || (Number(state.stone)||0) < 8) return;
-    state.wood -= 16; state.stone -= 8;
+    if (housesBuilt >= HOUSE_SLOTS.length) { onToast("A aldeia já atingiu o limite de seis casas novas."); return; }
+    if (availableConstructionResource("wood") < 16 || availableConstructionResource("stone") < 8) {
+      refreshHousingUI();
+      onToast("Materiais insuficientes. A casa exige 16 madeiras e 8 pedras somando mochila, depósito comunitário e baú pessoal.");
+      return;
+    }
+    if (!takeConstructionResource("wood",16) || !takeConstructionResource("stone",8)) {
+      onToast("Não foi possível separar os materiais. Confira os estoques e tente novamente.");
+      refreshHousingUI();
+      return;
+    }
     buildHouse(housesBuilt); housesBuilt++;
     saveVillageProgress(); refreshHousingUI(); refreshStockpileUI(); renderWorkPanel();
     if (onSave) onSave();
