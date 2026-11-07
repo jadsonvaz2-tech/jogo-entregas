@@ -8,6 +8,7 @@ import { createExpandedWorld } from "./systems/world-expansion.js?v=underground-
 import { createDistantVillageResidents } from "./systems/distant-village-residents.js";
 import { createSettlementEconomy } from "./systems/settlement-economy.js";
 import { createCommunityExpeditions } from "./systems/community-expeditions.js?v=expedition-world-routes-2026-11-07-1";
+import { createDistantExploration } from "./systems/distant-exploration.js?v=free-exploration-fog-2026-11-07-1";
 let villageResidents=null;
 let distantVillageResidents=null;
 let settlementEconomy=null;
@@ -4551,6 +4552,24 @@ function paintWorldMap(canvas,ctx,full=false){
  for(const [x,z,r] of [[-118,-104,17],[82,126,15]]){ctx.beginPath();ctx.fillStyle="#4e9db0";ctx.arc(px(x),py(z),Math.max(2,r*scale),0,Math.PI*2);ctx.fill();}
  ctx.strokeStyle="#c4b58c";ctx.lineWidth=Math.max(1.5,2.1*scale);ctx.lineJoin="round";ctx.lineCap="round";
  for(const path of WORLD_ROAD_PATHS){ctx.beginPath();path.forEach((p,i)=>{if(i===0)ctx.moveTo(px(p[0]),py(p[1]));else ctx.lineTo(px(p[0]),py(p[1]));});ctx.stroke();}
+ if(distantExploration){
+  for(const segment of (distantExploration.getWalkTrails?.()||[])){
+   if(!Array.isArray(segment)||segment.length<2)continue;
+   ctx.beginPath();ctx.strokeStyle=full?"#b9d69b":"#b9d69b99";ctx.lineWidth=full?2.7:1.7;ctx.lineCap="round";ctx.lineJoin="round";
+   segment.forEach((point,index)=>{if(index===0)ctx.moveTo(px(point[0]),py(point[1]));else ctx.lineTo(px(point[0]),py(point[1]));});ctx.stroke();
+  }
+ }
+ ctx.save();ctx.fillStyle="rgba(10,17,14,.84)";ctx.fillRect(0,0,w,h);
+ ctx.globalCompositeOperation="destination-out";
+ const fogPoints=distantExploration?.getFogPoints?.()||[];
+ for(const point of fogPoints){
+  const x=px(point[0]),y=py(point[1]),radius=20*scale;
+  if(x<-radius||x>w+radius||y<-radius||y>h+radius)continue;
+  const gradient=ctx.createRadialGradient(x,y,0,x,y,Math.max(1,radius));
+  gradient.addColorStop(0,"rgba(0,0,0,1)");gradient.addColorStop(.72,"rgba(0,0,0,.98)");gradient.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=gradient;ctx.beginPath();ctx.arc(x,y,radius,0,Math.PI*2);ctx.fill();
+ }
+ ctx.restore();
  const marker=(x,z,color,r)=>{ctx.beginPath();ctx.fillStyle=color;ctx.arc(px(x),py(z),Math.max(3,r*scale),0,Math.PI*2);ctx.fill();ctx.strokeStyle="#f5e8c9";ctx.lineWidth=1.4;ctx.stroke();};
  marker(0,0,"#d9b56c",2.6);marker(142,-112,"#9bd5e2",2.4);marker(166,-151,"#d8a65c",2.4);
  if(full){ctx.font="bold 13px Arial";ctx.textAlign="center";ctx.fillStyle="#f5edcf";ctx.shadowColor="#142016";ctx.shadowBlur=4;ctx.fillText("VILA CENTRAL",px(0),py(0)-12);ctx.fillText("CAVERNA",px(142),py(-112)-10);ctx.fillText("MINA",px(166),py(-151)-10);ctx.fillText("PRADARIAS",px(-151),py(151));ctx.fillText("MANGUE",px(151),py(91));ctx.fillText("SERRA",px(165),py(-184)-12);ctx.shadowBlur=0;}
@@ -4562,8 +4581,8 @@ function paintWorldMap(canvas,ctx,full=false){
    if(full){const end=route.points[route.points.length-1];ctx.fillStyle="#f4d77e";ctx.beginPath();ctx.arc(px(end[0]),py(end[1]),4,0,Math.PI*2);ctx.fill();}ctx.restore();
   }
   for(const point of distantExploration.getMapMarkers()){
-   const x=px(point.x),y=py(point.z);ctx.beginPath();ctx.fillStyle=point.color;ctx.arc(x,y,point.kind==="rare"?(full?8:6):(full?7:5),0,Math.PI*2);ctx.fill();ctx.strokeStyle=point.kind==="rare"?"#fff1a8":"#f5e8c9";ctx.lineWidth=point.kind==="rare"?2.4:1.6;ctx.stroke();
-   if(full){ctx.font=point.kind==="rare"?"bold 15px Arial":"bold 12px Arial";ctx.textAlign="center";ctx.fillStyle=point.kind==="rare"?"#fff1a8":"#fff4d6";ctx.shadowColor="#172016";ctx.shadowBlur=4;ctx.fillText(point.symbol+" "+point.label,x,y-11);ctx.shadowBlur=0;}
+   const x=px(point.x),y=py(point.z),visited=point.kind==="site"&&point.visited;ctx.beginPath();ctx.fillStyle=point.color;ctx.arc(x,y,point.kind==="rare"?(full?8:6):(full?7:5),0,Math.PI*2);ctx.fill();ctx.strokeStyle=point.kind==="rare"?"#fff1a8":"#f5e8c9";ctx.lineWidth=point.kind==="rare"?2.4:1.6;ctx.stroke();if(visited){ctx.beginPath();ctx.strokeStyle="#d7edaa";ctx.lineWidth=2.5;ctx.arc(x,y,full?11:8,0,Math.PI*2);ctx.stroke();}
+   if(full){ctx.font=point.kind==="rare"?"bold 15px Arial":"bold 12px Arial";ctx.textAlign="center";ctx.fillStyle=point.kind==="rare"?"#fff1a8":"#fff4d6";ctx.shadowColor="#172016";ctx.shadowBlur=4;ctx.fillText((visited?"✓ ":"")+point.symbol+" "+point.label,x,y-11);ctx.shadowBlur=0;}
   }
  }
  const ux=px(player.position.x),uy=py(player.position.z);

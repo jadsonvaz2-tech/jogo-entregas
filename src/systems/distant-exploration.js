@@ -5,6 +5,12 @@ const SITE_DEFS={
  ruins:{id:"ruins",destination:"ruins",label:"Ruínas do Norte",kind:"ruins",symbol:"◆",color:"#d5c8a5",x:-124,z:-128,description:"Paredes antigas, colunas partidas e vestígios de uma povoação esquecida.",resources:[["stone",3,5],["herbs",1,3],["honey",0,1]]},
  marsh:{id:"marsh",destination:"marsh",label:"Clareira do Pântano",kind:"marsh",symbol:"♣",color:"#91bd83",x:151,z:91,description:"Uma clareira úmida entre raízes e juncos. Fibras, ervas e rastros de animais podem ser encontrados.",resources:[["fiber",2,4],["herbs",2,3],["hide",0,1]]}
 };
+const SECRET_DEFS=[
+ {id:"shrine",label:"Santuário Esquecido",symbol:"⛩",color:"#d8c58c",x:-72,z:58,description:"Um pequeno santuário de pedra coberto de musgo. Símbolos antigos indicam que viajantes deixavam oferendas neste lugar."},
+ {id:"spring",label:"Fonte das Raízes",symbol:"♧",color:"#8bd3c2",x:58,z:112,description:"Uma nascente escondida entre raízes grossas e pedras lisas. A água permanece limpa mesmo sob a mata fechada."},
+ {id:"cache",label:"Esconderijo do Caçador",symbol:"⚒",color:"#c99b62",x:-86,z:-52,description:"Um depósito improvisado por um antigo caçador, protegido por pedras e madeira envelhecida."},
+ {id:"watch",label:"Marco dos Antigos",symbol:"◈",color:"#b8b7a2",x:80,z:-64,description:"Um marco de pedra talhada, alinhado com as montanhas. Marcas gastas sugerem uma antiga rota de passagem."}
+];
 const safeParse=value=>{try{const parsed=JSON.parse(value||"null");return parsed&&typeof parsed==="object"&&!Array.isArray(parsed)?parsed:null;}catch{return null;}};
 export function createDistantExploration({THREE,scene,player,terrainHeight,state,onToast,onSave}){
  const raw=safeParse(localStorage.getItem(SAVE_KEY)),backup=safeParse(localStorage.getItem(SAVE_KEY+"-backup"));
@@ -14,6 +20,12 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
  if(!Array.isArray(data.routes))data.routes=[];
  if(!Array.isArray(data.rareMarkers))data.rareMarkers=[];
  if(!Array.isArray(data.visited))data.visited=[];
+ if(!Array.isArray(data.fogPoints))data.fogPoints=[];
+ if(!Array.isArray(data.walkTrails))data.walkTrails=[];
+ if(!Array.isArray(data.secretsFound))data.secretsFound=[];
+ data.fogPoints=data.fogPoints.filter(point=>Array.isArray(point)&&Number.isFinite(point[0])&&Number.isFinite(point[1]));
+ data.walkTrails=data.walkTrails.filter(segment=>Array.isArray(segment)).map(segment=>segment.filter(point=>Array.isArray(point)&&Number.isFinite(point[0])&&Number.isFinite(point[1])));
+ data.secretsFound=data.secretsFound.filter(id=>SECRET_DEFS.some(secret=>secret.id===id));
  if(!data.sites||typeof data.sites!=="object")data.sites={};
  let lastUI=0,nearby=null;
  const groups=new Map();
@@ -61,6 +73,27 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
   group.position.set(site.x,terrainHeight(site.x,site.z),site.z);
   scene.add(group);groups.set(site.id,group);
  };
+ const createSecretVisual=secret=>{
+  if(groups.has("secret-"+secret.id))return;
+  const g=new THREE.Group();
+  if(secret.id==="shrine"||secret.id==="watch"){
+   box(g,2.8,.32,2.2,mats.darkStone,0,.16,0);
+   box(g,.55,2.0,.55,mats.stone,-.88,1.15,-.55);box(g,.55,2.0,.55,mats.stone,.88,1.15,-.55);
+   box(g,2.45,.38,.65,mats.moss,0,2.15,-.55);
+   box(g,.42,.8,.42,mats.iron,0,2.62,-.55);
+   sphere(g,.22,mats.fire,0,3.12,-.55,.8,1.2,.8);
+  }else if(secret.id==="spring"){
+   const water=new THREE.Mesh(new THREE.CircleGeometry(2.1,18),mats.water);water.rotation.x=-Math.PI/2;water.position.y=.035;g.add(water);
+   for(let i=0;i<9;i++){const a=i*Math.PI*2/9;sphere(g,.38,mats.stone,Math.cos(a)*2.1,.22,Math.sin(a)*2.1,1,.65,1);}
+   for(let i=0;i<4;i++)cylinder(g,.055,.08,.8,mats.reed,-1.7+i*1.1,.4,1.8,5);
+  }else{
+   box(g,1.8,.65,1.35,mats.wood,0,.55,0);
+   box(g,1.95,.2,1.48,mats.darkWood,0,1.0,0);
+   box(g,.16,.4,.08,mats.iron,0,.55,.7);
+   for(let i=0;i<5;i++)sphere(g,.35,mats.moss,-1.25+i*.62,.2,1.1,.9,.55,1.1);
+  }
+  g.position.set(secret.x,terrainHeight(secret.x,secret.z),secret.z);scene.add(g);groups.set("secret-"+secret.id,g);
+ };
  const createTemporaryCamp=camp=>{
   if(groups.has(camp.id))return;
   const group=new THREE.Group();createCamp(group);
@@ -98,9 +131,10 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
   addResources(site);
  };
  const rareFor=id=>data.rareMarkers.find(marker=>marker.id===id)||null;
- const select=id=>{const exists=discoveredSites().some(s=>s.id===id)||allCamps().some(c=>c.id===id)||!!rareFor(id);if(!exists)return false;data.selectedId=id;save();renderDetails();return true;};
+ const secretFor=id=>data.secretsFound.map(secretId=>SECRET_DEFS.find(secret=>secret.id===secretId)).find(secret=>secret?.id===id)||null;
+ const select=id=>{const exists=discoveredSites().some(s=>s.id===id)||allCamps().some(c=>c.id===id)||!!rareFor(id)||!!secretFor(id);if(!exists)return false;data.selectedId=id;save();renderDetails();return true;};
  const selectAtWorld=(x,z)=>{
-  const candidates=[...discoveredSites(),...allCamps(),...data.rareMarkers].map(p=>({...p,distance:Math.hypot(x-p.x,z-p.z)})).sort((a,b)=>a.distance-b.distance);
+  const candidates=[...discoveredSites(),...allCamps(),...data.rareMarkers,...data.secretsFound.map(secretId=>SECRET_DEFS.find(secret=>secret.id===secretId)).filter(Boolean)].map(p=>({...p,distance:Math.hypot(x-p.x,z-p.z)})).sort((a,b)=>a.distance-b.distance);
   if(!candidates.length||candidates[0].distance>12)return false;
   return select(candidates[0].id);
  };
@@ -133,6 +167,42 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
   data.routes=data.routes.slice(0,24);
   data.rareMarkers=data.rareMarkers.slice(0,40);
  }
+ let lastFogPoint=null,lastExplorationSave=Date.now();
+ const recordPlayerExploration=()=>{
+  const x=player.position.x,z=player.position.z,now=Date.now();
+  if(!Number.isFinite(x)||!Number.isFinite(z))return;
+  let trail=data.walkTrails[data.walkTrails.length-1];
+  const previous=Array.isArray(trail)&&trail.length?trail[trail.length-1]:null;
+  const distance=previous?Math.hypot(x-previous[0],z-previous[1]):Infinity;
+  let changed=false,forceSave=false;
+  if(!previous||distance>42){trail=[];data.walkTrails.push(trail);trail.push([Number(x.toFixed(1)),Number(z.toFixed(1))]);changed=true;}
+  else if(distance>=5){trail.push([Number(x.toFixed(1)),Number(z.toFixed(1))]);changed=true;}
+  while(data.walkTrails.length>16)data.walkTrails.shift();
+  for(const segment of data.walkTrails)if(segment.length>450)segment.splice(0,segment.length-450);
+  const fogDistance=lastFogPoint?Math.hypot(x-lastFogPoint[0],z-lastFogPoint[1]):Infinity;
+  if(!lastFogPoint||fogDistance>=14){
+   data.fogPoints.push([Number(x.toFixed(1)),Number(z.toFixed(1))]);
+   lastFogPoint=[x,z];changed=true;forceSave=true;
+   if(data.fogPoints.length>900)data.fogPoints.splice(0,data.fogPoints.length-900);
+  }
+  for(const site of discoveredSites()){
+   if(!data.visited.includes(site.id)&&Math.hypot(x-site.x,z-site.z)<=10){data.visited.push(site.id);changed=true;forceSave=true;onToast("Local visitado: "+site.label+".");}
+  }
+  for(const secret of SECRET_DEFS){
+   if(data.secretsFound.includes(secret.id))continue;
+   if(Math.hypot(x-secret.x,z-secret.z)<=12){
+    data.secretsFound.push(secret.id);data.selectedId=secret.id;forceSave=true;
+    onToast("Ponto secreto descoberto: "+secret.label+"! O local foi marcado no mapa.");
+    changed=true;
+   }
+  }
+  if(changed&&(forceSave||now-lastExplorationSave>10000)){
+   save();lastExplorationSave=now;
+  }
+ };
+ const getFogPoints=()=>data.fogPoints;
+ const getWalkTrails=()=>data.walkTrails;
+ const getExplorationStatus=()=>({revealedAreas:data.fogPoints.length,trailPoints:data.walkTrails.reduce((sum,line)=>sum+line.length,0),secrets:data.secretsFound.length});
  const discoverFromExpedition=info=>{
   const id=info?.destination,site=SITE_DEFS[id]||SITE_DEFS.mines;
   if(SITE_DEFS[id]&&!data.discovered.includes(id)){data.discovered.push(id);createSiteVisual(SITE_DEFS[id]);onToast("Novo ponto de interesse descoberto: "+SITE_DEFS[id].label+".");}
@@ -164,11 +234,11 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
  const infoRoot=document.getElementById("explorationSiteInfo"),listRoot=document.getElementById("explorationSiteList");
  const renderDetails=()=>{
   if(!infoRoot||!listRoot)return;
-  const sites=discoveredSites(),camps=allCamps(),rares=data.rareMarkers,selected=sites.find(s=>s.id===data.selectedId)||camps.find(c=>c.id===data.selectedId)||rareFor(data.selectedId);
-  infoRoot.textContent=selected?(selected.description||"Um acampamento temporário marcado pelos exploradores."):"Locais descobertos: "+sites.length+" · visitados: "+data.visited.length+" · acampamentos: "+camps.length+" · achados raros: "+rares.length+". Toque em um símbolo do mapa para ver detalhes.";
+  const sites=discoveredSites(),camps=allCamps(),rares=data.rareMarkers,secrets=data.secretsFound.map(secretId=>SECRET_DEFS.find(secret=>secret.id===secretId)).filter(Boolean),selected=sites.find(s=>s.id===data.selectedId)||camps.find(c=>c.id===data.selectedId)||rareFor(data.selectedId)||secretFor(data.selectedId);
+  infoRoot.textContent=selected?(selected.description||"Um acampamento temporário marcado pelos exploradores."):"Locais descobertos: "+sites.length+" · visitados: "+data.visited.length+" · acampamentos: "+camps.length+" · achados raros: "+rares.length+" · segredos: "+secrets.length+". Áreas reveladas: "+data.fogPoints.length+". Toque em um símbolo do mapa para ver detalhes.";
   listRoot.innerHTML="";
-  for(const point of [...sites,...camps,...rares]){
-   const button=document.createElement("button");button.type="button";button.className="exploration-site-button"+(point.id.startsWith("rare-")?" rare-site-marker":"");button.textContent=(point.symbol||"⛺")+" "+point.label;button.addEventListener("click",()=>{select(point.id);});listRoot.append(button);
+  for(const point of [...sites,...camps,...rares,...secrets]){
+   const button=document.createElement("button");button.type="button";button.className="exploration-site-button"+(point.id.startsWith("rare-")?" rare-site-marker":"");button.textContent=(point.kind==="site"&&data.visited.includes(point.id)?"✓ ":"")+(point.symbol||"⛺")+" "+point.label;button.addEventListener("click",()=>{select(point.id);});listRoot.append(button);
   }
   if(selected&&sites.some(s=>s.id===selected.id)){
    const site=sites.find(s=>s.id===selected.id),distance=Math.hypot(player.position.x-site.x,player.position.z-site.z);
@@ -182,11 +252,13 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
  const getMapMarkers=()=>[
   ...discoveredSites().map(site=>({id:site.id,x:site.x,z:site.z,label:site.label,symbol:site.symbol,color:site.color,visited:data.visited.includes(site.id),kind:"site"})),
   ...allCamps().map(camp=>({id:camp.id,x:camp.x,z:camp.z,label:camp.label,symbol:"⛺",color:"#d7b97b",kind:"camp"})),
-  ...data.rareMarkers.map(marker=>({...marker,kind:"rare"}))
+  ...data.rareMarkers.map(marker=>({...marker,kind:"rare"})),
+  ...data.secretsFound.map(secretId=>SECRET_DEFS.find(secret=>secret.id===secretId)).filter(Boolean).map(secret=>({...secret,kind:"secret"}))
  ];
  const getMapRoutes=()=>data.routes.slice().reverse();
  const getMapStatus=()=>({discovered:discoveredSites().length,visited:data.visited.length,camps:allCamps().length,rare:data.rareMarkers.length,routes:data.routes.length});
  const update=()=>{
+  recordPlayerExploration();
   const next=nearestSite(player.position.x,player.position.z,7);
   nearby=next;
   let button=document.getElementById("explorationCollectButton");
@@ -199,6 +271,7 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
  };
  for(const id of data.discovered){const site=SITE_DEFS[id];if(site)createSiteVisual({...site,...(data.sites[id]||{})});}
  for(const camp of allCamps())createTemporaryCamp(camp);
+ for(const secret of SECRET_DEFS)createSecretVisual(secret);
  renderDetails();
- return {update,getMapMarkers,getMapRoutes,selectAtWorld,discoverFromExpedition,getStatus:getMapStatus};
+ return {update,getMapMarkers,getMapRoutes,getFogPoints,getWalkTrails,selectAtWorld,discoverFromExpedition,getExplorationStatus,getStatus:getMapStatus};
 }

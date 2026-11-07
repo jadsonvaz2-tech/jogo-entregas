@@ -190,3 +190,7 @@
 
 /* Camadas de trilhas, locais visitados e descobertas raras no mapa. */
 .map-legend{gap:8px 13px;line-height:1.5}.map-legend span{white-space:nowrap}.exploration-site-button.rare-site-marker{border-color:#e6ca69;background:linear-gradient(135deg,#65502a,#382f1b);color:#ffe8a0}
+
+
+/* Exploração progressiva e legenda de neblina do mapa. */
+.map-legend{display:flex;flex-wrap:wrap;gap:7px 12px;line-height:1.45}.map-legend span{white-space:nowrap}
