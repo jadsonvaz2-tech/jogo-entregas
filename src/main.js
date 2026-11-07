@@ -2,6 +2,8 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
 import { createStoryEncounter } from "./systems/story.js";
+import { createVillageResidents } from "./systems/village.js";
+let villageResidents=null;
 let storyEncounter=null;
 
 const $ = (id) => document.getElementById(id);
@@ -4232,7 +4234,7 @@ function update(dt){
 function animate(now){
  requestAnimationFrame(animate);
  const dt=Math.min((now-last)/1000,.05);last=now;
- update(dt);if(storyEncounter)storyEncounter.update();updateWindEnvironment(dt,now*.001);updateForestAudio();if(activeBuildPlacement)updateBuildPreview();if(now-lastSave>5000){saveGame();lastSave=now;}renderer.render(scene,camera);
+ update(dt);if(storyEncounter)storyEncounter.update();if(villageResidents)villageResidents.update(dt);updateWindEnvironment(dt,now*.001);updateForestAudio();if(activeBuildPlacement)updateBuildPreview();if(now-lastSave>5000){saveGame();lastSave=now;}renderer.render(scene,camera);
 }
 addEventListener("keydown",e=>{if(e.key==="Escape"&&activeBuildPlacement)cancelBuildPlacement();});
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));});
@@ -4278,6 +4280,7 @@ async function start(){
  const loaded=await loadCharacter();
  if(!loaded)toast("Modelo do viajante indisponível: usando personagem provisório.");
  storyEncounter=createStoryEncounter({THREE,scene,player,terrainHeight,state,onSave:saveGame,onToast:toast});
+ villageResidents=createVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast});
  $("loadingBar").style.width="100%";
  updateHUD();
  setTimeout(()=>{$("loading").style.opacity="0";setTimeout(()=>$("loading").remove(),700);},350);
