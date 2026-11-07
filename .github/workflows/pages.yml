@@ -39,8 +39,12 @@ jobs:
           const source = readFileSync("src/main.js", "utf8");
           const deployed = readFileSync("src/game-main-20261107-weather.js", "utf8");
           if (source !== deployed) throw new Error("The deployed game entry does not match src/main.js");
-          if (!readFileSync("index.html", "utf8").includes("game-main-20261107-weather.js")) {
-            throw new Error("index.html does not reference the current game entry");
+          const html = readFileSync("index.html", "utf8");
+          if (!html.includes('import("./src/game-main-20261107-weather.js?')) {
+            throw new Error("index.html must import the game entry from the src directory");
+          }
+          if (!existsSync("src/game-main-20261107-weather.js")) {
+            throw new Error("The deployed game entry file is missing from src");
           }
           console.log("All local imports resolve and the deployed entry matches src/main.js");
           NODE
