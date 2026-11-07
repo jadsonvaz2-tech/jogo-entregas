@@ -137,6 +137,15 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     }];
   }));
 
+  const productionTotals = Object.fromEntries(residents.map(resident => {
+    const savedTotals = saved.productionTotals && typeof saved.productionTotals === "object" ? saved.productionTotals[resident.id] || {} : {};
+    return [resident.id, {
+      wood: Math.max(0, Math.floor(Number(savedTotals.wood) || 0)),
+      stone: Math.max(0, Math.floor(Number(savedTotals.stone) || 0)),
+      berries: Math.max(0, Math.floor(Number(savedTotals.berries) || 0))
+    }];
+  }));
+
   const professions = {
     farmer: { label: "Agricultora", resource: "berries", resourceLabel: "frutas", amount: 2, detail: "Cuida das hortas: planta 3 frutas e colhe 6 quando amadurecem." },
     lumberjack: { label: "Lenhador", resource: "wood", resourceLabel: "madeiras", amount: 1 },
@@ -154,7 +163,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     try {
       const jobs = {};
       for (const resident of residents) jobs[resident.id] = { profession: resident.profession, enabled: resident.enabled };
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, lastUpkeepDay, skills, relationships }));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, lastUpkeepDay, skills, relationships, productionTotals }));
     } catch (error) {
       console.warn("Não foi possível salvar o progresso dos moradores.", error);
     }
@@ -219,6 +228,18 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     onToast("Você recolheu a produção comunitária: " + amounts.wood + " madeiras, " + amounts.stone + " pedras e " + amounts.berries + " frutas.");
   });
 
+  function recordProduction(resident, resource, amount) {
+    if (!productionTotals[resident.id] || !Object.prototype.hasOwnProperty.call(productionTotals[resident.id], resource)) return;
+    const quantity = Math.max(0, Math.floor(Number(amount) || 0));
+    if (!quantity) return;
+    productionTotals[resident.id][resource] += quantity;
+  }
+
+  function productionHistoryText(resident) {
+    const totals = productionTotals[resident.id];
+    return "HISTÓRICO · " + totals.berries + " frutas · " + totals.wood + " madeiras · " + totals.stone + " pedras";
+  }
+
   function experienceNeeded(level) { return level * 5; }
 
   function productionBonus(resident) {
@@ -255,7 +276,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const production = row.querySelector(".production");
     if (production) {
       const skillLine = skill.level >= 10 ? "NÍVEL 10 · MESTRE" : "NÍVEL " + skill.level + " · XP " + skill.xp + "/" + experienceNeeded(skill.level) + (bonus ? " · +" + bonus + " por ciclo" : "");
-      production.textContent = (job.resource ? (job.detail || ("Produz " + job.amount + " " + job.resourceLabel + " por ciclo de trabalho.")) : "Sem produção atribuída.") + " " + skillLine + (job.resource ? " · CICLO ATUAL: " + workCycleDuration(resident) + "s" : "");
+      production.textContent = (job.resource ? (job.detail || ("Produz " + job.amount + " " + job.resourceLabel + " por ciclo de trabalho.")) : "Sem produção atribuída.") + " " + skillLine + (job.resource ? " · CICLO ATUAL: " + workCycleDuration(resident) + "s" : "") + " · " + productionHistoryText(resident);
     }
     const fill = row.querySelector('[aria-label="Progresso da profissão de ' + resident.name + '"] > div');
     if (fill) fill.style.width = skillProgress + "%";
@@ -647,6 +668,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
           if (farmResult && typeof farmResult === "object" && farmResult.resource && Number(farmResult.amount) > 0) {
             const produced = Number(farmResult.amount) + bonus;
             stockpile[farmResult.resource] = (stockpile[farmResult.resource] || 0) + produced;
+            recordProduction(resident, farmResult.resource, produced);
             saveVillageProgress();
             refreshStockpileUI();
             onToast((farmResult.message || "Lina armazenou a colheita no depósito comunitário.") + (bonus ? " Bônus de experiência: +" + bonus + " unidade(s)." : ""));
@@ -655,6 +677,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
           } else {
             const produced = job.amount + bonus;
             stockpile[job.resource] = (stockpile[job.resource] || 0) + produced;
+            recordProduction(resident, job.resource, produced);
             saveVillageProgress();
             refreshStockpileUI();
             onToast(resident.name + " armazenou " + produced + " " + job.resourceLabel + " no depósito comunitário.");
