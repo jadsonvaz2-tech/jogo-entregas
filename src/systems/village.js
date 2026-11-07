@@ -3,7 +3,7 @@ import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
 
 const SAVE_KEY = "cronicas-floresta-village-v1";
 
-export function createVillageResidents({ THREE, scene, player, terrainHeight, state, onToast, onSave, onFarmAction, managementRoot = null }) {
+export function createVillageResidents({ THREE, scene, player, terrainHeight, state, onToast, onSave, onFarmAction, onClaimTool = null, managementRoot = null }) {
   const professions = {
     farmer: { label: "Agricultora", resource: "berries", resourceLabel: "frutas", amount: 2, detail: "Cuida das hortas: planta 3 frutas e colhe 6 quando amadurecem." },
     lumberjack: { label: "Lenhador", resource: "wood", resourceLabel: "madeiras", amount: 1 },
