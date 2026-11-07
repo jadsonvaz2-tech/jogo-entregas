@@ -1,5 +1,5 @@
 // Clima e estações puramente visuais: não cria nem altera dados de salvamento.
-export function createWeatherSystem({THREE,scene,player,mobilePerformanceMode=false}){
+export function createWeatherSystem({THREE,scene,player,sun,ambient,mobilePerformanceMode=false}){
   const hud=document.getElementById("hud")||document.body;
   const badge=document.createElement("div");
   badge.id="dynamicWeatherBadge";
@@ -25,6 +25,7 @@ export function createWeatherSystem({THREE,scene,player,mobilePerformanceMode=fa
   const seasons=["PRIMAVERA","VERÃO","OUTONO","INVERNO"];
   const weatherNames={clear:"☀️ CÉU LIMPO",cloudy:"☁️ NUBLADO",rain:"🌧️ CHUVA",mist:"🌫️ NEBLINA",snow:"❄️ NEVE"};
   let lastKey="",condition="clear",season=0;
+  let lightningCooldown=randomRange(7,14),lightningStrength=0;
   const baseFog=scene.fog&&Number.isFinite(scene.fog.density)?scene.fog.density:.0068;
   function choose(day,position){
     const safeDay=Math.max(1,Math.floor(Number(day)||1)),period=Math.floor((safeDay-1)/2);
@@ -39,15 +40,22 @@ export function createWeatherSystem({THREE,scene,player,mobilePerformanceMode=fa
   function update(dt,day,hour,position){
     const safeDay=Math.max(1,Math.floor(Number(day)||1)),period=Math.floor((safeDay-1)/2);
     const north=position.x>65&&position.z< -45,key=period+":"+Math.floor(((safeDay-1)%112)/28)+":"+(north?"north":"south");
-    if(key!==lastKey){lastKey=key;condition=choose(safeDay,position);badge.textContent=seasons[season]+" · "+weatherNames[condition];rain.visible=condition==="rain";snow.visible=condition==="snow";}
+    if(key!==lastKey){lastKey=key;condition=choose(safeDay,position);badge.textContent=seasons[season]+" · "+weatherNames[condition];rain.visible=condition==="rain";snow.visible=condition==="snow";if(condition!=="rain")lightningStrength=0;}
     const fogFactor=condition==="mist" ? .013 : condition==="rain" ? .0088 : condition==="snow" ? .0082 : condition==="cloudy" ? .0076 : baseFog;
     if(scene.fog)scene.fog.density=fogFactor;
     rain.position.set(position.x,0,position.z);snow.position.set(position.x,0,position.z);
+    const windX=1.8+Math.sin(hour*.7)*2.4,windZ=Math.cos(hour*.45)*1.1;
     if(condition==="rain"){
-      for(let i=0;i<rainCount;i++){const p=i*6;rainPositions[p+1]-=dt*18;rainPositions[p+4]-=dt*18;if(rainPositions[p+1]<-1)resetRain(i);}
+      for(let i=0;i<rainCount;i++){const p=i*6;rainPositions[p+1]-=dt*18;rainPositions[p+4]-=dt*18;rainPositions[p]+=windX*dt;rainPositions[p+2]+=windZ*dt;rainPositions[p+3]+=windX*dt;rainPositions[p+5]+=windZ*dt;if(rainPositions[p+1]<-1)resetRain(i);}
       rainGeometry.attributes.position.needsUpdate=true;
+      lightningCooldown-=dt;
+      if(lightningCooldown<=0){lightningStrength=1;lightningCooldown=randomRange(9,20);}
+      lightningStrength=Math.max(0,lightningStrength-dt*5.5);
+      const flash=lightningStrength*lightningStrength;
+      if(sun)sun.intensity+=flash*2.6;
+      if(ambient)ambient.intensity+=flash*1.1;
     }else if(condition==="snow"){
-      for(let i=0;i<snowCount;i++){const p=i*3;snowPositions[p+1]-=dt*(.75+(i%7)*.11);snowPositions[p]+=(Math.sin(hour*1.7+i)*.22)*dt;if(snowPositions[p+1]<-.5){snowPositions[p]=randomRange(-24,24);snowPositions[p+1]=randomRange(12,25);snowPositions[p+2]=randomRange(-24,24);}}
+      for(let i=0;i<snowCount;i++){const p=i*3;snowPositions[p+1]-=dt*(.75+(i%7)*.11);snowPositions[p]+=((Math.sin(hour*1.7+i)*.22)+windX*.18)*dt;snowPositions[p+2]+=windZ*.18*dt;if(snowPositions[p+1]<-.5){snowPositions[p]=randomRange(-24,24);snowPositions[p+1]=randomRange(12,25);snowPositions[p+2]=randomRange(-24,24);}}
       snowGeometry.attributes.position.needsUpdate=true;
     }
   }

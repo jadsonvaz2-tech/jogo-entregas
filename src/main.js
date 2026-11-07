@@ -11,7 +11,7 @@ import { createCommunityExpeditions } from "./systems/community-expeditions.js?v
 import { createDistantExploration } from "./systems/distant-exploration.js?v=secret-characters-2026-11-07-1";
 import { createCommunityEvents } from "./systems/community-events.js?v=community-festivals-2026-11-07-1";
 import { createTravelNetwork } from "./systems/travel-network.js?v=inns-travelers-trade-2026-11-07-1";
-import { createWeatherSystem } from "./systems/weather.js?v=dynamic-weather-2026-11-07-1";
+import { createWeatherSystem } from "./systems/weather.js?v=dynamic-weather-storms-2026-11-07-1";
 let villageResidents=null;
 let distantVillageResidents=null;
 let settlementEconomy=null;
@@ -4650,7 +4650,7 @@ async function start(){
  await buildForest();
  startupStage="criando as aldeias e estradas";
  const settlements = createWorldSettlements({ THREE, scene, terrainHeight });
- weatherSystem=startOptional("o clima dinâmico",()=>createWeatherSystem({THREE,scene,player,mobilePerformanceMode}));
+ weatherSystem=startOptional("o clima dinâmico",()=>createWeatherSystem({THREE,scene,player,sun,ambient,mobilePerformanceMode}));
  communityEvents=startOptional("as festas e feiras comunitárias",()=>createCommunityEvents({THREE,scene,terrainHeight,centers:settlements.centers,onToast:toast}));
 
  const expandedWorld=await createExpandedWorld({ THREE, scene, terrainHeight, player, state, registerResource, onToast:toast, onSave:saveGame });
