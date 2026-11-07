@@ -122,7 +122,12 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     #village-work select{width:100%;margin-top:5px;padding:7px;border:1px solid #b99b5c;border-radius:6px;background:#263729;color:#fff1cc;font:11px system-ui}
     #village-work button{margin-top:5px;width:100%;padding:7px;border:1px solid #b99b5c;border-radius:6px;background:#52634a;color:#fff1cc;font:700 10px system-ui}
     #village-work .production{color:#c4cfaa;font-size:10px;margin-top:3px}
-    @media(max-width:600px){#village-work{top:390px;right:7px;width:174px;max-height:35vh;padding:7px;font-size:10px}#village-work select{padding:6px;font-size:10px}}
+    #village-work .stockpile-heading{margin:10px 0 6px;padding-top:9px;border-top:1px solid #b99b5c88;color:#f0d58a;font-weight:800;font-size:11px;letter-spacing:.04em}
+    #village-work .stockpile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+    #village-work .stockpile-item{display:flex;justify-content:space-between;align-items:center;gap:4px;padding:6px;background:#293b2d;border:1px solid #65714d;border-radius:6px;color:#eee5cf;font-size:11px}
+    #village-work .stockpile-item b{color:#f5d98c;font-size:13px}
+    #village-work .stockpile-capacity{margin-top:7px;padding:7px;background:#3a482f;border-radius:6px;color:#f0d58a;font-weight:800;text-align:center}
+    @media(max-width:600px){#village-work{top:390px;right:7px;width:174px;max-height:35vh;padding:7px;font-size:10px}#village-work select{padding:6px;font-size:10px}#village-work .stockpile-grid{grid-template-columns:1fr 1fr}#village-work .stockpile-item{font-size:10px;padding:5px}}
     @media(min-width:800px){#village-work{top:390px;right:20px;width:220px;max-height:48vh}}
   `;
   document.head.appendChild(workStyle);
@@ -336,9 +341,16 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   }
 
   function refreshStockpileUI() {
-    stockpileDisplay.textContent = "DEPÓSITO · " + stockpile.wood + " madeira · " + stockpile.stone + " pedra · " + stockpile.berries + " frutas · " + stockpile.meat + " carne · " + stockpile.herbs + " ervas · " + stockpile.hide + " peles · " + stockpile.fiber + " fibras · " + stockpile.wool + " lã · " + stockpile.honey + " mel";
+    const resources = [
+      ["🪵","Madeira","wood"],["🪨","Pedra","stone"],["🫐","Frutas","berries"],
+      ["🥩","Carne","meat"],["🌿","Ervas","herbs"],["🟤","Peles","hide"],
+      ["🧵","Fibras","fiber"],["🐑","Lã","wool"],["🍯","Mel","honey"]
+    ];
     const total = stockpileTotal();
-    stockpileDisplay.textContent += " · CAPACIDADE " + total + "/" + storageCapacity();
+    stockpileDisplay.innerHTML = '<div class="stockpile-heading">DEPÓSITO COMUNITÁRIO · RECURSOS DA ALDEIA</div>' +
+      '<div class="stockpile-grid">' + resources.map(([icon,label,key]) =>
+        '<div class="stockpile-item"><span>' + icon + ' ' + label + '</span><b>' + stockpile[key] + '</b></div>'
+      ).join("") + '</div><div class="stockpile-capacity">TOTAL ARMAZENADO · ' + total + ' / ' + storageCapacity() + ' unidades</div>';
     collectStockpileButton.disabled = total < 1;
     refreshStorageUpgradeUI();
     moraleDisplay.textContent = "ÂNIMO DO POVOADO · " + Math.round(morale) + "/100 · " + moraleDescription();
