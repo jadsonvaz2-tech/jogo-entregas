@@ -11,6 +11,12 @@ const SECRET_DEFS=[
  {id:"cache",label:"Esconderijo do Caçador",symbol:"⚒",color:"#c99b62",x:-86,z:-52,description:"Um depósito improvisado por um antigo caçador, protegido por pedras e madeira envelhecida."},
  {id:"watch",label:"Marco dos Antigos",symbol:"◈",color:"#b8b7a2",x:80,z:-64,description:"Um marco de pedra talhada, alinhado com as montanhas. Marcas gastas sugerem uma antiga rota de passagem."}
 ];
+const SECRET_QUESTS={
+ shrine:{steps:["Examine os símbolos gastos no altar.","Decifre a inscrição e reorganize as pedras de oferenda."],actions:["EXAMINAR INSCRIÇÃO","DECIFRAR E OFERECER"],story:"A inscrição fala de viajantes que protegiam a floresta e deixavam sementes para quem viesse depois.",reward:[["stone",3],["herbs",2],["honey",1]]},
+ spring:{steps:["Observe o fluxo da água e procure a nascente entre as raízes.","Limpe a passagem das pedras para liberar a água cristalina."],actions:["INVESTIGAR NASCENTE","LIBERAR A FONTE"],story:"A fonte abastecia antigos viajantes. Sob as pedras havia ervas preservadas e fibras úteis.",reward:[["herbs",3],["fiber",3],["honey",1]]},
+ cache:{steps:["Inspecione o esconderijo e procure o mecanismo da tampa.","Abra o baú antigo usando as marcas deixadas pelo caçador."],actions:["INSPECIONAR BAÚ","ABRIR ESCONDERIJO"],story:"O caçador deixou provisões para alguém que soubesse seguir suas marcas. Um bilhete recomenda respeitar a mata.",reward:[["hide",2],["ironOre",2],["wood",4]]},
+ watch:{steps:["Leia as marcas talhadas no marco de pedra.","Alinhe as pedras menores com a rota indicada pela inscrição."],actions:["LER INSCRIÇÕES","ALINHAR MARCO"],story:"O marco assinalava uma passagem segura entre as colinas. A última inscrição registra uma antiga rota de comércio.",reward:[["stone",4],["ironOre",2],["herbs",2]]}
+};
 const safeParse=value=>{try{const parsed=JSON.parse(value||"null");return parsed&&typeof parsed==="object"&&!Array.isArray(parsed)?parsed:null;}catch{return null;}};
 export function createDistantExploration({THREE,scene,player,terrainHeight,state,onToast,onSave}){
  const raw=safeParse(localStorage.getItem(SAVE_KEY)),backup=safeParse(localStorage.getItem(SAVE_KEY+"-backup"));
@@ -23,13 +29,17 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
  if(!Array.isArray(data.fogPoints))data.fogPoints=[];
  if(!Array.isArray(data.walkTrails))data.walkTrails=[];
  if(!Array.isArray(data.secretsFound))data.secretsFound=[];
+ if(!data.secretProgress||typeof data.secretProgress!=="object"||Array.isArray(data.secretProgress))data.secretProgress={};
+ if(!Array.isArray(data.secretCompleted))data.secretCompleted=[];
+ if(!Array.isArray(data.secretJournal))data.secretJournal=[];
  data.fogPoints=data.fogPoints.filter(point=>Array.isArray(point)&&Number.isFinite(point[0])&&Number.isFinite(point[1]));
  data.walkTrails=data.walkTrails.filter(segment=>Array.isArray(segment)).map(segment=>segment.filter(point=>Array.isArray(point)&&Number.isFinite(point[0])&&Number.isFinite(point[1])));
  data.secretsFound=data.secretsFound.filter(id=>SECRET_DEFS.some(secret=>secret.id===id));
  if(!data.sites||typeof data.sites!=="object")data.sites={};
- let lastUI=0,nearby=null;
+ let lastUI=0,nearby=null,nearbySecret=null;
  const groups=new Map();
  const material=(color,roughness=1)=>new THREE.MeshStandardMaterial({color,roughness});
+ const relicMaterial=material(0xd8b45c,.3);relicMaterial.emissive=new THREE.Color(0x66421b);
  const mats={wood:material(0x68472b),darkWood:material(0x3d2b1e),canvas:material(0x8a7953),stone:material(0x77766d),darkStone:material(0x45463f),moss:material(0x526b3c),iron:material(0x8b7654,.8),fire:material(0xd77b35),reed:material(0x87904b),water:material(0x426f68)};
  const box=(g,w,h,d,mat,x,y,z,ry=0)=>{const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);mesh.position.set(x,y,z);mesh.rotation.y=ry;mesh.castShadow=true;mesh.receiveShadow=true;g.add(mesh);return mesh;};
  const sphere=(g,r,mat,x,y,z,sx=1,sy=1,sz=1)=>{const mesh=new THREE.Mesh(new THREE.SphereGeometry(r,9,7),mat);mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);mesh.castShadow=true;mesh.receiveShadow=true;g.add(mesh);return mesh;};
@@ -94,6 +104,13 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
   }
   g.position.set(secret.x,terrainHeight(secret.x,secret.z),secret.z);scene.add(g);groups.set("secret-"+secret.id,g);
  };
+ const showSecretReward=secret=>{
+  const g=groups.get("secret-"+secret.id);if(!g||g.userData.rewardShown)return;
+  g.userData.rewardShown=true;
+  const relic=new THREE.Mesh(new THREE.OctahedronGeometry(.34,0),relicMaterial);
+  relic.position.set(0,secret.id==="cache"?1.42:secret.id==="spring"?.5:3.35,secret.id==="cache"||secret.id==="spring"?0:-.55);
+  relic.castShadow=true;g.add(relic);
+ };
  const createTemporaryCamp=camp=>{
   if(groups.has(camp.id))return;
   const group=new THREE.Group();createCamp(group);
@@ -129,6 +146,25 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
   const last=Number(site.lastCollectedAt)||0,remaining=COOLDOWN-(Date.now()-last);
   if(remaining>0){onToast("Este local precisa de mais "+Math.ceil(remaining/60000)+" min para recuperar recursos.");return;}
   addResources(site);
+ };
+ const secretProgressFor=id=>Math.max(0,Math.min(2,Number(data.secretProgress[id])||0));
+ const secretQuestFor=id=>SECRET_QUESTS[id]||null;
+ const investigateSecret=secret=>{
+  const quest=secretQuestFor(secret.id);if(!quest)return;
+  if(data.secretCompleted.includes(secret.id)){onToast("Esta descoberta já foi concluída. O registro está no diário.");return;}
+  const step=secretProgressFor(secret.id);
+  if(step===0){
+   data.secretProgress[secret.id]=1;
+   data.secretJournal.unshift({id:secret.id,title:secret.label,text:quest.steps[0],at:Date.now(),kind:"clue"});
+   data.secretJournal=data.secretJournal.slice(0,24);save();onSave?.();
+   onToast(quest.steps[0]);renderDetails();return;
+  }
+  for(const [key,amount] of quest.reward){if(typeof state[key]!=="number")state[key]=0;state[key]+=amount;}
+  data.secretProgress[secret.id]=2;data.secretCompleted.push(secret.id);
+  showSecretReward(secret);
+  data.secretJournal.unshift({id:secret.id,title:secret.label,text:quest.story,reward:quest.reward,at:Date.now(),kind:"discovery"});
+  data.secretJournal=data.secretJournal.slice(0,24);
+  save();onSave?.();onToast("Missão concluída: "+secret.label+". Recompensas adicionadas ao inventário.");renderDetails();
  };
  const rareFor=id=>data.rareMarkers.find(marker=>marker.id===id)||null;
  const secretFor=id=>data.secretsFound.map(secretId=>SECRET_DEFS.find(secret=>secret.id===secretId)).find(secret=>secret?.id===id)||null;
@@ -231,14 +267,21 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
   if(!data.selectedId&&SITE_DEFS[id])data.selectedId=id;
   save();renderDetails();
  };
- const infoRoot=document.getElementById("explorationSiteInfo"),listRoot=document.getElementById("explorationSiteList");
+ const infoRoot=document.getElementById("explorationSiteInfo"),listRoot=document.getElementById("explorationSiteList"),journalRoot=document.getElementById("secretDiscoveryJournal");
  const renderDetails=()=>{
   if(!infoRoot||!listRoot)return;
   const sites=discoveredSites(),camps=allCamps(),rares=data.rareMarkers,secrets=data.secretsFound.map(secretId=>SECRET_DEFS.find(secret=>secret.id===secretId)).filter(Boolean),selected=sites.find(s=>s.id===data.selectedId)||camps.find(c=>c.id===data.selectedId)||rareFor(data.selectedId)||secretFor(data.selectedId);
-  infoRoot.textContent=selected?(selected.description||"Um acampamento temporário marcado pelos exploradores."):"Locais descobertos: "+sites.length+" · visitados: "+data.visited.length+" · acampamentos: "+camps.length+" · achados raros: "+rares.length+" · segredos: "+secrets.length+". Áreas reveladas: "+data.fogPoints.length+". Toque em um símbolo do mapa para ver detalhes.";
+  const selectedQuest=selected&&secretFor(selected.id)?secretQuestFor(selected.id):null,selectedStep=selectedQuest?secretProgressFor(selected.id):0,selectedComplete=selectedQuest&&data.secretCompleted.includes(selected.id);
+  infoRoot.textContent=selected?(selected.description||"Um acampamento temporário marcado pelos exploradores.")+(selectedQuest?" "+(selectedComplete?selectedQuest.story:selectedQuest.steps[selectedStep]):""):"Locais descobertos: "+sites.length+" · visitados: "+data.visited.length+" · acampamentos: "+camps.length+" · achados raros: "+rares.length+" · segredos: "+secrets.length+". Áreas reveladas: "+data.fogPoints.length+". Toque em um símbolo do mapa para ver detalhes.";
   listRoot.innerHTML="";
   for(const point of [...sites,...camps,...rares,...secrets]){
    const button=document.createElement("button");button.type="button";button.className="exploration-site-button"+(point.id.startsWith("rare-")?" rare-site-marker":"");button.textContent=(point.kind==="site"&&data.visited.includes(point.id)?"✓ ":"")+(point.symbol||"⛺")+" "+point.label;button.addEventListener("click",()=>{select(point.id);});listRoot.append(button);
+  }
+  if(journalRoot){journalRoot.innerHTML="";for(const entry of data.secretJournal.slice(0,6)){const row=document.createElement("div");row.className="secret-journal-entry";const heading=document.createElement("strong");heading.textContent=entry.title;const story=document.createElement("p");story.textContent=entry.text;row.append(heading,story);if(entry.reward){const reward=document.createElement("small");reward.textContent="Recompensa: "+entry.reward.map(([key,amount])=>amount+" "+key).join(", ");row.append(reward);}journalRoot.append(row);}}
+  if(selected&&secretFor(selected.id)){
+   const secret=secretFor(selected.id),quest=secretQuestFor(secret.id),step=secretProgressFor(secret.id),complete=data.secretCompleted.includes(secret.id);
+   const status=document.createElement("small");status.textContent=complete?"Descoberta concluída · registrada no diário.":step===0?"Missão disponível · aproxime-se do local para investigar.":quest.steps[1];listRoot.append(status);
+   if(complete){const reward=document.createElement("small");reward.textContent="Recompensa: "+quest.reward.map(([key,amount])=>amount+" "+key).join(", ");listRoot.append(reward);}
   }
   if(selected&&sites.some(s=>s.id===selected.id)){
    const site=sites.find(s=>s.id===selected.id),distance=Math.hypot(player.position.x-site.x,player.position.z-site.z);
@@ -267,11 +310,16 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
    button.hidden=!nearby;
    if(nearby){const remaining=COOLDOWN-(Date.now()-(Number(nearby.lastCollectedAt)||0));button.textContent=nearby.kind==="ruins"&&!nearby.explored?"EXPLORAR RUÍNAS":remaining>0?"LOCAL EM RECUPERAÇÃO":"RECOLHER RECURSOS";button.disabled=!(nearby.kind==="ruins"&&!nearby.explored)&&remaining>0;}
   }
+  nearbySecret=data.secretsFound.map(id=>SECRET_DEFS.find(secret=>secret.id===id)).filter(Boolean).map(secret=>({...secret,distance:Math.hypot(player.position.x-secret.x,player.position.z-secret.z)})).filter(secret=>secret.distance<=9).sort((a,b)=>a.distance-b.distance)[0]||null;
+  let secretButton=document.getElementById("explorationSecretButton");
+  if(!secretButton){const holder=document.querySelector(".right-controls");if(holder){secretButton=document.createElement("button");secretButton.id="explorationSecretButton";secretButton.type="button";secretButton.className="control-button action";secretButton.hidden=true;secretButton.addEventListener("click",()=>{if(nearbySecret)investigateSecret(nearbySecret);});holder.insertBefore(secretButton,holder.firstChild);}}
+  if(secretButton){secretButton.hidden=!nearbySecret||data.secretCompleted.includes(nearbySecret.id);if(nearbySecret&&!secretButton.hidden){const quest=secretQuestFor(nearbySecret.id),step=secretProgressFor(nearbySecret.id);secretButton.textContent=quest.actions[step]||"INVESTIGAR";}}
   if(Date.now()-lastUI>1100){renderDetails();lastUI=Date.now();}
  };
  for(const id of data.discovered){const site=SITE_DEFS[id];if(site)createSiteVisual({...site,...(data.sites[id]||{})});}
  for(const camp of allCamps())createTemporaryCamp(camp);
  for(const secret of SECRET_DEFS)createSecretVisual(secret);
+ for(const secretId of data.secretCompleted){const secret=SECRET_DEFS.find(item=>item.id===secretId);if(secret)showSecretReward(secret);}
  renderDetails();
- return {update,getMapMarkers,getMapRoutes,getFogPoints,getWalkTrails,selectAtWorld,discoverFromExpedition,getExplorationStatus,getStatus:getMapStatus};
+ return {update,getMapMarkers,getMapRoutes,getFogPoints,getWalkTrails,selectAtWorld,discoverFromExpedition,getExplorationStatus,getSecretJournal:()=>data.secretJournal.slice(),getStatus:getMapStatus};
 }

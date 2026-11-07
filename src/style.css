@@ -194,3 +194,7 @@
 
 /* Exploração progressiva e legenda de neblina do mapa. */
 .map-legend{display:flex;flex-wrap:wrap;gap:7px 12px;line-height:1.45}.map-legend span{white-space:nowrap}
+
+
+/* Investigações dos pontos secretos e diário narrativo persistente. */
+#explorationSecretButton{background:linear-gradient(145deg,#826b3d,#564326);border-color:#f0d38a;color:#fff0c4}#explorationSecretButton[hidden]{display:none}.secret-journal-panel{display:grid;gap:6px;max-height:170px;overflow:auto;padding:9px;border:1px solid #a58c5a88;border-radius:8px;background:#1b2a20;color:#e8e0c9;font:10px/1.45 system-ui}.secret-journal-panel>strong{color:#e7c98b;font-size:10px;letter-spacing:1px}.secret-journal-entry{padding:6px 7px;border-left:2px solid #b99b5c;background:#26382a;border-radius:3px}.secret-journal-entry strong{color:#f1d49a}.secret-journal-entry p{margin:3px 0;color:#e0e3d6}.secret-journal-entry small{color:#bcd0a7}
