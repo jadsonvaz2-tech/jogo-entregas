@@ -50,8 +50,8 @@ export function createWorldSettlements({ THREE, scene, terrainHeight }) {
     addBox(group, [width + .18, .2, .22], [0, wallHeight + .26, depth / 2 - .12], materials.timber);
     // Telhado de duas águas.
     const roofHalf = width * .59;
-    addBox(group, [roofHalf * 2, .24, depth + .72], [-roofHalf / 2, wallHeight + .62, 0], roofMaterial, [0, 0, .58]);
-    addBox(group, [roofHalf * 2, .24, depth + .72], [roofHalf / 2, wallHeight + .62, 0], roofMaterial, [0, 0, -.58]);
+    addBox(group, [roofHalf * 1.15, .24, depth + .72], [-roofHalf * .48, wallHeight + .62, 0], roofMaterial, [0, 0, .58]);
+    addBox(group, [roofHalf * 1.15, .24, depth + .72], [roofHalf * .48, wallHeight + .62, 0], roofMaterial, [0, 0, -.58]);
     addBox(group, [.24, .28, depth + .82], [0, wallHeight + 1.42, 0], materials.timber);
     // Porta frontal e janelas com moldura.
     addBox(group, [1.05, 2.15, .16], [0, 1.42, depth / 2 + .09], materials.timber);
@@ -134,7 +134,7 @@ export function createWorldSettlements({ THREE, scene, terrainHeight }) {
       }
       if (i < samples.length - 1) {
         const a = i * 2;
-        indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+        indices.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
       }
     }
     const geometry = new THREE.BufferGeometry();
