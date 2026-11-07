@@ -42,7 +42,18 @@ jobs:
             "assets/3d/Pebble_Round_2.gltf",
             "assets/3d/Pebble_Round_3.gltf",
             "assets/3d/Pebble_Round_4.gltf",
-            "assets/3d/Pebble_Round_5.gltf"
+            "assets/3d/Pebble_Round_5.gltf",
+            "assets/3d/animals/Alpaca.gltf",
+            "assets/3d/animals/Bull.gltf",
+            "assets/3d/animals/Deer.gltf",
+            "assets/3d/animals/Donkey.gltf",
+            "assets/3d/animals/Fox.gltf",
+            "assets/3d/animals/Horse.gltf",
+            "assets/3d/animals/Horse_White.gltf",
+            "assets/3d/animals/Husky.gltf",
+            "assets/3d/animals/ShibaInu.gltf",
+            "assets/3d/animals/Stag.gltf",
+            "assets/3d/animals/Wolf.gltf",
           ];
           for (const file of models) {
             const gltf = JSON.parse(readFileSync(file, "utf8"));
