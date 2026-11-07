@@ -475,6 +475,29 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     guard: [[-12,-12],[12,-12],[12,12],[-12,12]]
   };
   const housingStatus = workPanel.querySelector("#village-housing-status");
+  // Diagnóstico somente de leitura: compara o salvamento atual e a cópia sem alterar nenhum deles.
+  const saveDiagnostics = document.createElement("div");
+  saveDiagnostics.id = "village-save-diagnostics";
+  saveDiagnostics.style.cssText = "margin:7px 0;padding:8px;border:1px solid #8a774b;border-radius:7px;background:#202d22;color:#e9dfc8;font:10px/1.45 system-ui;white-space:pre-line";
+  const renderSaveDiagnostics = () => {
+    const readSave = key => {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return { exists:false, valid:false, residents:0, houses:0 };
+        const data = JSON.parse(raw);
+        if (!data || typeof data !== "object") return { exists:true, valid:false, residents:0, houses:0 };
+        const recruits = Array.isArray(data.recruits) ? data.recruits.filter(person => person && person.id).length : 0;
+        return { exists:true, valid:true, residents:3+recruits, houses:Math.max(0,Math.min(6,Math.floor(Number(data.houses)||0))), homes:data.homes && typeof data.homes==="object" ? Object.keys(data.homes).length : 0 };
+      } catch (error) { return { exists:true, valid:false, residents:0, houses:0 }; }
+    };
+    const primary = readSave(SAVE_KEY);
+    const backup = readSave(SAVE_KEY + "-backup");
+    const status = item => !item.exists ? "não encontrado" : !item.valid ? "inválido" : item.residents + " moradores · " + item.houses + " casas · " + item.homes + " vínculos de moradia";
+    saveDiagnostics.textContent = "DIAGNÓSTICO DE SALVAMENTO · somente leitura\\nAtual: " + status(primary) + "\\nCópia: " + status(backup) + "\\n" + (localStorage.getItem(SAVE_KEY + "-recovery-used") ? "A cópia foi selecionada na recuperação desta sessão." : "Nenhuma recuperação automática registrada nesta sessão.");
+  };
+  saveDiagnostics.setAttribute("aria-live","polite");
+  workPanel.insertBefore(saveDiagnostics, housingStatus);
+  renderSaveDiagnostics();
   const housingRosterDisplay = workPanel.querySelector("#village-housing-roster");
   const autoAssignHomesButton = workPanel.querySelector("#village-auto-assign-homes");
   const villageAlerts = workPanel.querySelector("#village-alerts");
@@ -709,6 +732,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
         catch (backupError) { localStorage.setItem(SAVE_KEY + "-recovery-raw", previous); }
       }
       localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, prosperityXp, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes, storageLevel, workShift, foodReserveTargetDays, foodRationPolicy, communalMealPolicy, protectFoodReserve, productionReport, foodReport, resourceTargets, nextRecruitProfession, residentSort, residentStatusFilter, residentHousingFilter }));
+      renderSaveDiagnostics();
     } catch (error) {
       console.warn("Não foi possível salvar o progresso dos moradores.", error);
     }
