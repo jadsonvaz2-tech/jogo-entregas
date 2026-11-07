@@ -17,6 +17,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
 
   const savedJobs = saved.jobs && typeof saved.jobs === "object" ? saved.jobs : {};
   let morale = Math.min(100, Math.max(0, Number(saved.morale ?? 50) || 0));
+  let lastUpkeepDay = Number.isFinite(Number(saved.lastUpkeepDay)) ? Math.max(1, Number(saved.lastUpkeepDay)) : Math.max(1, Number(state.day) || 1);
   const stockpile = { wood: Math.max(0, Number(saved.stockpile?.wood) || 0), stone: Math.max(0, Number(saved.stockpile?.stone) || 0), berries: Math.max(0, Number(saved.stockpile?.berries) || 0) };
   const residents = [
     {
@@ -86,6 +87,10 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   const stockpileDisplay = workPanel.querySelector("#village-stockpile");
   const collectStockpileButton = workPanel.querySelector("#village-collect-stockpile");
   const workSummary = workPanel.querySelector("#village-work-summary");
+  const upkeepStatus = document.createElement("div");
+  upkeepStatus.className = "production";
+  upkeepStatus.style.marginTop = "4px";
+  workPanel.insertBefore(upkeepStatus, stockpileDisplay);
   const moraleDisplay = workPanel.querySelector("#village-morale");
   const communalMealButton = workPanel.querySelector("#village-communal-meal");
 
@@ -120,7 +125,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     try {
       const jobs = {};
       for (const resident of residents) jobs[resident.id] = { profession: resident.profession, enabled: resident.enabled };
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale }));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, lastUpkeepDay }));
     } catch (error) {
       console.warn("Não foi possível salvar o progresso dos moradores.", error);
     }
@@ -132,6 +137,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     collectStockpileButton.disabled = total < 1;
     moraleDisplay.textContent = "ÂNIMO DO POVOADO · " + Math.round(morale) + "/100";
     communalMealButton.disabled = stockpile.berries < 5 || morale >= 100;
+    upkeepStatus.textContent = "REFEIÇÃO DIÁRIA · 3 frutas por dia";
     workSummary.textContent = residents.filter(r => r.enabled && r.profession !== "idle").length + "/3 moradores em atividade · produção guardada no depósito.";
   }
 
@@ -377,6 +383,27 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   let nearestResident = null;
   let rosterClock = 0;
   function update(dt) {
+    const currentDay = Math.max(1, Number(state.day) || 1);
+    if (currentDay > lastUpkeepDay) {
+      let fedDays = 0;
+      let missedDays = 0;
+      while (lastUpkeepDay < currentDay) {
+        lastUpkeepDay++;
+        if (stockpile.berries >= 3) {
+          stockpile.berries -= 3;
+          morale = Math.min(100, morale + 4);
+          fedDays++;
+        } else {
+          morale = Math.max(0, morale - 8);
+          missedDays++;
+        }
+      }
+      saveVillageProgress();
+      refreshStockpileUI();
+      if (fedDays && missedDays) onToast("O povoado recebeu " + fedDays + " refeição(ões), mas faltou comida em " + missedDays + " dia(s).");
+      else if (fedDays) onToast("Os moradores fizeram suas refeições diárias. O ânimo melhorou.");
+      else onToast("Faltaram frutas para alimentar o povoado. O ânimo dos moradores diminuiu.");
+    }
     const hour = Number(state.timeOfDay) || 8;
     for (const resident of residents) {
       const schedule = scheduleFor(resident, hour);
@@ -415,7 +442,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
         workElapsed[resident.id] += Math.max(0, dt);
         const workCycle = morale >= 75 ? 40 : morale < 25 ? 55 : 45;
         if (workElapsed[resident.id] >= workCycle) {
-          workElapsed[resident.id] -= 45;
+          workElapsed[resident.id] -= workCycle;
           const farmResult = resident.profession === "farmer" && typeof onFarmAction === "function"
             ? onFarmAction()
             : null;
