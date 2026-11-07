@@ -55,7 +55,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   const ORIGINAL_HOMES = { lina: [-5.5,1.5], odo: [6.2,1.2], toma: [0.8,7.2] };
   function homePosition(slotId) {
     if (slotId && slotId.startsWith("original-")) return ORIGINAL_HOMES[slotId.slice(9)] || [0,0];
-    const match = /^house-(\\d+)-(\\d+)$/.exec(slotId || "");
+    const match = /^house-(\d+)-(\d+)$/.exec(slotId || "");
     if (!match) return [0,0];
     const center = HOUSE_SLOTS[Number(match[1])];
     if (!center) return [0,0];
@@ -200,11 +200,9 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const capacity = 3 + housesBuilt * 2;
     if (residents.length >= capacity || (Number(state.coins)||0) < 25) return;
     const recruitIndex = residents.length - 3;
-    const houseIndex = Math.floor(recruitIndex / 2);
-    const slot = HOUSE_SLOTS[houseIndex];
-    if (!slot) return;
-    const side = recruitIndex % 2 === 0 ? -1.25 : 1.25;
-    const homeSlot = "house-" + houseIndex + "-" + (recruitIndex % 2);
+    const availableHome = housingSlots().find(slot => !residents.some(person => person.homeSlot === slot.id));
+    if (!availableHome) return;
+    const homeSlot = availableHome.id;
     const home = homePosition(homeSlot);
     const usedNames = new Set(residents.map(r => r.name));
     const name = recruitNames.find(candidate => !usedNames.has(candidate)) || ("Morador " + (residents.length + 1));
