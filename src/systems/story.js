@@ -189,6 +189,7 @@ export function createStoryEncounter({ THREE: T, scene, player, terrainHeight, s
 
   talkButton.addEventListener("click", openDialogue);
   renderQuest();
+  let lastQuestUiRefresh = 0;
 
   return {
     update() {
@@ -198,10 +199,14 @@ export function createStoryEncounter({ THREE: T, scene, player, terrainHeight, s
       if (nearby) {
         talkButton.textContent = quest.status === "active" ? "FALAR / ENTREGAR MATERIAIS" : "CONVERSAR COM EDRIK";
       }
+      const now = performance.now();
       marker.rotation.y += 0.012;
-      marker.position.y = 2.65 + Math.sin(performance.now() * 0.002) * 0.12;
-      groundRing.material.opacity = 0.65 + Math.sin(performance.now() * 0.003) * 0.18;
-      if (!dialog.hidden && quest.status === "active") renderQuest();
+      marker.position.y = 2.65 + Math.sin(now * 0.002) * 0.12;
+      groundRing.material.opacity = 0.65 + Math.sin(now * 0.003) * 0.18;
+      if (now - lastQuestUiRefresh > 500) {
+        renderQuest();
+        lastQuestUiRefresh = now;
+      }
     }
   };
 }
