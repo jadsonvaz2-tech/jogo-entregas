@@ -17,6 +17,12 @@ const SECRET_QUESTS={
  cache:{steps:["Inspecione o esconderijo e procure o mecanismo da tampa.","Abra o baú antigo usando as marcas deixadas pelo caçador."],actions:["INSPECIONAR BAÚ","ABRIR ESCONDERIJO"],story:"O caçador deixou provisões para alguém que soubesse seguir suas marcas. Um bilhete recomenda respeitar a mata.",reward:[["hide",2],["ironOre",2],["wood",4]]},
  watch:{steps:["Leia as marcas talhadas no marco de pedra.","Alinhe as pedras menores com a rota indicada pela inscrição."],actions:["LER INSCRIÇÕES","ALINHAR MARCO"],story:"O marco assinalava uma passagem segura entre as colinas. A última inscrição registra uma antiga rota de comércio.",reward:[["stone",4],["ironOre",2],["herbs",2]]}
 };
+const SECRET_NPCS={
+ shrine:{name:"Iara",role:"Guardiã do Santuário",intro:"A floresta guarda a memória de quem cuidou dela. Sou Iara, guardiã deste altar. Poucos chegam até aqui com respeito.",lore:"Os antigos viajantes plantavam sementes ao redor do santuário. Diziam que uma floresta protegida também protege seus caminhos.",quests:[{id:"seed",title:"Restaurar o jardim antigo",text:"Iara pede que você traga ervas para replantar o pequeno jardim do santuário.",needs:[["herbs",2]],reward:{key:"guardianSeed",label:"Semente da Guardiã",story:"Uma semente rara, preservada por gerações, capaz de lembrar a Edrik o compromisso de proteger a mata."}},{id:"brooch",title:"Reerguer o marco de pedra",text:"A guardiã precisa de pedras para firmar novamente a base do altar.",needs:[["stone",3]],reward:{key:"oakBrooch",label:"Broche do Carvalho",story:"Um broche de madeira antiga, símbolo dos primeiros protetores da floresta."}}]},
+ spring:{name:"Naiá",role:"Espírito da Fonte",intro:"A água ainda canta, embora quase ninguém escute. Sou Naiá, memória viva desta nascente.",lore:"A fonte guiava os moradores durante as secas. Eles nunca retiravam mais água do que precisavam.",quests:[{id:"dew",title:"Purificar a nascente",text:"Naiá pede fibras para filtrar a água e proteger a nascente.",needs:[["fiber",3]],reward:{key:"springDew",label:"Gota da Nascente",story:"Uma gota cristalina que guarda o brilho da fonte e sua antiga canção."}},{id:"shell",title:"Recompor o círculo de ervas",text:"O espírito pede ervas para recompor o círculo natural que protege a água.",needs:[["herbs",2]],reward:{key:"waterShell",label:"Concha das Águas",story:"Uma concha lisa encontrada no fundo da fonte, marcada por símbolos de proteção."}}]},
+ cache:{name:"Bento",role:"Viajante Errante",intro:"Por fim, alguém encontrou meu esconderijo. Sou Bento. Atravessei estas matas quando ainda havia pequenas casas por toda a região.",lore:"Os antigos moradores trocavam ferramentas e mantimentos neste abrigo. O caminho seguro passava pelo marco de pedra ao norte.",quests:[{id:"amulet",title:"Preparar um kit de viagem",text:"Bento pede couro para consertar sua velha bolsa de viagem.",needs:[["hide",2]],reward:{key:"hunterAmulet",label:"Amuleto do Caçador",story:"Um amuleto de osso e couro que pertenceu ao primeiro caçador destas colinas."}},{id:"map",title:"Recuperar as provisões perdidas",text:"Bento precisa de madeira para reforçar as caixas onde guardava seus mapas.",needs:[["wood",4]],reward:{key:"travelerMap",label:"Mapa do Viajante",story:"Um mapa antigo com anotações de trilhas que ainda não aparecem nos mapas comuns."}}]},
+ watch:{name:"Memória dos Moradores",role:"Eco dos Antigos",intro:"Não sou um corpo, mas a lembrança de muitas vozes. Aqui viveram famílias que conheciam cada colina e cada nascente.",lore:"Os moradores deixaram este marco para que ninguém se perdesse ao atravessar as montanhas. Suas casas desapareceram, mas seus caminhos permanecem.",quests:[{id:"seal",title:"Reparar o marco comunitário",text:"O eco pede pedras para recompor a base do marco e honrar os antigos moradores.",needs:[["stone",4]],reward:{key:"ancientSeal",label:"Selo dos Antigos",story:"Um selo gravado com os símbolos das primeiras famílias que habitaram a floresta."}},{id:"route",title:"Reconstruir o registro da rota",text:"O eco precisa de minério de ferro para fixar a placa que indica a antiga rota.",needs:[["ironOre",2]],reward:{key:"routeFragment",label:"Fragmento da Rota",story:"Um fragmento metálico gravado com parte de uma rota comercial esquecida."}}]}
+};
 const safeParse=value=>{try{const parsed=JSON.parse(value||"null");return parsed&&typeof parsed==="object"&&!Array.isArray(parsed)?parsed:null;}catch{return null;}};
 export function createDistantExploration({THREE,scene,player,terrainHeight,state,onToast,onSave}){
  const raw=safeParse(localStorage.getItem(SAVE_KEY)),backup=safeParse(localStorage.getItem(SAVE_KEY+"-backup"));
@@ -32,6 +38,9 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
  if(!data.secretProgress||typeof data.secretProgress!=="object"||Array.isArray(data.secretProgress))data.secretProgress={};
  if(!Array.isArray(data.secretCompleted))data.secretCompleted=[];
  if(!Array.isArray(data.secretJournal))data.secretJournal=[];
+ if(!data.secretSideMissions||typeof data.secretSideMissions!=="object"||Array.isArray(data.secretSideMissions))data.secretSideMissions={};
+ if(!Array.isArray(data.secretUniqueRewards))data.secretUniqueRewards=[];
+ if(!Array.isArray(data.secretDialogueHistory))data.secretDialogueHistory=[];
  data.fogPoints=data.fogPoints.filter(point=>Array.isArray(point)&&Number.isFinite(point[0])&&Number.isFinite(point[1]));
  data.walkTrails=data.walkTrails.filter(segment=>Array.isArray(segment)).map(segment=>segment.filter(point=>Array.isArray(point)&&Number.isFinite(point[0])&&Number.isFinite(point[1])));
  data.secretsFound=data.secretsFound.filter(id=>SECRET_DEFS.some(secret=>secret.id===id));
@@ -104,6 +113,28 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
   }
   g.position.set(secret.x,terrainHeight(secret.x,secret.z),secret.z);scene.add(g);groups.set("secret-"+secret.id,g);
  };
+ const createSecretNpc=secret=>{
+  const def=SECRET_NPCS[secret.id],site=groups.get("secret-"+secret.id);if(!def||!site||site.userData.npcCreated)return;
+  const npc=new THREE.Group(),spirit=secret.id==="spring",echo=secret.id==="watch";
+  const robe=new THREE.MeshStandardMaterial({color:spirit?0x62bcae:echo?0x9caeaa:secret.id==="shrine"?0x344c36:0x72513a,roughness:.8,transparent:spirit||echo,opacity:spirit?.76:echo?.62});
+  const skin=new THREE.MeshStandardMaterial({color:echo?0xc5d2c7:spirit?0x9fe8d8:0xc99b76,roughness:.85,transparent:spirit||echo,opacity:spirit?.8:echo?.65});
+  const hood=new THREE.Mesh(new THREE.ConeGeometry(.48,1.25,8),robe);hood.position.y=.72;hood.castShadow=true;npc.add(hood);
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(.22,.42,1.05,9),robe);body.position.y=.82;body.castShadow=true;npc.add(body);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.25,12,10),skin);head.position.set(0,1.55,.02);head.castShadow=true;npc.add(head);
+  const hair=new THREE.Mesh(new THREE.SphereGeometry(.27,10,8),new THREE.MeshStandardMaterial({color:echo?0xbac8c0:0x33291f,roughness:1}));hair.position.set(0,1.67,-.025);hair.scale.set(1,.58,1);npc.add(hair);
+  if(secret.id==="cache"){const pack=new THREE.Mesh(new THREE.BoxGeometry(.48,.56,.28),mats.darkWood);pack.position.set(0,.94,-.34);npc.add(pack);const staff=cylinder(npc,.035,.045,1.65,mats.wood,.52,.86,.02,6);staff.rotation.z=-.08;}
+  if(secret.id==="shrine"){const staff=cylinder(npc,.04,.05,1.9,mats.wood,.58,.98,.05,7);staff.rotation.z=-.08;sphere(npc,.13,mats.moss,.58,1.95,.05,.8,1.2,.8);}
+  if(spirit){const aura=new THREE.Mesh(new THREE.TorusGeometry(.62,.045,6,24),new THREE.MeshBasicMaterial({color:0x8ee9d6,transparent:true,opacity:.7}));aura.rotation.x=Math.PI/2;aura.position.y=.15;npc.add(aura);head.scale.set(1.05,1.05,1.05);}
+  if(echo){const glow=new THREE.PointLight(0xb8d9c9,1.1,5);glow.position.set(0,1.3,0);npc.add(glow);}
+  npc.position.set(secret.id==="spring"?2.65:2.8,0,secret.id==="watch"?.85:1.15);npc.rotation.y=-.35;site.add(npc);site.userData.npcCreated=true;
+ };
+ const showSideQuestReward=secret=>{
+  const site=groups.get("secret-"+secret.id);if(!site||site.userData.sideRewardShown)return;
+  site.userData.sideRewardShown=true;
+  const colors={shrine:0x9bc66a,spring:0x72dfd0,cache:0xd8a45d,watch:0xc4d1c8};
+  const gem=new THREE.Mesh(new THREE.OctahedronGeometry(.25,1),new THREE.MeshStandardMaterial({color:colors[secret.id]||0xd8b45c,emissive:colors[secret.id]||0xd8b45c,emissiveIntensity:.22,roughness:.28}));
+  gem.position.set(2.8,2.05,1.15);gem.castShadow=true;site.add(gem);
+ };
  const showSecretReward=secret=>{
   const g=groups.get("secret-"+secret.id);if(!g||g.userData.rewardShown)return;
   g.userData.rewardShown=true;
@@ -148,7 +179,62 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
   addResources(site);
  };
  const secretProgressFor=id=>Math.max(0,Math.min(2,Number(data.secretProgress[id])||0));
+ const sideMissionFor=id=>data.secretSideMissions[id]||null;
+ const addSecretJournal=(entry)=>{data.secretJournal.unshift({...entry,at:Date.now()});data.secretJournal=data.secretJournal.slice(0,24);};
  const secretQuestFor=id=>SECRET_QUESTS[id]||null;
+ let secretDialogueRoot=null;
+ const ensureSecretDialogue=()=>{
+  if(secretDialogueRoot)return secretDialogueRoot;
+  const root=document.createElement("div");root.id="secretDialogueOverlay";root.className="secret-dialogue-overlay";root.hidden=true;
+  const card=document.createElement("section");card.className="secret-dialogue-card";
+  const header=document.createElement("header");header.className="secret-dialogue-header";
+  const title=document.createElement("strong");title.id="secretDialogueTitle";
+  const close=document.createElement("button");close.type="button";close.className="secret-dialogue-close";close.textContent="FECHAR";close.addEventListener("click",()=>{root.hidden=true;});
+  header.append(title,close);
+  const text=document.createElement("p");text.id="secretDialogueText";text.className="secret-dialogue-text";
+  const options=document.createElement("div");options.id="secretDialogueOptions";options.className="secret-dialogue-options";
+  card.append(header,text,options);root.append(card);root.addEventListener("click",event=>{if(event.target===root)root.hidden=true;});
+  document.body.append(root);secretDialogueRoot=root;return root;
+ };
+ const openSecretDialogue=secret=>{
+  const def=SECRET_NPCS[secret.id];if(!def)return;
+  const root=ensureSecretDialogue(),title=root.querySelector("#secretDialogueTitle"),text=root.querySelector("#secretDialogueText"),options=root.querySelector("#secretDialogueOptions");
+  const mission=sideMissionFor(secret.id),complete=!!mission?.completed;
+  title.textContent=def.name+" · "+def.role;options.innerHTML="";
+  const action=(label,callback,disabled=false)=>{
+   const button=document.createElement("button");button.type="button";button.className="secret-dialogue-choice";button.textContent=label;button.disabled=disabled;button.addEventListener("click",callback);options.append(button);
+  };
+  if(complete){
+   const reward=data.secretUniqueRewards.find(item=>item.key===mission.rewardKey);
+   text.textContent="Você cumpriu sua promessa. "+(reward?.story||"A lembrança deste encontro ficará registrada.");
+   action("OUVIR MAIS SOBRE O PASSADO",()=>{addSecretJournal({id:secret.id,title:def.name,text:def.lore,kind:"lore"});save();onSave?.();text.textContent=def.lore;options.innerHTML="";action("FECHAR CONVERSA",()=>root.hidden=true);renderDetails();});
+  }else if(mission&&!mission.completed){
+   const quest=def.quests.find(item=>item.id===mission.questId);
+   const missing=quest.needs.map(([key,amount])=>({key,amount,have:Number(state[key])||0}));
+   const enough=missing.every(item=>item.have>=item.amount);
+   text.textContent=def.name+": "+quest.text+"\n\nNecessário: "+missing.map(item=>item.amount+" "+item.key+" (você tem "+item.have+")").join(", ")+".";
+   action(enough?"ENTREGAR E CONCLUIR MISSÃO":"AINDA FALTAM RECURSOS",()=>{
+    for(const [key,amount] of quest.needs)state[key]=Math.max(0,(Number(state[key])||0)-amount);
+    const reward=quest.reward;
+    mission.completed=true;mission.rewardKey=reward.key;data.secretUniqueRewards.push({key:reward.key,label:reward.label,story:reward.story,secretId:secret.id,at:Date.now()});
+    addSecretJournal({id:secret.id,title:quest.title,text:reward.story,kind:"side-quest",uniqueReward:reward.label});
+    showSideQuestReward(secret);save();onSave?.();renderDetails();onToast("Missão secundária concluída: "+reward.label+"!");openSecretDialogue(secret);
+   },!enough);
+   action("PERGUNTAR SOBRE A FLORESTA",()=>{text.textContent=def.lore;addSecretJournal({id:secret.id,title:def.name,text:def.lore,kind:"lore"});save();onSave?.();renderDetails();options.innerHTML="";action("VOLTAR À MISSÃO",()=>openSecretDialogue(secret));action("FECHAR CONVERSA",()=>root.hidden=true);});
+  }else{
+   text.textContent=def.intro;
+   for(const quest of def.quests){
+    action("ACEITAR: "+quest.title,()=>{
+     data.secretSideMissions[secret.id]={questId:quest.id,accepted:true,completed:false,acceptedAt:Date.now()};
+     addSecretJournal({id:secret.id,title:quest.title,text:quest.text,kind:"side-quest"});
+     save();onSave?.();renderDetails();onToast("Nova missão secundária: "+quest.title);openSecretDialogue(secret);
+    });
+   }
+   action("PERGUNTAR SOBRE O PASSADO",()=>{text.textContent=def.lore;addSecretJournal({id:secret.id,title:def.name,text:def.lore,kind:"lore"});save();onSave?.();renderDetails();options.innerHTML="";action("VOLTAR",()=>openSecretDialogue(secret));action("FECHAR CONVERSA",()=>root.hidden=true);});
+  }
+  action("DEIXAR PARA DEPOIS",()=>{root.hidden=true;});
+  root.hidden=false;
+ };
  const investigateSecret=secret=>{
   const quest=secretQuestFor(secret.id);if(!quest)return;
   if(data.secretCompleted.includes(secret.id)){onToast("Esta descoberta já foi concluída. O registro está no diário.");return;}
@@ -227,7 +313,7 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
   for(const secret of SECRET_DEFS){
    if(data.secretsFound.includes(secret.id))continue;
    if(Math.hypot(x-secret.x,z-secret.z)<=12){
-    data.secretsFound.push(secret.id);data.selectedId=secret.id;forceSave=true;
+    data.secretsFound.push(secret.id);data.selectedId=secret.id;createSecretNpc(secret);forceSave=true;
     onToast("Ponto secreto descoberto: "+secret.label+"! O local foi marcado no mapa.");
     changed=true;
    }
@@ -272,12 +358,13 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
   if(!infoRoot||!listRoot)return;
   const sites=discoveredSites(),camps=allCamps(),rares=data.rareMarkers,secrets=data.secretsFound.map(secretId=>SECRET_DEFS.find(secret=>secret.id===secretId)).filter(Boolean),selected=sites.find(s=>s.id===data.selectedId)||camps.find(c=>c.id===data.selectedId)||rareFor(data.selectedId)||secretFor(data.selectedId);
   const selectedQuest=selected&&secretFor(selected.id)?secretQuestFor(selected.id):null,selectedStep=selectedQuest?secretProgressFor(selected.id):0,selectedComplete=selectedQuest&&data.secretCompleted.includes(selected.id);
-  infoRoot.textContent=selected?(selected.description||"Um acampamento temporário marcado pelos exploradores.")+(selectedQuest?" "+(selectedComplete?selectedQuest.story:selectedQuest.steps[selectedStep]):""):"Locais descobertos: "+sites.length+" · visitados: "+data.visited.length+" · acampamentos: "+camps.length+" · achados raros: "+rares.length+" · segredos: "+secrets.length+". Áreas reveladas: "+data.fogPoints.length+". Toque em um símbolo do mapa para ver detalhes.";
+  const selectedNpc=selected&&secretFor(selected.id)?SECRET_NPCS[selected.id]:null,selectedSide=selected&&secretFor(selected.id)?sideMissionFor(selected.id):null;
+  infoRoot.textContent=selected?(selected.description||"Um acampamento temporário marcado pelos exploradores.")+(selectedQuest?" "+(selectedComplete?selectedQuest.story:selectedQuest.steps[selectedStep]):"")+(selectedNpc?" Personagem: "+selectedNpc.name+" · "+(selectedSide?.completed?"missão secundária concluída":selectedSide?"missão secundária em andamento":"aguarda conversa")+".":""):"Locais descobertos: "+sites.length+" · visitados: "+data.visited.length+" · acampamentos: "+camps.length+" · achados raros: "+rares.length+" · segredos: "+secrets.length+". Áreas reveladas: "+data.fogPoints.length+". Toque em um símbolo do mapa para ver detalhes.";
   listRoot.innerHTML="";
   for(const point of [...sites,...camps,...rares,...secrets]){
    const button=document.createElement("button");button.type="button";button.className="exploration-site-button"+(point.id.startsWith("rare-")?" rare-site-marker":"");button.textContent=(point.kind==="site"&&data.visited.includes(point.id)?"✓ ":"")+(point.symbol||"⛺")+" "+point.label;button.addEventListener("click",()=>{select(point.id);});listRoot.append(button);
   }
-  if(journalRoot){journalRoot.innerHTML="";for(const entry of data.secretJournal.slice(0,6)){const row=document.createElement("div");row.className="secret-journal-entry";const heading=document.createElement("strong");heading.textContent=entry.title;const story=document.createElement("p");story.textContent=entry.text;row.append(heading,story);if(entry.reward){const reward=document.createElement("small");reward.textContent="Recompensa: "+entry.reward.map(([key,amount])=>amount+" "+key).join(", ");row.append(reward);}journalRoot.append(row);}}
+  if(journalRoot){journalRoot.innerHTML="";for(const entry of data.secretJournal.slice(0,8)){const row=document.createElement("div");row.className="secret-journal-entry";const heading=document.createElement("strong");heading.textContent=entry.title;const story=document.createElement("p");story.textContent=entry.text;row.append(heading,story);if(entry.reward){const reward=document.createElement("small");reward.textContent="Recompensa: "+entry.reward.map(([key,amount])=>amount+" "+key).join(", ");row.append(reward);}if(entry.uniqueReward){const reward=document.createElement("small");reward.textContent="Relíquia exclusiva: "+entry.uniqueReward;row.append(reward);}journalRoot.append(row);}if(data.secretUniqueRewards.length){const collection=document.createElement("div");collection.className="secret-relic-collection";const heading=document.createElement("strong");heading.textContent="RELÍQUIAS EXCLUSIVAS ENCONTRADAS";collection.append(heading);for(const item of data.secretUniqueRewards){const line=document.createElement("p");line.textContent="✧ "+item.label;collection.append(line);}journalRoot.append(collection);}}
   if(selected&&secretFor(selected.id)){
    const secret=secretFor(selected.id),quest=secretQuestFor(secret.id),step=secretProgressFor(secret.id),complete=data.secretCompleted.includes(secret.id);
    const status=document.createElement("small");status.textContent=complete?"Descoberta concluída · registrada no diário.":step===0?"Missão disponível · aproxime-se do local para investigar.":quest.steps[1];listRoot.append(status);
@@ -311,6 +398,9 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
    if(nearby){const remaining=COOLDOWN-(Date.now()-(Number(nearby.lastCollectedAt)||0));button.textContent=nearby.kind==="ruins"&&!nearby.explored?"EXPLORAR RUÍNAS":remaining>0?"LOCAL EM RECUPERAÇÃO":"RECOLHER RECURSOS";button.disabled=!(nearby.kind==="ruins"&&!nearby.explored)&&remaining>0;}
   }
   nearbySecret=data.secretsFound.map(id=>SECRET_DEFS.find(secret=>secret.id===id)).filter(Boolean).map(secret=>({...secret,distance:Math.hypot(player.position.x-secret.x,player.position.z-secret.z)})).filter(secret=>secret.distance<=9).sort((a,b)=>a.distance-b.distance)[0]||null;
+  let talkButton=document.getElementById("explorationTalkButton");
+  if(!talkButton){const holder=document.querySelector(".right-controls");if(holder){talkButton=document.createElement("button");talkButton.id="explorationTalkButton";talkButton.type="button";talkButton.className="control-button action";talkButton.textContent="CONVERSAR";talkButton.hidden=true;talkButton.addEventListener("click",()=>{if(nearbySecret)openSecretDialogue(nearbySecret);});holder.insertBefore(talkButton,holder.firstChild);}}
+  if(talkButton){talkButton.hidden=!nearbySecret; if(nearbySecret){const person=SECRET_NPCS[nearbySecret.id];talkButton.textContent="FALAR: "+(person?.name||"VIAJANTE").toUpperCase();}}
   let secretButton=document.getElementById("explorationSecretButton");
   if(!secretButton){const holder=document.querySelector(".right-controls");if(holder){secretButton=document.createElement("button");secretButton.id="explorationSecretButton";secretButton.type="button";secretButton.className="control-button action";secretButton.hidden=true;secretButton.addEventListener("click",()=>{if(nearbySecret)investigateSecret(nearbySecret);});holder.insertBefore(secretButton,holder.firstChild);}}
   if(secretButton){secretButton.hidden=!nearbySecret||data.secretCompleted.includes(nearbySecret.id);if(nearbySecret&&!secretButton.hidden){const quest=secretQuestFor(nearbySecret.id),step=secretProgressFor(nearbySecret.id);secretButton.textContent=quest.actions[step]||"INVESTIGAR";}}
@@ -319,7 +409,9 @@ export function createDistantExploration({THREE,scene,player,terrainHeight,state
  for(const id of data.discovered){const site=SITE_DEFS[id];if(site)createSiteVisual({...site,...(data.sites[id]||{})});}
  for(const camp of allCamps())createTemporaryCamp(camp);
  for(const secret of SECRET_DEFS)createSecretVisual(secret);
+ for(const secretId of data.secretsFound){const secret=SECRET_DEFS.find(item=>item.id===secretId);if(secret)createSecretNpc(secret);}
+ for(const secretId of data.secretUniqueRewards.map(item=>item.secretId)){const secret=SECRET_DEFS.find(item=>item.id===secretId);if(secret)showSideQuestReward(secret);}
  for(const secretId of data.secretCompleted){const secret=SECRET_DEFS.find(item=>item.id===secretId);if(secret)showSecretReward(secret);}
  renderDetails();
- return {update,getMapMarkers,getMapRoutes,getFogPoints,getWalkTrails,selectAtWorld,discoverFromExpedition,getExplorationStatus,getSecretJournal:()=>data.secretJournal.slice(),getStatus:getMapStatus};
+ return {update,getMapMarkers,getMapRoutes,getFogPoints,getWalkTrails,selectAtWorld,discoverFromExpedition,getExplorationStatus,getSecretJournal:()=>data.secretJournal.slice(),getSecretSideMissions:()=>data.secretSideMissions,getSecretUniqueRewards:()=>data.secretUniqueRewards.slice(),getStatus:getMapStatus};
 }

@@ -8,7 +8,7 @@ import { createExpandedWorld } from "./systems/world-expansion.js?v=underground-
 import { createDistantVillageResidents } from "./systems/distant-village-residents.js";
 import { createSettlementEconomy } from "./systems/settlement-economy.js";
 import { createCommunityExpeditions } from "./systems/community-expeditions.js?v=expedition-world-routes-2026-11-07-1";
-import { createDistantExploration } from "./systems/distant-exploration.js?v=secret-investigations-2026-11-07-1";
+import { createDistantExploration } from "./systems/distant-exploration.js?v=secret-characters-2026-11-07-1";
 let villageResidents=null;
 let distantVillageResidents=null;
 let settlementEconomy=null;
