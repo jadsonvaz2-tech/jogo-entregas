@@ -3113,6 +3113,7 @@ function craftCampfire(){
 }
 let campfireFlameMesh=null,campfireCoreMesh=null,campfireLightSource=null;
 const campfireEmbers=[];
+const campfireSmoke=[];
 let campfireAnimationTime=0;
 function createCampfire(x,z){
  if(state.campfireObject)scene.remove(state.campfireObject);
@@ -3142,6 +3143,17 @@ function createCampfire(x,z){
   group.add(ember);
   campfireEmbers.push({object:ember,phase,speed:.42+(i%3)*.09});
  }
+ const smokeGeometry=new THREE.SphereGeometry(.16,7,6);
+ campfireSmoke.length=0;
+ for(let i=0;i<6;i++){
+  const smokeMaterial=new THREE.MeshBasicMaterial({color:0xaeb2a7,transparent:true,opacity:0,depthWrite:false});
+  const puff=new THREE.Mesh(smokeGeometry,smokeMaterial);
+  const phase=i/6;
+  puff.position.set(0,.9+phase*2.1,0);
+  puff.scale.setScalar(.45);
+  group.add(puff);
+  campfireSmoke.push({object:puff,phase,speed:.105+(i%3)*.012});
+ }
  group.position.set(x,terrainHeight(x,z),z);scene.add(group);
  state.campfireObject=group;state.campfire=true;state.campfireX=x;state.campfireZ=z;
  campfireFlameMesh=flame;campfireCoreMesh=core;campfireLightSource=light;campfireAnimationTime=0;
@@ -3162,8 +3174,16 @@ function updateCampfireVisuals(dt){
   ember.object.position.z=Math.cos(t*1.8+ember.phase*7)*(.12+rise*.2);
   ember.object.material.opacity=(1-rise)*.78;
  }
+ for(const puff of campfireSmoke){
+  const rise=(t*puff.speed+puff.phase)%1;
+  puff.object.position.y=.9+rise*2.35;
+  puff.object.position.x=Math.sin(t*.72+puff.phase*6.2)*(.08+rise*.28);
+  puff.object.position.z=Math.cos(t*.58+puff.phase*5.4)*(.07+rise*.22);
+  puff.object.scale.setScalar(.42+rise*1.15);
+  puff.object.material.opacity=(1-rise)*.17;
+ }
 }
-function craftCloak(){
+function craftCloak()
  if(state.coldCloak){toast("Você já está usando o manto térmico.");return;}
  if(state.fiber<5||state.wood<2){toast("Faltam materiais: 5 fibras e 2 madeiras.");return;}
  state.fiber-=5;state.wood-=2;state.coldCloak=true;createCloakVisual();updateHUD();saveGame();toast("Manto térmico fabricado! Você perde menos calor no frio.");
