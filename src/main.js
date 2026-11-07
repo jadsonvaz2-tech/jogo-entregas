@@ -1828,6 +1828,7 @@ importBackupButton.addEventListener("click",()=>backupFileInput.click());
 backupFileInput.addEventListener("change",()=>{const file=backupFileInput.files?.[0];restoreSaveBackup(file);backupFileInput.value="";});
 
 craftToggle.addEventListener("click",()=>{const open=craftPanel.classList.toggle("open");craftToggle.textContent=open?"FECHAR GESTÃO":"GESTÃO";});
+$("expeditionsQuickButton").addEventListener("click",()=>{const panel=$("communityExpeditionsPanel");const category=panel?.closest("details");if(!panel||!category){toast("Exploração comunitária indisponível no momento.");return;}craftPanel.classList.add("open");craftToggle.textContent="FECHAR GESTÃO";category.open=true;requestAnimationFrame(()=>{category.scrollIntoView({behavior:"smooth",block:"start"});});});
 $("resetBuiltStructures").addEventListener("click",resetBuiltStructures);
 $("craftAxe").addEventListener("click",()=>craftTool("axe"));
 $("craftPickaxe").addEventListener("click",()=>craftTool("pickaxe"));

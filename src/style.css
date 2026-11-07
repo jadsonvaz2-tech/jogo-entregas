@@ -154,3 +154,5 @@
 .exploration-site-list small{flex-basis:100%;color:#c7d2bc;font:10px/1.4 system-ui}
 #explorationCollectButton{background:#8a6837;border-color:#e0c48c}
 #explorationCollectButton[hidden]{display:none}
+
+#expeditionsQuickButton{border:1px solid #e2c47b;background:linear-gradient(135deg,#876a35,#594323);color:#fff4d2;border-radius:5px;padding:7px 9px;font:bold 9px Arial,sans-serif;letter-spacing:.45px;box-shadow:0 1px 6px #0007;touch-action:manipulation}#expeditionsQuickButton:active{transform:scale(.97)}@media(max-width:430px){#inventory{gap:5px;padding:8px}#expeditionsQuickButton{padding:7px 7px;font-size:8px}}
