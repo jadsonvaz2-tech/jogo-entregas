@@ -650,8 +650,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       : routeKeys[Math.max(0, guardIndex) % routeKeys.length];
     const route = GUARD_PATROL_ROUTES[selectedKey];
     const reverse = !resident.patrolRoute && guardIndex % 2 === 1;
-    const points = reverse ? [...route.points].reverse() : [...route.points];
-    return { key: selectedKey, label: route.label, points };
+    return { key: selectedKey, label: route.label, points: reverse ? [...route.points].reverse() : [...route.points] };
   }
 
   function refreshSecurityUI() {
@@ -660,11 +659,22 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const averageLevel = guards ? activeGuards.reduce((sum, resident) => sum + (skills[resident.id]?.level || 1), 0) / guards : 0;
     const level = guards === 0 ? "SEM PATRULHA" : guards === 1 ? "VIGILÂNCIA BÁSICA" : guards <= 3 ? "VIGILÂNCIA REGULAR" : "VIGILÂNCIA REFORÇADA";
     const experience = guards ? " · EXPERIÊNCIA MÉDIA Nv. " + averageLevel.toFixed(1) + "/10" : "";
+    const routeCounts = Object.fromEntries(Object.keys(GUARD_PATROL_ROUTES).map(key => [key, 0]));
+    for (const resident of activeGuards) routeCounts[guardPatrolFor(resident).key]++;
+    const coveredRoutes = Object.values(routeCounts).filter(count => count > 0).length;
+    const coveragePercent = Math.round(coveredRoutes / Object.keys(GUARD_PATROL_ROUTES).length * 100);
+    const routeSummary = Object.entries(GUARD_PATROL_ROUTES).map(([key, route]) => route.label + ": " + routeCounts[key]).join(" · ");
+    const missingRoutes = Object.entries(GUARD_PATROL_ROUTES).filter(([key]) => routeCounts[key] === 0).map(([,route]) => route.label);
+    const coverageDetail = guards === 0
+      ? "Nenhum setor possui vigia ativo."
+      : missingRoutes.length
+        ? "Setores sem vigia: " + missingRoutes.join(", ") + "."
+        : "Os três setores possuem ao menos um vigia ativo.";
     const patrolTeam = guards ? " · " + activeGuards.map(resident => resident.name + " Nv." + (skills[resident.id]?.level || 1) + " · " + guardPatrolFor(resident).label).join("; ") : "";
     const detail = guards === 0
       ? "Nenhum morador está fazendo rondas. Atribua a profissão Vigia para iniciar a patrulha."
-      : "As rondas são distribuídas entre perímetro externo, caminho interno e faixa central. Cada ciclo completo concede experiência.";
-    securityDisplay.textContent = "VIGILÂNCIA · " + level + " · " + guards + " VIGIA(S)" + experience + patrolTeam + ". " + detail;
+      : "Cada ciclo completo concede experiência. A cobertura é um indicador de distribuição das rondas, não uma simulação de combate.";
+    securityDisplay.textContent = "VIGILÂNCIA · " + level + " · " + guards + " VIGIA(S) · COBERTURA " + coveragePercent + "% · " + routeSummary + " · " + coverageDetail + experience + patrolTeam + ". " + detail;
   }
 
   function experienceNeeded(level) { return level * 5; }
@@ -1030,3 +1040,159 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     dialogName.textContent = resident.name;
     dialogRole.textContent = resident.role;
     const reserveDays = foodReserveDays();
+    const villageCondition = morale >= 75
+      ? "O povoado está animado e o trabalho rende mais."
+      : morale >= 45
+        ? "O povoado está estável, mas precisamos manter as provisões."
+        : morale >= 25
+          ? "O ânimo está baixo. Uma refeição comunitária ajudaria."
+          : "O povoado está desanimado; precisamos cuidar das pessoas.";
+    const foodCondition = reserveDays > 1
+      ? "Temos frutas para " + reserveDays + " dias de refeições."
+      : reserveDays === 1
+        ? "Nosso estoque só cobre mais um dia de refeições."
+        : "Estamos sem frutas para as refeições diárias.";
+    dialogText.textContent = resident.greeting + " Hoje estou " + (resident.moving ? "indo para meu local de trabalho. " : "no meu ponto da rotina diária. ") + villageCondition + " " + foodCondition;
+    dialog.hidden = false;
+    onToast("Você conversou com " + resident.name + ".");
+  }
+
+  talkButton.addEventListener("click", () => {
+    if (nearestResident) openResidentDialogue(nearestResident);
+  });
+
+  let nearestResident = null;
+  let rosterClock = 0;
+  function update(dt) {
+    const currentDay = Math.max(1, Number(state.day) || 1);
+    if (currentDay > lastUpkeepDay) {
+      let fedDays = 0;
+      let missedDays = 0;
+      const previousProsperityLevel = prosperityLevel();
+      while (lastUpkeepDay < currentDay) {
+        lastUpkeepDay++;
+        const ration = consumeDailyRation();
+        if (ration.fed) {
+          morale = Math.min(100, morale + 4);
+          fedDays++;
+        } else {
+          morale = Math.max(0, morale - 8);
+          missedDays++;
+        }
+      }
+      prosperityXp += fedDays;
+      saveVillageProgress();
+      refreshStockpileUI();
+      if (prosperityLevel() > previousProsperityLevel) onToast("A aldeia central alcançou o nível " + prosperityLevel() + " de prosperidade graças às refeições diárias.");
+      if (fedDays && missedDays) onToast("O povoado recebeu " + fedDays + " refeição(ões), mas faltou comida em " + missedDays + " dia(s).");
+      else if (fedDays) onToast("Os moradores fizeram suas refeições diárias. O ânimo melhorou.");
+      else onToast("Faltaram frutas para alimentar o povoado. O ânimo dos moradores diminuiu.");
+    }
+    const hour = Number(state.timeOfDay) || 8;
+    for (const resident of residents) {
+      const schedule = scheduleFor(resident, hour);
+      if (schedule.key !== resident.routeKey) {
+        resident.routeKey = schedule.key;
+        resident.routeIndex = 0;
+        resident.target = schedule.points[0];
+      }
+      if (resident.target) {
+        const dx = resident.target[0] - resident.group.position.x;
+        const dz = resident.target[1] - resident.group.position.z;
+        const distance = Math.hypot(dx, dz);
+        if (distance < .35) {
+          if (schedule.points.length > 1) {
+            resident.routeIndex = (resident.routeIndex + 1) % schedule.points.length;
+            resident.target = schedule.points[resident.routeIndex];
+          } else {
+            resident.setMoving(false);
+          }
+        } else {
+          const speed = .82;
+          const step = Math.min(distance, speed * Math.max(0, dt));
+          resident.group.position.x += dx / distance * step;
+          resident.group.position.z += dz / distance * step;
+          resident.group.rotation.y = Math.atan2(dx, dz);
+          resident.group.position.y = terrainHeight(resident.group.position.x, resident.group.position.z);
+          resident.setMoving(step > .002);
+        }
+      } else {
+        resident.setMoving(false);
+      }
+      if (resident.mixer) resident.mixer.update(dt);
+      const shift = WORK_SHIFTS[workShift];
+      const workingTime = hour >= shift.start && hour < 11.5 || hour >= 13.5 && hour < shift.end;
+      const job = professions[resident.profession];
+      if (resident.enabled && job && (job.resource || resident.profession === "guard") && workingTime) {
+        workElapsed[resident.id] += Math.max(0, dt);
+        const workCycle = workCycleFor(resident);
+        if (workElapsed[resident.id] >= workCycle) {
+          workElapsed[resident.id] -= workCycle;
+          const leveledUp = awardWorkExperience(resident);
+          const bonus = productionBonus(resident);
+          if (leveledUp) {
+            updateResidentNameTag(resident);
+            renderWorkPanel();
+            onToast(resident.name + " evoluiu na profissão! Agora está no nível " + skills[resident.id].level + ".");
+          } else {
+            updateSkillProgressUI(resident);
+          }
+          if (resident.profession === "guard") {
+            refreshSecurityUI();
+            continue;
+          }
+          const farmResult = resident.profession === "farmer" && typeof onFarmAction === "function" && stockpileTotal() < storageCapacity() ? onFarmAction() : null;
+          if (farmResult && typeof farmResult === "object" && farmResult.resource && Number(farmResult.amount) > 0) {
+            const produced = Number(farmResult.amount) + bonus;
+            const stored = storeResource(farmResult.resource, produced);
+            recordProduction(resident, farmResult.resource, produced, stored);
+            saveVillageProgress();
+            refreshStockpileUI();
+            onToast((farmResult.message || "Lina trabalhou na horta.") + (stored < produced ? " Depósito cheio: " + stored + "/" + produced + " unidades armazenadas." : (bonus ? " Bônus de experiência: +" + bonus + " unidade(s)." : "")));
+          } else if (farmResult) {
+            onToast(farmResult);
+          } else {
+            const produced = job.amount + bonus;
+            const stored = storeResource(job.resource, produced);
+            recordProduction(resident, job.resource, produced, stored);
+            saveVillageProgress();
+            refreshStockpileUI();
+            onToast(stored > 0 ? resident.name + " armazenou " + stored + " " + job.resourceLabel + " no depósito comunitário." + (stored < produced ? " O depósito está cheio; amplie-o em GESTÃO." : "") : "Depósito comunitário cheio! Amplie a capacidade em GESTÃO para retomar a produção.");
+          }
+        }
+      }
+    }
+
+    let closest = null;
+    let closestDistance = 4.3;
+    for (const resident of residents) {
+      const distance = Math.hypot(player.position.x - resident.group.position.x, player.position.z - resident.group.position.z);
+      if (distance < closestDistance) {
+        closest = resident;
+        closestDistance = distance;
+      }
+    }
+    nearestResident = closest;
+    talkButton.hidden = !closest || !dialog.hidden;
+    if (closest && dialog.hidden) talkButton.textContent = "CONVERSAR COM " + closest.name.toUpperCase();
+
+    rosterClock += dt;
+    if (rosterClock > 1.5) {
+      rosterClock = 0;
+      const hourText = hour.toFixed(0).padStart(2, "0") + "h";
+      const productionLine = workPanel.querySelector("#village-work-summary");
+      if (productionLine) {
+        const active = residents.filter(r => r.enabled && r.profession !== "idle").length;
+        productionLine.textContent = active + "/" + residents.length + " moradores em atividade · ciclos durante o expediente.";
+      }
+      refreshSecurityUI();
+      roster.querySelector("div:last-child").textContent = hour >= 20 || hour < 5.5
+        ? "Todos descansam · " + hourText
+        : hour >= 11.5 && hour < 13.5
+          ? "Pausa para refeição · " + hourText
+          : "Trabalho no povoado · " + hourText;
+    }
+  }
+
+  return { update, getStockpile, takeFromStockpile, getMorale: () => morale };
+}
