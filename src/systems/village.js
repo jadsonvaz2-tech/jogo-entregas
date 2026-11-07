@@ -20,6 +20,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   let prosperityXp = Math.max(0, Math.floor(Number(saved.prosperityXp) || 0));
   let storageLevel = Math.max(0, Math.min(3, Math.floor(Number(saved.storageLevel) || 0)));
   let lastUpkeepDay = Number.isFinite(Number(saved.lastUpkeepDay)) ? Math.max(1, Number(saved.lastUpkeepDay)) : Math.max(1, Number(state.day) || 1);
+  const WORK_SHIFTS = { reduced:{label:"Jornada reduzida · 7h–17h",start:7,end:17,detail:"Menos horas de trabalho e mais tempo de descanso."}, normal:{label:"Jornada normal · 6h–19h30",start:6,end:19.5,detail:"Equilíbrio entre produção e descanso."}, extended:{label:"Jornada estendida · 5h–21h",start:5,end:21,detail:"Mais tempo de produção, com menos descanso."} };
+  let workShift = Object.prototype.hasOwnProperty.call(WORK_SHIFTS,saved.workShift) ? saved.workShift : "normal";
   const stockpile = Object.fromEntries(["wood","stone","berries","meat","herbs","hide","fiber","wool","honey"].map(key => [key, Math.max(0, Number(saved.stockpile?.[key]) || 0)]));
   const legacyStorageFloor = Object.values(stockpile).reduce((sum, amount) => sum + amount, 0);
   const residents = [
@@ -120,6 +122,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     #village-work .work-row{padding:7px 0;border-top:1px solid #ffffff20}
     #village-work .work-head{display:flex;justify-content:space-between;align-items:center;gap:6px}
     #village-work select{width:100%;margin-top:5px;padding:7px;border:1px solid #b99b5c;border-radius:6px;background:#263729;color:#fff1cc;font:11px system-ui}
+    #village-work #village-work-shift{margin:4px 0 2px;border-color:#d6b45d;font-weight:700}
     #village-work button{margin-top:5px;width:100%;padding:7px;border:1px solid #b99b5c;border-radius:6px;background:#52634a;color:#fff1cc;font:700 10px system-ui}
     #village-work .production{color:#c4cfaa;font-size:10px;margin-top:3px}
     #village-work .stockpile-heading{margin:10px 0 6px;padding-top:9px;border-top:1px solid #b99b5c88;color:#f0d58a;font-weight:800;font-size:11px;letter-spacing:.04em}
@@ -139,10 +142,23 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   document.head.appendChild(workStyle);
   const workPanel = document.createElement("section");
   workPanel.id = "village-work";
-  workPanel.innerHTML = '<strong>ADMINISTRAÇÃO DA ALDEIA CENTRAL</strong><div id="village-housing-status" class="production"></div><div class="village-management-actions"><button id="village-build-house" type="button">🏠 CONSTRUIR CASA · 16 MADEIRAS + 8 PEDRAS</button><button id="village-recruit" type="button">👥 RECRUTAR · 25 MOEDAS</button></div><div class="work-list"></div><div id="village-morale" class="production"></div><div id="village-prosperity" class="production"></div><button id="village-communal-meal" type="button">PREPARAR REFEIÇÃO · 5 FRUTAS</button><div id="village-stockpile" class="production"></div><button id="village-upgrade-storage" type="button">MELHORAR DEPÓSITO</button><button id="village-collect-stockpile" type="button">RECOLHER PRODUÇÃO</button><div id="village-work-summary" class="production"></div>';
+  workPanel.innerHTML = '<strong>ADMINISTRAÇÃO DA ALDEIA CENTRAL</strong><label class="production" for="village-work-shift">JORNADA DOS MORADORES</label><select id="village-work-shift" aria-label="Jornada de trabalho da aldeia"><option value="reduced">Jornada reduzida · 7h–17h</option><option value="normal">Jornada normal · 6h–19h30</option><option value="extended">Jornada estendida · 5h–21h</option></select><div id="village-shift-detail" class="production"></div><div id="village-housing-status" class="production"></div><div class="village-management-actions"><button id="village-build-house" type="button">🏠 CONSTRUIR CASA · 16 MADEIRAS + 8 PEDRAS</button><button id="village-recruit" type="button">👥 RECRUTAR · 25 MOEDAS</button></div><div class="work-list"></div><div id="village-morale" class="production"></div><div id="village-prosperity" class="production"></div><button id="village-communal-meal" type="button">PREPARAR REFEIÇÃO · 5 FRUTAS</button><div id="village-stockpile" class="production"></div><button id="village-upgrade-storage" type="button">MELHORAR DEPÓSITO</button><button id="village-collect-stockpile" type="button">RECOLHER PRODUÇÃO</button><div id="village-work-summary" class="production"></div>';
   if (managementRoot) managementRoot.appendChild(workPanel);
   else document.body.appendChild(workPanel);
   const workList = workPanel.querySelector(".work-list");
+  const workShiftSelect = workPanel.querySelector("#village-work-shift");
+  const workShiftDetail = workPanel.querySelector("#village-shift-detail");
+  workShiftSelect.value = workShift;
+  const refreshWorkShiftUI = () => { workShiftSelect.value = workShift; workShiftDetail.textContent = WORK_SHIFTS[workShift].detail; };
+  workShiftSelect.addEventListener("change", () => {
+    if (!Object.prototype.hasOwnProperty.call(WORK_SHIFTS,workShiftSelect.value)) { refreshWorkShiftUI(); return; }
+    workShift = workShiftSelect.value;
+    for (const resident of residents) { resident.routeKey = ""; resident.target = null; resident.routeIndex = 0; }
+    saveVillageProgress();
+    refreshWorkShiftUI();
+    onToast("Jornada da aldeia alterada: " + WORK_SHIFTS[workShift].label + ".");
+  });
+  refreshWorkShiftUI();
   const stockpileDisplay = workPanel.querySelector("#village-stockpile");
   const collectStockpileButton = workPanel.querySelector("#village-collect-stockpile");
   const upgradeStorageButton = workPanel.querySelector("#village-upgrade-storage");
@@ -269,7 +285,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       for (const resident of residents) jobs[resident.id] = { profession: resident.profession, enabled: resident.enabled };
       const recruits = residents.filter(r => r.isRecruit).map(r => ({ id:r.id, name:r.name, role:r.role, profession:r.profession, model:r.model, start:r.start, home:r.home, homeSlot:r.homeSlot, work:r.work, greeting:r.greeting }));
       const homes = Object.fromEntries(residents.map(r => [r.id,{slot:r.homeSlot,position:r.home}]));
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, prosperityXp, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes, storageLevel }));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, prosperityXp, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes, storageLevel, workShift }));
     } catch (error) {
       console.warn("Não foi possível salvar o progresso dos moradores.", error);
     }
@@ -749,9 +765,10 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   renderWorkPanel();
 
   function scheduleFor(resident, hour) {
-    if (hour < 5.5 || hour >= 20) return { key: "sleep", points: [resident.home] };
+    const shift = WORK_SHIFTS[workShift];
+    if (hour < shift.start || hour >= shift.end) return { key: "sleep", points: [resident.home] };
     if (hour >= 11.5 && hour < 13.5) return { key: "meal", points: [resident.home] };
-    const workingHours = hour >= 6 && hour < 11.5 || hour >= 13.5 && hour < 19.5;
+    const workingHours = hour >= shift.start && hour < 11.5 || hour >= 13.5 && hour < shift.end;
     if (workingHours && (!resident.enabled || resident.profession === "idle")) {
       return { key: "resting-" + resident.id, points: [resident.home] };
     }
@@ -860,7 +877,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
         resident.setMoving(false);
       }
       if (resident.mixer) resident.mixer.update(dt);
-      const workingTime = hour >= 6 && hour < 11.5 || hour >= 13.5 && hour < 19.5;
+      const shift = WORK_SHIFTS[workShift];
+      const workingTime = hour >= shift.start && hour < 11.5 || hour >= 13.5 && hour < shift.end;
       const job = professions[resident.profession];
       if (resident.enabled && job && job.resource && workingTime) {
         workElapsed[resident.id] += Math.max(0, dt);
