@@ -55,6 +55,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     #village-dialog .trust{margin:0 0 14px;padding:9px 10px;border:1px solid #ffffff20;border-radius:8px;background:#101b1680;font:11px/1.4 system-ui;color:#e8d9ad}
     #village-dialog .trust-track{height:5px;margin-top:6px;border-radius:5px;background:#ffffff24;overflow:hidden}
     #village-dialog .trust-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,#8d9f65,#e6c979)}
+    #village-dialog #village-gift-button{width:100%;margin:0 0 8px;background:#6b7543}
+    #village-dialog #village-gift-button:disabled{opacity:.5}
     #village-dialog p{margin:0 0 16px}
     #village-dialog button{padding:10px 15px;border:1px solid #d6b45d;border-radius:9px;background:#52634a;color:#fff1cc;font:700 12px system-ui}
     #village-dialog .close{float:right;background:transparent}
@@ -106,13 +108,15 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   const dialog = document.createElement("section");
   dialog.id = "village-dialog";
   dialog.hidden = true;
-  dialog.innerHTML = '<button class="close" type="button">FECHAR ✕</button><h2 id="village-dialog-name"></h2><div class="role" id="village-dialog-role"></div><div class="trust" id="village-dialog-trust"></div><p id="village-dialog-text"></p><button id="village-dialog-done" type="button">CONTINUAR</button>';
+  dialog.innerHTML = '<button class="close" type="button">FECHAR ✕</button><h2 id="village-dialog-name"></h2><div class="role" id="village-dialog-role"></div><div class="trust" id="village-dialog-trust"></div><p id="village-dialog-text"></p><button id="village-gift-button" type="button">🎁 OFERECER 2 FRUTAS</button><button id="village-dialog-done" type="button">CONTINUAR</button>';
   document.body.appendChild(dialog);
 
   const dialogName = dialog.querySelector("#village-dialog-name");
   const dialogRole = dialog.querySelector("#village-dialog-role");
   const dialogText = dialog.querySelector("#village-dialog-text");
   const dialogTrust = dialog.querySelector("#village-dialog-trust");
+  const giftButton = dialog.querySelector("#village-gift-button");
+  let activeResident = null;
   const closeDialog = () => { dialog.hidden = true; };
   dialog.querySelector(".close").addEventListener("click", closeDialog);
   dialog.querySelector("#village-dialog-done").addEventListener("click", closeDialog);
@@ -128,7 +132,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     return [resident.id, {
       points,
       level: Math.min(5, Math.max(1, Math.floor(Number(savedRelationship.level) || (1 + Math.floor(points / 3))))),
-      lastTalkDay: Math.max(0, Math.floor(Number(savedRelationship.lastTalkDay) || 0))
+      lastTalkDay: Math.max(0, Math.floor(Number(savedRelationship.lastTalkDay) || 0)),
+      lastGiftDay: Math.max(0, Math.floor(Number(savedRelationship.lastGiftDay) || 0))
     }];
   }));
 
@@ -473,6 +478,37 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     resident.group.add(resident.nameTag);
   }
 
+  function renderTrustPanel(resident, message) {
+    const relationship = relationships[resident.id];
+    const trustNames = ["Desconhecido", "Conhecido", "Companheiro", "Amigo", "Aliado"];
+    const trustProgress = relationship.level >= 5 ? 100 : (relationship.points % 3) / 3 * 100;
+    dialogTrust.innerHTML = "<b>CONFIANÇA · " + trustNames[relationship.level - 1] + " · NÍVEL " + relationship.level + "/5</b><div>" + relationship.points + "/12 pontos · " + message + "</div><div class=\\"trust-track\\"><div class=\\"trust-fill\\" style=\\"width:" + trustProgress + "%\\"></div></div>";
+    const currentDay = Math.max(1, Number(state.day) || 1);
+    const giftedToday = relationship.lastGiftDay >= currentDay;
+    giftButton.disabled = giftedToday || relationship.points >= 12 || stockpile.berries < 2;
+    giftButton.textContent = giftedToday ? "PRESENTE ENTREGUE HOJE" : relationship.points >= 12 ? "CONFIANÇA MÁXIMA" : "🎁 OFERECER 2 FRUTAS";
+  }
+
+  giftButton.addEventListener("click", () => {
+    if (!activeResident) return;
+    const currentDay = Math.max(1, Number(state.day) || 1);
+    const relationship = relationships[activeResident.id];
+    if (relationship.lastGiftDay >= currentDay || relationship.points >= 12 || !takeFromStockpile("berries", 2)) return;
+    relationship.lastGiftDay = currentDay;
+    const previousLevel = relationship.level;
+    relationship.points = Math.min(12, relationship.points + 2);
+    relationship.level = Math.min(5, 1 + Math.floor(relationship.points / 3));
+    let message = "Presente recebido! A confiança aumentou.";
+    if (relationship.level > previousLevel) {
+      morale = Math.min(100, morale + 2);
+      message = "Presente recebido! " + activeResident.name + " avançou para o nível " + relationship.level + " e o ânimo do povoado recebeu +2.";
+    }
+    saveVillageProgress();
+    refreshStockpileUI();
+    renderTrustPanel(activeResident, message);
+    onToast("Você presenteou " + activeResident.name + " com 2 frutas.");
+  });
+
   function openResidentDialogue(resident) {
     resident.met = true;
     const relationship = relationships[resident.id];
@@ -494,9 +530,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     } else {
       saveVillageProgress();
     }
-    const trustNames = ["Desconhecido", "Conhecido", "Companheiro", "Amigo", "Aliado"];
-    const trustProgress = relationship.level >= 5 ? 100 : (relationship.points % 3) / 3 * 100;
-    dialogTrust.innerHTML = "<b>CONFIANÇA · " + trustNames[relationship.level - 1] + " · NÍVEL " + relationship.level + "/5</b><div>" + relationship.points + "/12 encontros · " + relationshipMessage + "</div><div class=\\"trust-track\\"><div class=\\"trust-fill\\" style=\\"width:" + trustProgress + "%\\"></div></div>";
+    activeResident = resident;
+    renderTrustPanel(resident, relationshipMessage);
     dialogName.textContent = resident.name;
     dialogRole.textContent = resident.role;
     const reserveDays = foodReserveDays();
