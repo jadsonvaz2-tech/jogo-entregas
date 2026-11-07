@@ -818,15 +818,23 @@ function createResource(x,z,type="wood",target=null){
  registerResource({object:stump,x,z,type,target,active:true});
 }
 async function buildForest(){
- const [common,pine,twisted,rock,grassShort,grassTall,wispyGrass,wispyGrassTall,rockPathA,rockPathB,rockPathC,rockPathThin,rockPathWide,bushFlowers,fern,clover,flowerGroup,mushroomCommon,mushroomGolden,pebbleRound1,pebbleRound2,pebbleRound3,pebbleRound4,pebbleRound5] = await Promise.all([
-  loadTree("CommonTree_1"),loadTree("Pine_1"),loadTree("TwistedTree_1"),loadTree("Rock_Medium_1"),
+ const [common,pine,twisted,common2,common3,common4,common5,pine2,pine3,pine4,pine5,twisted2,twisted3,twisted4,twisted5,rock,grassShort,grassTall,wispyGrass,wispyGrassTall,rockPathA,rockPathB,rockPathC,rockPathThin,rockPathWide,bushFlowers,fern,clover,flowerGroup,mushroomCommon,mushroomGolden,pebbleRound1,pebbleRound2,pebbleRound3,pebbleRound4,pebbleRound5] = await Promise.all([
+  loadTree("CommonTree_1"),loadTree("Pine_1"),loadTree("TwistedTree_1"),
+  loadTree("CommonTree_2"),loadTree("CommonTree_3"),loadTree("CommonTree_4"),loadTree("CommonTree_5"),
+  loadTree("Pine_2"),loadTree("Pine_3"),loadTree("Pine_4"),loadTree("Pine_5"),
+  loadTree("TwistedTree_2"),loadTree("TwistedTree_3"),loadTree("TwistedTree_4"),loadTree("TwistedTree_5"),
+  loadTree("Rock_Medium_1"),
   loadTree("Grass_Common_Short"),loadTree("Grass_Common_Tall"),loadTree("Grass_Wispy_Short"),loadTree("Grass_Wispy_Tall"),
   loadTree("RockPath_Round_Small_1"),loadTree("RockPath_Round_Small_2"),loadTree("RockPath_Round_Small_3"),loadTree("RockPath_Round_Thin"),loadTree("RockPath_Round_Wide"),
   loadTree("Bush_Common_Flowers"),loadTree("Fern_1"),loadTree("Clover_1"),loadTree("Flower_3_Group"),
   loadTree("Mushroom_Common"),loadTree("Mushroom_Laetiporus"),
   loadTree("Pebble_Round_1"),loadTree("Pebble_Round_2"),loadTree("Pebble_Round_3"),loadTree("Pebble_Round_4"),loadTree("Pebble_Round_5")
  ]);
- const choices=[common,pine,twisted];
+ const treeVariants=[
+  [common,common2,common3,common4,common5].filter(Boolean),
+  [pine,pine2,pine3,pine4,pine5].filter(Boolean),
+  [twisted,twisted2,twisted3,twisted4,twisted5].filter(Boolean)
+ ];
  // Vegetação real do pacote de assets: tufos distribuídos nas encostas e clareiras, sem cobrir o acampamento inicial.
  const groundCover=[grassShort,grassTall,wispyGrass,wispyGrassTall].filter(Boolean);
  for(let i=0;i<128&&groundCover.length;i++){
@@ -844,7 +852,9 @@ async function buildForest(){
  }
  treePositions.forEach((p,i)=>{
   if(Math.hypot(p.x,p.z)<10)return;
-  const tree=scatterModel(choices[i%choices.length],p.x,p.z,.8+worldRandom()*.55);
+  const variants=treeVariants[i%treeVariants.length];
+  const selected=variants.length?variants[Math.floor(i/3)%variants.length]:null;
+  const tree=scatterModel(selected,p.x,p.z,.8+worldRandom()*.55);
   createResource(p.x,p.z,"wood",tree);
  });
  for(let i=0;i<35;i++){const a=worldRandom()*6.28,r=9+worldRandom()*85;addRock(Math.cos(a)*r,Math.sin(a)*r,.45+worldRandom()*.9,true);}
@@ -982,6 +992,76 @@ async function buildForest(){
   if(!point)continue;
   pebbleSpots.push(point);
   addGroundDecoration(pebbleModels[(i+2)%pebbleModels.length],point.x,point.z,.17+decorationRandom()*.13,decorationRandom()*Math.PI*2,false);
+ }
+ // Pequenos bosques: reforça alguns núcleos com árvores adicionais sem criar novos recursos coletáveis.
+ const woodlandCenters=treePositions.filter((p,i)=>i%9===2&&Math.hypot(p.x,p.z)>20).slice(0,6);
+ const extraTrees=treeVariants.flat().filter(Boolean);
+ for(let c=0;c<woodlandCenters.length;c++){
+  const center=woodlandCenters[c];
+  for(let j=0;j<3;j++){
+   const angle=decorationRandom()*Math.PI*2;
+   const radius=4.2+decorationRandom()*5.5;
+   const x=center.x+Math.cos(angle)*radius,z=center.z+Math.sin(angle)*radius;
+   if(Math.hypot(x,z)<15||treePositions.some(p=>Math.hypot(p.x-x,p.z-z)<3.7))continue;
+   const source=extraTrees[Math.floor(decorationRandom()*extraTrees.length)];
+   if(!source)continue;
+   const tree=source.clone(true);
+   tree.position.set(x,terrainHeight(x,z),z);
+   tree.rotation.y=decorationRandom()*Math.PI*2;
+   tree.scale.multiplyScalar(.62+decorationRandom()*.28);
+   tree.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true;}});
+   scene.add(tree);treeModels.push(tree);
+  }
+ }
+ // Troncos caídos e raízes expostas são malhas leves, sem colisão, coleta ou dados de salvamento.
+ const woodMaterial=new THREE.MeshStandardMaterial({color:0x60432c,roughness:1});
+ const cutWoodMaterial=new THREE.MeshStandardMaterial({color:0x98734c,roughness:1});
+ function addWoodSegment(group,start,end,radiusA,radiusB,material){
+  const direction=new THREE.Vector3().subVectors(end,start);
+  const length=direction.length();
+  if(length<.08)return;
+  const mesh=new THREE.Mesh(new THREE.CylinderGeometry(radiusA,radiusB,length,5),material);
+  mesh.position.copy(start).add(end).multiplyScalar(.5);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction.normalize());
+  mesh.castShadow=false;mesh.receiveShadow=true;group.add(mesh);
+ }
+ const fallenLogCenters=treePositions.filter((p,i)=>i%4===1&&Math.hypot(p.x,p.z)>18).slice(0,13);
+ for(let i=0;i<fallenLogCenters.length;i++){
+  const p=fallenLogCenters[i],angle=decorationRandom()*Math.PI*2;
+  const length=1.8+decorationRandom()*1.25;
+  const group=new THREE.Group();
+  const start=new THREE.Vector3(-Math.cos(angle)*length*.5,.22,-Math.sin(angle)*length*.5);
+  const end=new THREE.Vector3(Math.cos(angle)*length*.5,.22,Math.sin(angle)*length*.5);
+  addWoodSegment(group,start,end,.16,.21,woodMaterial);
+  for(const side of [-1,1]){
+   const cap=new THREE.Mesh(new THREE.CircleGeometry(.145,7),cutWoodMaterial);
+   cap.position.copy(side<0?start:end);
+   cap.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),new THREE.Vector3(side*Math.cos(angle),0,side*Math.sin(angle)));
+   group.add(cap);
+  }
+  if(i%2===0){
+   const branchStart=new THREE.Vector3(Math.cos(angle)*.15,.28,Math.sin(angle)*.15);
+   const branchEnd=branchStart.clone().add(new THREE.Vector3(Math.cos(angle+1.1)*.62,.12,Math.sin(angle+1.1)*.62));
+   addWoodSegment(group,branchStart,branchEnd,.055,.09,woodMaterial);
+  }
+  group.position.set(p.x,terrainHeight(p.x,p.z),p.z);
+  group.rotation.y=decorationRandom()*Math.PI*2;
+  scene.add(group);treeModels.push(group);
+ }
+ // Raízes curtas e ramificadas junto à base de árvores selecionadas.
+ const rootTrees=treePositions.filter((p,i)=>i%3===0&&Math.hypot(p.x,p.z)>14).slice(0,18);
+ for(const p of rootTrees){
+  const group=new THREE.Group();
+  for(let r=0;r<4;r++){
+   const angle=r*Math.PI*.5+decorationRandom()*.32;
+   const reach=.75+decorationRandom()*.55;
+   const start=new THREE.Vector3(0,.12,0);
+   const end=new THREE.Vector3(Math.cos(angle)*reach,.035,Math.sin(angle)*reach);
+   addWoodSegment(group,start,end,.045,.13,woodMaterial);
+  }
+  group.position.set(p.x,terrainHeight(p.x,p.z),p.z);
+  group.rotation.y=decorationRandom()*Math.PI*2;
+  scene.add(group);treeModels.push(group);
  }
 }
 
