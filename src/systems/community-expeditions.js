@@ -92,8 +92,9 @@ export function createCommunityExpeditions({villageResidents,state,onToast,root=
   if(!active)return;
   const mission=active,d=DESTINATIONS[mission.destination]||DESTINATIONS.mines;
   const rewards=[];
-  for(const [key,min,max] of d.rewards){const amount=min+Math.floor(Math.random()*(max-min+1));const stored=villageResidents.depositToStockpile(key,amount);if(stored)rewards.push(stored+" "+key);}
+  // Devolve primeiro o equipamento emprestado para garantir que não seja bloqueado por recompensas que encham o depósito.
   for(const key of mission.gearItems||[])villageResidents.depositToStockpile(key,1);
+  for(const [key,min,max] of d.rewards){const amount=min+Math.floor(Math.random()*(max-min+1));const stored=villageResidents.depositToStockpile(key,amount);if(stored)rewards.push(stored+" "+key);}
   villageResidents.setExpeditionAway?.(mission.members,false);
   saved.completed++;
   const record={destination:d.label,members:mission.members.length,result:rewards.join(", ")||"retorno sem carga adicional",at:Date.now()};
