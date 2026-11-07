@@ -3,7 +3,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
 import { createStoryEncounter } from "./systems/story.js";
 import { createVillageResidents } from "./systems/village.js?v=visible-save-diagnostics-1";
-import { createWorldSettlements, WORLD_ROAD_PATHS } from "./systems/settlements.js?v=road-relief-1";
+import { createWorldSettlements, WORLD_ROAD_PATHS } from "./systems/settlements.js?v=roads-visible-2026-11-07-3";
 import { createDistantVillageResidents } from "./systems/distant-village-residents.js";
 import { createSettlementEconomy } from "./systems/settlement-economy.js";
 let villageResidents=null;
