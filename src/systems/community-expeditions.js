@@ -5,7 +5,7 @@ const DESTINATIONS = {
   marsh:{label:"Pântano Antigo",duration:150000,detail:"Terreno alagado, fibras resistentes e peles raras.",rewards:[["herbs",4,7],["hide",2,4],["fiber",3,6],["leather",1,2]]}
 };
 const clampInt=(n,min,max)=>Math.max(min,Math.min(max,Math.floor(Number(n)||0)));
-export function createCommunityExpeditions({villageResidents,state,onToast,root=document.getElementById("communityExpeditionsPanel")}){
+export function createCommunityExpeditions({villageResidents,state,onToast,onDiscovery=null,root=document.getElementById("communityExpeditionsPanel")}){
  if(!root||!villageResidents)return null;
  let saved={active:null,history:[],completed:0};
  const parse=value=>{try{const data=JSON.parse(value||"null");return data&&typeof data==="object"?data:null;}catch{return null;}};
@@ -139,6 +139,7 @@ export function createCommunityExpeditions({villageResidents,state,onToast,root=
   for(const [key,min,max] of d.rewards){const amount=min+Math.floor(Math.random()*(max-min+1));const stored=villageResidents.depositToStockpile(key,amount);if(stored)rewards.push(stored+" "+key);}
   for(const item of mission.bonusRewards||[]){const stored=villageResidents.depositToStockpile(item.key,item.amount);if(stored)rewards.push(stored+" "+item.key+" (evento)");}
   if(mission.event&&!mission.eventResolved)mission.eventResult="O grupo preferiu não se arriscar e seguiu viagem."; 
+  try{onDiscovery?.({destination:mission.destination,eventType:mission.event?.type||null,eventResolved:!!mission.eventResolved,memberNames:mission.memberNames||[]});}catch(error){console.warn("Não foi possível registrar a descoberta da expedição.",error);}
   villageResidents.setExpeditionAway?.(mission.members,false);
   saved.completed++;
   const record={destination:d.label,members:mission.members.length,result:rewards.join(", ")||"retorno sem carga adicional",at:Date.now()};

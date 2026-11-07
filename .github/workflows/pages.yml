@@ -18,6 +18,7 @@ jobs:
         run: |
           node --input-type=module --check < src/main.js
           node --input-type=module --check < src/systems/community-expeditions.js
+          node --input-type=module --check < src/systems/distant-exploration.js
           node --input-type=module --check < src/systems/settlements.js
           node --input-type=module --check < src/systems/village.js
       - name: Validate required 3D model dependencies

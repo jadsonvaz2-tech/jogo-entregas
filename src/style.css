@@ -146,3 +146,11 @@
 .expedition-event-choice{display:block;width:100%;margin:6px 0;padding:9px;border:1px solid #8f805e;border-radius:6px;background:#354638;color:#fff;text-align:left;font-weight:650}
 .expedition-event-choice:active{background:#566b4c}
 .expedition-event-result{font-weight:700;color:#cce0b6!important}
+
+/* Pontos de interesse descobertos nas expedições e interação presencial. */
+.exploration-site-info{padding:9px 10px;border:1px solid #a58c5a88;border-radius:7px;background:#253328;color:#f1e5c6;font:11px/1.45 system-ui}
+.exploration-site-list{display:flex;flex-wrap:wrap;gap:6px;max-height:110px;overflow:auto}
+.exploration-site-button{padding:7px 9px;border:1px solid #8f805e;border-radius:6px;background:#354638;color:#fff0cb;font:700 10px system-ui;touch-action:manipulation}
+.exploration-site-list small{flex-basis:100%;color:#c7d2bc;font:10px/1.4 system-ui}
+#explorationCollectButton{background:#8a6837;border-color:#e0c48c}
+#explorationCollectButton[hidden]{display:none}
