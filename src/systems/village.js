@@ -221,7 +221,12 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
 
   function experienceNeeded(level) { return level * 5; }
 
-  function productionBonus(resident) { return Math.floor((skills[resident.id].level - 1) / 2); }
+  function productionBonus(resident) {
+    const skillBonus = Math.floor((skills[resident.id].level - 1) / 2);
+    const relationship = relationships[resident.id];
+    const friendshipBonus = relationship.level >= 5 ? 2 : relationship.level >= 3 ? 1 : 0;
+    return skillBonus + friendshipBonus;
+  }
 
   function awardWorkExperience(resident) {
     const skill = skills[resident.id];
@@ -482,7 +487,9 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const relationship = relationships[resident.id];
     const trustNames = ["Desconhecido", "Conhecido", "Companheiro", "Amigo", "Aliado"];
     const trustProgress = relationship.level >= 5 ? 100 : (relationship.points % 3) / 3 * 100;
-    dialogTrust.innerHTML = "<b>CONFIANÇA · " + trustNames[relationship.level - 1] + " · NÍVEL " + relationship.level + "/5</b><div>" + relationship.points + "/12 pontos · " + message + "</div><div class=\\"trust-track\\"><div class=\\"trust-fill\\" style=\\"width:" + trustProgress + "%\\"></div></div>";
+    const friendshipBonus = relationship.level >= 5 ? 2 : relationship.level >= 3 ? 1 : 0;
+    dialogTrust.innerHTML = "<b>CONFIANÇA · " + trustNames[relationship.level - 1] + " · NÍVEL " + relationship.level + "/5</b><div>" + relationship.points + "/12 pontos · " + message + "</div><div class=\\"trust-track\\"><div class=\\"trust-fill\\" style=\\"width:" + trustProgress + "%\\"></div></div><div>" + (friendshipBonus ? "🤝 BÔNUS DE AMIZADE: +" + friendshipBonus + " unidade(s) por ciclo de trabalho." : "Fortaleça a amizade até Companheiro para desbloquear bônus de trabalho.") + "</div>";
+    renderWorkPanel();
     const currentDay = Math.max(1, Number(state.day) || 1);
     const giftedToday = relationship.lastGiftDay >= currentDay;
     giftButton.disabled = giftedToday || relationship.points >= 12 || stockpile.berries < 2;
