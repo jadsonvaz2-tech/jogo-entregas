@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
 import { createStoryEncounter } from "./systems/story.js";
-import { createVillageResidents } from "./systems/village.js?v=community-textile-leather-2026-11-07-2";
+import { createVillageResidents } from "./systems/village.js?v=community-campaign-tailor-2026-11-07-7";
 import { createWorldSettlements, WORLD_ROAD_PATHS } from "./systems/settlements.js?v=natural-road-relief-2026-11-07-1";
 import { createExpandedWorld } from "./systems/world-expansion.js?v=underground-exploration-2026-11-07-1";
 import { createDistantVillageResidents } from "./systems/distant-village-residents.js";
@@ -1475,9 +1475,12 @@ function updateHUD(){
   $("fieldKitStatus").textContent="Kits de campo: "+state.fieldKits+" · "+(state.paddedGambeson?"gibão reforça a recuperação":"recuperação padrão");
   const communalCloth=villageResidents?.getStockpile?.("cloth")||0,communalLeather=villageResidents?.getStockpile?.("leather")||0,communalHerbs=villageResidents?.getStockpile?.("herbs")||0;
   const communalKits=villageResidents?.getStockpile?.("fieldKits")||0;
-  $("communalExpeditionStatus").textContent="Depósito comunitário · Tecidos: "+communalCloth+" · Couro curtido: "+communalLeather+" · Ervas: "+communalHerbs+" · Kits prontos: "+communalKits;
+  const communalGambesons=villageResidents?.getStockpile?.("paddedGambesons")||0;
+  $("communalExpeditionStatus").textContent="Depósito comunitário · Tecidos: "+communalCloth+" · Couro curtido: "+communalLeather+" · Ervas: "+communalHerbs+" · Kits prontos: "+communalKits+" · Gibões: "+communalGambesons;
   $("withdrawCommunalFieldKit").hidden=state.nearExpeditionTentIndex<0;
   $("withdrawCommunalFieldKit").disabled=state.nearExpeditionTentIndex<0||communalKits<1;
+  $("withdrawCommunalGambeson").hidden=state.nearExpeditionTentIndex<0;
+  $("withdrawCommunalGambeson").disabled=state.nearExpeditionTentIndex<0||communalGambesons<1||state.paddedGambeson;
   $("craftCommunalFieldKit").hidden=state.nearExpeditionTentIndex<0;
   $("craftCommunalFieldKit").disabled=state.nearExpeditionTentIndex<0||communalCloth<2||communalLeather<1||communalHerbs<2;
   $("craftFieldKit").hidden=state.nearExpeditionTentIndex<0;
@@ -1878,6 +1881,7 @@ $("craftStorageChest").addEventListener("click",craftStorageChest);
   $("craftFieldKit").addEventListener("click",craftFieldKit);
   $("craftCommunalFieldKit").addEventListener("click",craftCommunalFieldKit);
   $("withdrawCommunalFieldKit").addEventListener("click",withdrawCommunalFieldKit);
+  $("withdrawCommunalGambeson").addEventListener("click",withdrawCommunalGambeson);
   $("useFieldKit").addEventListener("click",useFieldKit);
  $("craftSmithy").addEventListener("click",craftSmithy);
   $("withdrawVillageMetals").addEventListener("click",withdrawVillageMetals);
@@ -2462,6 +2466,13 @@ function findFenceConnection(targetX,targetZ,extension){
   if(!villageResidents.takeFromStockpile("cloth",2)||!villageResidents.takeFromStockpile("leather",1)||!villageResidents.takeFromStockpile("herbs",2)){toast("Não foi possível reservar os materiais comunitários.");return;}
   state.fieldKits++;updateHUD();saveGame();
   toast(state.paddedGambeson?"A comunidade preparou um kit reforçado pelo seu gibão acolchoado.":"Kit de campo preparado com materiais do depósito comunitário.");
+ }
+ function withdrawCommunalGambeson(){
+  if(state.nearExpeditionTentIndex<0){toast("Aproxime-se de uma tenda de expedição.");return;}
+  if(state.paddedGambeson){toast("Você já está usando um gibão acolchoado.");return;}
+  if(!villageResidents?.getStockpile||!villageResidents?.takeFromStockpile||villageResidents.getStockpile("paddedGambesons")<1){toast("A aldeia ainda não tem gibão pronto no depósito.");return;}
+  if(!villageResidents.takeFromStockpile("paddedGambesons",1)){toast("Não foi possível retirar o gibão comunitário.");return;}
+  state.paddedGambeson=true;if(characterReady)createPaddedGambesonVisual();updateHUD();saveGame();toast("Gibão acolchoado comunitário equipado! Proteção adicional ativada.");
  }
  function withdrawCommunalFieldKit(){
   if(state.nearExpeditionTentIndex<0){toast("Aproxime-se de uma tenda de expedição.");return;}
