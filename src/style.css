@@ -98,3 +98,13 @@
 #craftPanel>.craft-category>summary{padding:13px 12px;font-size:12px}
 #craftPanel>.craft-category>*:not(summary){margin-left:7px;width:calc(100% - 14px)}
 @media(min-width:800px){#craftPanel{left:50%;bottom:auto}}
+
+
+/* A gestão do povoado inicial agora vive dentro da categoria ALDEIA CENTRAL do menu GESTÃO. */
+#playerVillageManagementSlot{display:grid;gap:8px;padding:6px 3px 3px}
+#playerVillageManagementSlot #village-roster,#playerVillageManagementSlot #village-work{position:static!important;inset:auto!important;transform:none!important;width:100%!important;max-width:none!important;max-height:none!important;margin:0!important;box-shadow:none!important;pointer-events:auto!important}
+#playerVillageManagementSlot #village-roster{padding:10px;background:#17231b;border:1px solid #65714d;border-radius:8px}
+#playerVillageManagementSlot #village-work{padding:10px;background:#17231b;border:1px solid #65714d;border-radius:8px}
+#playerVillageManagementSlot .village-management-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:8px 0}
+#playerVillageManagementSlot .village-management-actions button{min-height:42px;padding:8px;border:1px solid #b99b5c;border-radius:7px;background:#42583a;color:#fff1cc;font:700 10px system-ui;white-space:normal}
+#playerVillageManagementSlot .village-management-actions button:disabled{opacity:.42}

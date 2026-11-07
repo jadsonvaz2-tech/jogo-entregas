@@ -3,7 +3,7 @@ import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
 
 const SAVE_KEY = "cronicas-floresta-village-v1";
 
-export function createVillageResidents({ THREE, scene, player, terrainHeight, state, onToast, onSave, onFarmAction }) {
+export function createVillageResidents({ THREE, scene, player, terrainHeight, state, onToast, onSave, onFarmAction, managementRoot = null }) {
   const loader = new GLTFLoader();
   const saved = (() => {
     try {
@@ -39,6 +39,20 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       greeting: "Meu nome é Tomé. Conheço pedras boas para fundações e caminhos. Quero ajudar a erguer casas firmes por aqui. Por enquanto, reúno material perto da clareira."
     }
   ];
+  const savedRecruits = Array.isArray(saved.recruits) ? saved.recruits : [];
+  for (const recruit of savedRecruits) {
+    if (!recruit || !recruit.id || residents.some(person => person.id === recruit.id)) continue;
+    const home = Array.isArray(recruit.home) && recruit.home.length === 2 ? recruit.home : [0, 0];
+    residents.push({
+      id: recruit.id, name: recruit.name || "Novo morador", role: recruit.role || "Sem tarefa",
+      profession: recruit.profession || "idle", model: recruit.model || "Worker_Male.gltf",
+      start: [...home], home: [...home], work: Array.isArray(recruit.work) ? recruit.work : [],
+      greeting: recruit.greeting || "Obrigado por me receber nesta aldeia.", isRecruit: true
+    });
+  }
+  let housesBuilt = Math.max(0, Math.min(6, Math.floor(Number(saved.houses) || 0)));
+  const HOUSE_SLOTS = [[-15,14],[15,14],[-15,-14],[15,-14],[-23,0],[23,0]];
+  const recruitNames = ["Afonso","Beatriz","Cecília","Dário","Elisa","Frederico","Guilherme","Helena","Inês","Joaquim","Leonor","Martim","Nuno","Olívia","Rafael","Sofia"];
 
   const uiStyle = document.createElement("style");
   uiStyle.textContent = `
@@ -61,14 +75,24 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
 
   const roster = document.createElement("div");
   roster.id = "village-roster";
-  roster.innerHTML = '<strong>POVOADO · 3 MORADORES</strong>' +
-    residents.map((resident) => '<div class="resident-line"><b>' + resident.name + '</b><span>' + resident.role + '</span></div>').join("") +
-    '<div style="padding-top:6px;color:#bfc99d">Rotinas diárias · amanhecer ao anoitecer</div>';
-  document.body.appendChild(roster);
+  const refreshRoster = () => {
+    roster.innerHTML = '<strong>ALDEIA CENTRAL · ' + residents.length + ' MORADORES</strong>' +
+      residents.map((resident) => '<div class="resident-line"><b>' + resident.name + '</b><span>' + resident.role + '</span></div>').join("") +
+      '<div style="padding-top:6px;color:#bfc99d">Rotinas diárias · amanhecer ao anoitecer</div>';
+  };
+  refreshRoster();
+  if (managementRoot) managementRoot.appendChild(roster);
+  else document.body.appendChild(roster);
 
   const workStyle = document.createElement("style");
   workStyle.textContent = `
     #village-work{position:fixed;z-index:24;right:10px;top:390px;width:min(260px,calc(100vw - 20px));max-height:42vh;overflow:auto;padding:10px;border:1px solid rgba(194,167,106,.68);border-radius:11px;background:rgba(22,32,24,.94);color:#eee5cf;font:11px/1.35 system-ui;box-shadow:0 4px 16px #0007;pointer-events:auto}
+    #playerVillageManagementSlot #village-roster,#playerVillageManagementSlot #village-work{position:static;z-index:auto;top:auto;right:auto;left:auto;bottom:auto;transform:none;width:100%;max-width:none;max-height:none;margin:0 0 9px;box-shadow:none;pointer-events:auto}
+    #playerVillageManagementSlot #village-roster{padding:10px;background:#17231b;border:1px solid #65714d;border-radius:8px}
+    #playerVillageManagementSlot #village-work{padding:10px;background:#17231b;border:1px solid #65714d;border-radius:8px}
+    #playerVillageManagementSlot .village-management-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:7px 0}
+    #playerVillageManagementSlot .village-management-actions button{min-height:42px;padding:8px;border:1px solid #b99b5c;border-radius:7px;background:#42583a;color:#fff1cc;font:700 10px system-ui}
+    #playerVillageManagementSlot .village-management-actions button:disabled{opacity:.42}
     #village-work strong{display:block;color:#e6c979;font-size:10px;letter-spacing:.08em;margin-bottom:6px}
     #village-work .work-row{padding:7px 0;border-top:1px solid #ffffff20}
     #village-work .work-head{display:flex;justify-content:space-between;align-items:center;gap:6px}
@@ -81,8 +105,9 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   document.head.appendChild(workStyle);
   const workPanel = document.createElement("section");
   workPanel.id = "village-work";
-  workPanel.innerHTML = '<strong>GESTÃO DO POVOADO</strong><div class="work-list"></div><div id="village-morale" class="production"></div><button id="village-communal-meal" type="button">PREPARAR REFEIÇÃO · 5 FRUTAS</button><div id="village-stockpile" class="production"></div><button id="village-collect-stockpile" type="button">RECOLHER PRODUÇÃO</button><div id="village-work-summary" class="production"></div>';
-  document.body.appendChild(workPanel);
+  workPanel.innerHTML = '<strong>ADMINISTRAÇÃO DA ALDEIA CENTRAL</strong><div id="village-housing-status" class="production"></div><div class="village-management-actions"><button id="village-build-house" type="button">🏠 CONSTRUIR CASA · 16 MADEIRAS + 8 PEDRAS</button><button id="village-recruit" type="button">👥 RECRUTAR · 25 MOEDAS</button></div><div class="work-list"></div><div id="village-morale" class="production"></div><button id="village-communal-meal" type="button">PREPARAR REFEIÇÃO · 5 FRUTAS</button><div id="village-stockpile" class="production"></div><button id="village-collect-stockpile" type="button">RECOLHER PRODUÇÃO</button><div id="village-work-summary" class="production"></div>';
+  if (managementRoot) managementRoot.appendChild(workPanel);
+  else document.body.appendChild(workPanel);
   const workList = workPanel.querySelector(".work-list");
   const stockpileDisplay = workPanel.querySelector("#village-stockpile");
   const collectStockpileButton = workPanel.querySelector("#village-collect-stockpile");
@@ -130,12 +155,76 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     lumberjack: [[9.1, 1.4], [8.4, -2.2]],
     mason: [[2.5, 9.2], [4.1, 7.4]]
   };
+  const housingStatus = workPanel.querySelector("#village-housing-status");
+  const buildHouseButton = workPanel.querySelector("#village-build-house");
+  const recruitButton = workPanel.querySelector("#village-recruit");
+  function refreshHousingUI() {
+    const capacity = 3 + housesBuilt * 2;
+    housingStatus.textContent = "MORADORES · " + residents.length + "/" + capacity + " vagas · CASAS CONSTRUÍDAS · " + housesBuilt + "/6";
+    buildHouseButton.disabled = housesBuilt >= HOUSE_SLOTS.length || (Number(state.wood)||0) < 16 || (Number(state.stone)||0) < 8;
+    buildHouseButton.textContent = housesBuilt >= HOUSE_SLOTS.length ? "LIMITE DE CASAS ATINGIDO" : "🏠 CASA · 16 MADEIRAS + 8 PEDRAS";
+    recruitButton.disabled = residents.length >= capacity || (Number(state.coins)||0) < 25;
+    recruitButton.textContent = residents.length >= capacity ? "CONSTRUA UMA CASA PARA MAIS VAGAS" : "👥 RECRUTAR · 25 MOEDAS";
+  }
+  function addRecruit() {
+    const capacity = 3 + housesBuilt * 2;
+    if (residents.length >= capacity || (Number(state.coins)||0) < 25) return;
+    const recruitIndex = residents.length - 3;
+    const houseIndex = Math.floor(recruitIndex / 2);
+    const slot = HOUSE_SLOTS[houseIndex];
+    if (!slot) return;
+    const side = recruitIndex % 2 === 0 ? -1.25 : 1.25;
+    const home = [slot[0] + side, slot[1] + 1.25];
+    const usedNames = new Set(residents.map(r => r.name));
+    const name = recruitNames.find(candidate => !usedNames.has(candidate)) || ("Morador " + (residents.length + 1));
+    const professionKeys = ["farmer","lumberjack","mason"];
+    const profession = professionKeys[(residents.length - 3) % professionKeys.length];
+    const resident = {
+      id:"central-recruit-"+Date.now()+"-"+residents.length, name, role:professions[profession].label, profession,
+      model:residents.length % 2 ? "Worker_Male.gltf" : "Worker_Female.gltf",
+      start:home, home, work:professionWorkPoints[profession], greeting:"Sou " + name + ". Vim construir uma vida nesta aldeia e ajudar a comunidade."
+    };
+    resident.group = new THREE.Group();
+    resident.group.position.set(home[0],terrainHeight(home[0],home[1]),home[1]);
+    scene.add(resident.group);
+    resident.fallback = makeFallback(resident.group,0x80694d);
+    skills[resident.id] = {xp:0,level:1};
+    workElapsed[resident.id] = 0;
+    resident.nameTag = makeNameTag(resident.name,resident.role,skills[resident.id].level);
+    resident.group.add(resident.nameTag);
+    resident.actions = {}; resident.mixer = null; resident.moving = false; resident.target = null;
+    resident.routeKey = ""; resident.routeIndex = 0; resident.idleAction = null; resident.walkAction = null;
+    resident.setMoving = moving => {
+      if (resident.moving === moving) return;
+      resident.moving = moving;
+      const next = moving ? resident.walkAction : resident.idleAction;
+      const previous = moving ? resident.idleAction : resident.walkAction;
+      if (previous) previous.fadeOut(.18);
+      if (next) next.reset().fadeIn(.18).play();
+    };
+    residents.push(resident);
+    loadResidentModel(resident,resident.group,resident.fallback);
+    state.coins -= 25;
+    refreshRoster(); renderWorkPanel(); saveVillageProgress(); refreshStockpileUI(); refreshHousingUI();
+    if (onSave) onSave();
+    onToast(name + " chegou à aldeia central como " + professions[profession].label + ".");
+  }
+  buildHouseButton.addEventListener("click",() => {
+    if (housesBuilt >= HOUSE_SLOTS.length || (Number(state.wood)||0) < 16 || (Number(state.stone)||0) < 8) return;
+    state.wood -= 16; state.stone -= 8;
+    buildHouse(housesBuilt); housesBuilt++;
+    saveVillageProgress(); refreshHousingUI(); refreshStockpileUI();
+    if (onSave) onSave();
+    onToast("Casa construída! A aldeia central agora pode abrigar mais dois moradores.");
+  });
+  recruitButton.addEventListener("click",addRecruit);
 
   function saveVillageProgress() {
     try {
       const jobs = {};
       for (const resident of residents) jobs[resident.id] = { profession: resident.profession, enabled: resident.enabled };
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, lastUpkeepDay, skills }));
+      const recruits = residents.filter(r => r.isRecruit).map(r => ({ id:r.id, name:r.name, role:r.role, profession:r.profession, model:r.model, start:r.start, home:r.home, work:r.work, greeting:r.greeting }));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, lastUpkeepDay, skills, recruits, houses:housesBuilt }));
     } catch (error) {
       console.warn("Não foi possível salvar o progresso dos moradores.", error);
     }
@@ -161,7 +250,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const reserveDays = foodReserveDays();
     const reserveText = reserveDays === 1 ? "1 dia" : reserveDays + " dias";
     upkeepStatus.textContent = "RAÇÕES · 3 frutas/dia · reserva para " + reserveText + (reserveDays < 2 ? " · REABASTECER" : " · suficiente");
-    workSummary.textContent = residents.filter(r => r.enabled && r.profession !== "idle").length + "/3 moradores em atividade · produção guardada no depósito.";
+    workSummary.textContent = residents.filter(r => r.enabled && r.profession !== "idle").length + "/" + residents.length + " moradores em atividade · produção guardada no depósito.";
   }
 
   function getStockpile(resource) {
@@ -176,6 +265,9 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     refreshStockpileUI();
     return true;
   }
+
+  refreshHousingUI();
+  refreshStockpileUI();
 
   communalMealButton.addEventListener("click", () => {
     if (stockpile.berries < 5 || morale >= 100) return;
@@ -260,6 +352,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
         const residentIndex = residents.indexOf(resident);
         const rosterRole = roster.querySelectorAll(".resident-line span")[residentIndex];
         if (rosterRole) rosterRole.textContent = resident.role;
+        refreshRoster();
         if (resident.profession === "idle") resident.enabled = false;
         else resident.enabled = true;
         resident.routeKey = "";
@@ -399,6 +492,32 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     });
   }
 
+  const houseObjects = [];
+  const houseWood = new THREE.MeshStandardMaterial({ color: 0x765333, roughness: .95 });
+  const houseRoof = new THREE.MeshStandardMaterial({ color: 0x514033, roughness: 1 });
+  const houseStone = new THREE.MeshStandardMaterial({ color: 0x77746a, roughness: 1 });
+  function buildHouse(index) {
+    const slot = HOUSE_SLOTS[index];
+    if (!slot) return;
+    const group = new THREE.Group();
+    const foundation = new THREE.Mesh(new THREE.BoxGeometry(5.2,.3,4.6),houseStone);
+    foundation.position.y=.15; foundation.receiveShadow=true; group.add(foundation);
+    const walls = new THREE.Mesh(new THREE.BoxGeometry(4.8,2.65,4.2),houseWood);
+    walls.position.y=1.62; walls.castShadow=true; walls.receiveShadow=true; group.add(walls);
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(3.7,2.25,4),houseRoof);
+    roof.rotation.y=Math.PI/4; roof.position.y=4.03; roof.castShadow=true; group.add(roof);
+    const door = new THREE.Mesh(new THREE.BoxGeometry(.85,1.8,.12),houseRoof);
+    door.position.set(0,1.05,2.17); group.add(door);
+    const windowMaterial = new THREE.MeshStandardMaterial({color:0x9eb5a4,emissive:0x263c32,roughness:.45});
+    for (const side of [-1,1]) {
+      const window = new THREE.Mesh(new THREE.BoxGeometry(.8,.72,.1),windowMaterial);
+      window.position.set(side*1.45,1.95,2.18); group.add(window);
+    }
+    group.position.set(slot[0],terrainHeight(slot[0],slot[1]),slot[1]);
+    scene.add(group); houseObjects.push(group);
+  }
+  for (let i=0;i<housesBuilt;i++) buildHouse(i);
+
   for (const resident of residents) {
     const job = savedJobs[resident.id];
     if (job && Object.prototype.hasOwnProperty.call(professions, job.profession)) resident.profession = job.profession;
@@ -430,7 +549,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     };
     loadResidentModel(resident, resident.group, resident.fallback);
   }
-  roster.querySelectorAll(".resident-line span").forEach((el, index) => { el.textContent = residents[index].role; });
+  refreshRoster();
   renderWorkPanel();
 
   function scheduleFor(resident, hour) {
@@ -598,7 +717,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       const productionLine = workPanel.querySelector("#village-work-summary");
       if (productionLine) {
         const active = residents.filter(r => r.enabled && r.profession !== "idle").length;
-        productionLine.textContent = active + "/3 moradores em atividade · ciclos durante o expediente.";
+        productionLine.textContent = active + "/" + residents.length + " moradores em atividade · ciclos durante o expediente.";
       }
       roster.querySelector("div:last-child").textContent = hour >= 20 || hour < 5.5
         ? "Todos descansam · " + hourText

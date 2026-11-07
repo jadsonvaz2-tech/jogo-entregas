@@ -1626,6 +1626,15 @@ if(craftOther.length){
  const summary=document.createElement("summary");summary.textContent="OUTROS";
  details.append(summary,...craftOther);craftPanel.appendChild(details);
 }
+const playerVillageSection=document.createElement("details");
+playerVillageSection.className="craft-category";
+playerVillageSection.id="playerVillageManagement";
+const playerVillageHeading=document.createElement("summary");
+playerVillageHeading.textContent="ALDEIA CENTRAL · MORADORES E GESTÃO";
+const playerVillageManagementSlot=document.createElement("div");
+playerVillageManagementSlot.id="playerVillageManagementSlot";
+playerVillageSection.append(playerVillageHeading,playerVillageManagementSlot);
+craftPanel.appendChild(playerVillageSection);
 
 // Backup manual do progresso: usa a mesma chave de salvamento, sem alterar o formato existente.
 const backupArea=document.createElement("div");
@@ -4365,7 +4374,7 @@ async function start(){
  const loaded=await loadCharacter();
  if(!loaded)toast("Modelo do viajante indisponível: usando personagem provisório.");
  storyEncounter=createStoryEncounter({THREE,scene,player,terrainHeight,state,onSave:saveGame,onToast:toast});
- villageResidents=createVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,onSave:saveGame,onFarmAction:villageFarmAction});
+ villageResidents=createVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,onSave:saveGame,onFarmAction:villageFarmAction,managementRoot:$("playerVillageManagementSlot")});
  settlementEconomy=createSettlementEconomy({THREE,player,state,onToast:toast,onChange:()=>{updateHUD();saveGame();}});
  distantVillageResidents=createDistantVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,economy:settlementEconomy});
  $("loadingBar").style.width="100%";
