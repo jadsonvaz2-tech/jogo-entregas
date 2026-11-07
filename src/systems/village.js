@@ -221,6 +221,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   const residentFilterCount = workPanel.querySelector("#village-resident-filter-count");
   const RESIDENT_STATUS_FILTERS = ["all","working","paused"];
   let residentStatusFilter = RESIDENT_STATUS_FILTERS.includes(saved.residentStatusFilter) ? saved.residentStatusFilter : "all";
+  const RESIDENT_HOUSING_FILTERS = ["all","housed","unhoused"];
+  let residentHousingFilter = RESIDENT_HOUSING_FILTERS.includes(saved.residentHousingFilter) ? saved.residentHousingFilter : "all";
   const residentStatusLabel = document.createElement("label");
   residentStatusLabel.className = "production";
   residentStatusLabel.htmlFor = "village-resident-status-filter";
@@ -232,6 +234,17 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   residentStatusSelect.value = residentStatusFilter;
   residentFilterCount.parentNode.insertBefore(residentStatusLabel,residentFilterCount);
   residentFilterCount.parentNode.insertBefore(residentStatusSelect,residentFilterCount);
+  const residentHousingLabel=document.createElement("label");
+  residentHousingLabel.className="production";
+  residentHousingLabel.htmlFor="village-resident-housing-filter";
+  residentHousingLabel.textContent="FILTRAR POR MORADIA";
+  const residentHousingSelect=document.createElement("select");
+  residentHousingSelect.id="village-resident-housing-filter";
+  residentHousingSelect.setAttribute("aria-label","Filtrar moradores por situação de moradia");
+  residentHousingSelect.innerHTML='<option value="all">Todas as moradias</option><option value="housed">Com cama atribuída</option><option value="unhoused">Sem moradia atribuída</option>';
+  residentHousingSelect.value=residentHousingFilter;
+  residentFilterCount.parentNode.insertBefore(residentHousingLabel,residentFilterCount);
+  residentFilterCount.parentNode.insertBefore(residentHousingSelect,residentFilterCount);
   const residentBulkActions = document.createElement("div");
   residentBulkActions.id = "village-resident-bulk-actions";
   residentBulkActions.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;margin:8px 0";
@@ -670,7 +683,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       for (const resident of residents) jobs[resident.id] = { profession: resident.profession, enabled: resident.enabled, priority: resident.priority || "normal", ...(resident.patrolRoute ? { patrolRoute: resident.patrolRoute } : {}) };
       const recruits = residents.filter(r => r.isRecruit).map(r => ({ id:r.id, name:r.name, role:r.role, profession:r.profession, model:r.model, start:r.start, home:r.home, homeSlot:r.homeSlot, work:r.work, greeting:r.greeting }));
       const homes = Object.fromEntries(residents.map(r => [r.id,{slot:r.homeSlot,position:r.home}]));
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, prosperityXp, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes, storageLevel, workShift, foodReserveTargetDays, foodRationPolicy, communalMealPolicy, protectFoodReserve, productionReport, foodReport, resourceTargets, nextRecruitProfession, residentSort, residentStatusFilter }));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, prosperityXp, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes, storageLevel, workShift, foodReserveTargetDays, foodRationPolicy, communalMealPolicy, protectFoodReserve, productionReport, foodReport, resourceTargets, nextRecruitProfession, residentSort, residentStatusFilter, residentHousingFilter }));
     } catch (error) {
       console.warn("Não foi possível salvar o progresso dos moradores.", error);
     }
@@ -1092,10 +1105,12 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       const matchesName=!query || name.includes(query);
       const matchesProfession=profession==="all" || row.dataset.profession===profession;
       const matchesStatus=residentStatusFilter==="all" || row.dataset.workStatus===residentStatusFilter;
-      row.hidden=!(matchesName && matchesProfession && matchesStatus);
+      const matchesHousing=residentHousingFilter==="all" || row.dataset.housingStatus===residentHousingFilter;
+      row.hidden=!(matchesName && matchesProfession && matchesStatus && matchesHousing);
       if(!row.hidden) visible++;
     }
-    residentFilterCount.textContent=visible+" de "+residents.length+" morador(es) exibido(s) · "+working+" trabalhando · "+paused+" pausado(s).";
+    const housed=residents.filter(resident=>!!resident.homeSlot).length;
+    residentFilterCount.textContent=visible+" de "+residents.length+" morador(es) exibido(s) · "+working+" trabalhando · "+paused+" pausado(s) · "+housed+" com moradia · "+(residents.length-housed)+" sem moradia.";
   }
   function setVisibleResidentsWorkState(enabled) {
     let changed=0;
@@ -1188,6 +1203,12 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     saveVillageProgress();
     applyResidentFilters();
   });
+  residentHousingSelect.addEventListener("change",()=>{
+    if(!RESIDENT_HOUSING_FILTERS.includes(residentHousingSelect.value)){residentHousingSelect.value=residentHousingFilter;return;}
+    residentHousingFilter=residentHousingSelect.value;
+    saveVillageProgress();
+    applyResidentFilters();
+  });
   residentSortSelect.addEventListener("change",()=>{
     if(!RESIDENT_SORTS.includes(residentSortSelect.value)){residentSortSelect.value=residentSort;return;}
     residentSort=residentSortSelect.value;
@@ -1212,6 +1233,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       row.dataset.residentName = resident.name;
       row.dataset.profession = resident.profession;
       row.dataset.workStatus = resident.enabled && resident.profession !== "idle" ? "working" : "paused";
+      row.dataset.housingStatus = resident.homeSlot ? "housed" : "unhoused";
       const head = document.createElement("div");
       head.className = "work-head";
       const name = document.createElement("b");
@@ -1228,7 +1250,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
         const occupied=residents.find(other=>other!==resident && other.homeSlot===homeSelect.value);
         if (occupied) { onToast("Esta cama já está atribuída a "+occupied.name+"."); homeSelect.value=resident.homeSlot; return; }
         resident.homeSlot=homeSelect.value; resident.home=homePosition(resident.homeSlot); resident.routeKey=""; resident.routeIndex=0; resident.target=resident.home;
-        saveVillageProgress(); refreshHousingUI(); onToast(resident.name+" agora mora em "+homeSelect.options[homeSelect.selectedIndex].text+".");
+        row.dataset.housingStatus=resident.homeSlot ? "housed" : "unhoused";
+        saveVillageProgress(); refreshHousingUI(); applyResidentFilters(); onToast(resident.name+" agora mora em "+homeSelect.options[homeSelect.selectedIndex].text+".");
       });
       const select = document.createElement("select");
       select.setAttribute("aria-label", "Profissão de " + resident.name);
