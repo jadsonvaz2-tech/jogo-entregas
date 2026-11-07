@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
 import { createStoryEncounter } from "./systems/story.js";
-import { createVillageResidents } from "./systems/village.js?v=community-metal-stockpile-2026-11-07-1";
+import { createVillageResidents } from "./systems/village.js?v=miner-blacksmith-jobs-2026-11-07-1";
 import { createWorldSettlements, WORLD_ROAD_PATHS } from "./systems/settlements.js?v=natural-road-relief-2026-11-07-1";
 import { createExpandedWorld } from "./systems/world-expansion.js?v=underground-exploration-2026-11-07-1";
 import { createDistantVillageResidents } from "./systems/distant-village-residents.js";
@@ -4528,7 +4528,7 @@ async function start(){
  const loaded=await loadCharacter();
  if(!loaded)toast("Modelo do viajante indisponível: usando personagem provisório.");
  storyEncounter=startOptional("a missão e o personagem Edrik",()=>createStoryEncounter({THREE,scene,player,terrainHeight,state,onSave:saveGame,onToast:toast}));
- villageResidents=startOptional("os moradores da aldeia central",()=>createVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,onSave:saveGame,onFarmAction:villageFarmAction,managementRoot:$("playerVillageManagementSlot")}));
+ villageResidents=startOptional("os moradores da aldeia central",()=>createVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,onSave:saveGame,onFarmAction:villageFarmAction,onClaimTool:(type)=>{state[type]=true;updateHUD();saveGame();return true;},managementRoot:$("playerVillageManagementSlot")}));
  settlementEconomy=startOptional("a economia das aldeias",()=>createSettlementEconomy({THREE,player,state,onToast:toast,onChange:()=>{updateHUD();saveGame();}}));
  distantVillageResidents=startOptional("os moradores das outras aldeias",()=>createDistantVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,economy:settlementEconomy}));
  startupStage="finalizando a entrada no mundo";
