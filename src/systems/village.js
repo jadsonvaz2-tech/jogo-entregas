@@ -376,7 +376,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   function saveVillageProgress() {
     try {
       const jobs = {};
-      for (const resident of residents) jobs[resident.id] = { profession: resident.profession, enabled: resident.enabled, priority: resident.priority || "normal" };
+      for (const resident of residents) jobs[resident.id] = { profession: resident.profession, enabled: resident.enabled, priority: resident.priority || "normal", ...(resident.patrolRoute ? { patrolRoute: resident.patrolRoute } : {}) };
       const recruits = residents.filter(r => r.isRecruit).map(r => ({ id:r.id, name:r.name, role:r.role, profession:r.profession, model:r.model, start:r.start, home:r.home, homeSlot:r.homeSlot, work:r.work, greeting:r.greeting }));
       const homes = Object.fromEntries(residents.map(r => [r.id,{slot:r.homeSlot,position:r.home}]));
       localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, prosperityXp, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes, storageLevel, workShift, foodReserveTargetDays, foodRationPolicy, productionReport }));
@@ -636,16 +636,22 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     onToast("Você recolheu a produção comunitária: " + Object.entries(amounts).filter(([,amount])=>amount>0).map(([resource,amount])=>amount+" "+({wood:"madeiras",stone:"pedras",berries:"frutas",meat:"carnes",herbs:"ervas",hide:"peles",fiber:"fibras",wool:"lãs",honey:"méis"}[resource]||resource)).join(", ")+".");
   });
 
+  const GUARD_PATROL_ROUTES = {
+    outer: { label: "perímetro externo", points: [[-12,-12],[12,-12],[12,12],[-12,12]] },
+    inner: { label: "caminho interno", points: [[-9,-9],[9,-9],[9,9],[-9,9]] },
+    central: { label: "faixa central", points: [[-12,-7],[12,-7],[12,7],[-12,7]] }
+  };
+
   function guardPatrolFor(resident) {
-    const routes = [
-      { label: "perímetro externo", points: [[-12,-12],[12,-12],[12,12],[-12,12]] },
-      { label: "caminho interno", points: [[-9,-9],[9,-9],[9,9],[-9,9]] },
-      { label: "faixa central", points: [[-12,-7],[12,-7],[12,7],[-12,7]] }
-    ];
     const guardIndex = residents.filter(person => person.profession === "guard").indexOf(resident);
-    const route = routes[(Math.max(0, guardIndex) % routes.length)];
-    const points = guardIndex % 2 === 1 ? [...route.points].reverse() : [...route.points];
-    return { label: route.label, points };
+    const routeKeys = Object.keys(GUARD_PATROL_ROUTES);
+    const selectedKey = Object.prototype.hasOwnProperty.call(GUARD_PATROL_ROUTES, resident.patrolRoute)
+      ? resident.patrolRoute
+      : routeKeys[Math.max(0, guardIndex) % routeKeys.length];
+    const route = GUARD_PATROL_ROUTES[selectedKey];
+    const reverse = !resident.patrolRoute && guardIndex % 2 === 1;
+    const points = reverse ? [...route.points].reverse() : [...route.points];
+    return { key: selectedKey, label: route.label, points };
   }
 
   function refreshSecurityUI() {
@@ -741,8 +747,33 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
         select.appendChild(option);
       }
       select.value = resident.profession;
+      const patrolLabel = document.createElement("label");
+      patrolLabel.className = "production";
+      patrolLabel.textContent = "ROTA DE PATRULHA";
+      patrolLabel.hidden = resident.profession !== "guard";
+      const patrolSelect = document.createElement("select");
+      patrolSelect.setAttribute("aria-label", "Rota de patrulha de " + resident.name);
+      for (const [value, route] of Object.entries(GUARD_PATROL_ROUTES)) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = route.label.charAt(0).toUpperCase() + route.label.slice(1);
+        patrolSelect.appendChild(option);
+      }
+      patrolSelect.value = guardPatrolFor(resident).key;
+      patrolSelect.hidden = resident.profession !== "guard";
+      patrolSelect.addEventListener("change", () => {
+        if (!Object.prototype.hasOwnProperty.call(GUARD_PATROL_ROUTES, patrolSelect.value)) return;
+        resident.patrolRoute = patrolSelect.value;
+        resident.routeKey = "";
+        resident.routeIndex = 0;
+        resident.target = null;
+        saveVillageProgress();
+        refreshSecurityUI();
+        onToast("Rota de " + resident.name + " alterada para " + GUARD_PATROL_ROUTES[resident.patrolRoute].label + ".");
+      });
       select.addEventListener("change", () => {
         resident.profession = select.value;
+        if (resident.profession === "guard" && !Object.prototype.hasOwnProperty.call(GUARD_PATROL_ROUTES, resident.patrolRoute)) resident.patrolRoute = guardPatrolFor(resident).key;
         resident.role = professions[resident.profession].label;
         const residentIndex = residents.indexOf(resident);
         const rosterRole = roster.querySelectorAll(".resident-line span")[residentIndex];
@@ -804,7 +835,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       skillCaption.className = "production";
       skillCaption.style.cssText = "font-size:9px;text-align:right;color:#d6c58f";
       skillCaption.textContent = skill.level >= 10 ? "MAESTRIA ALCANÇADA" : "PROGRESSO PARA O PRÓXIMO NÍVEL · " + skillProgress + "%";
-      row.append(head, homeSelect, select, priorityLabel, prioritySelect, toggle, production, skillTrack, skillCaption);
+      row.append(head, homeSelect, select, patrolLabel, patrolSelect, priorityLabel, prioritySelect, toggle, production, skillTrack, skillCaption);
       workList.appendChild(row);
     }
     refreshStockpileUI();
@@ -934,6 +965,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const job = savedJobs[resident.id];
     if (job && Object.prototype.hasOwnProperty.call(professions, job.profession)) resident.profession = job.profession;
     resident.priority = job && WORK_PRIORITIES.includes(job.priority) ? job.priority : "normal";
+    resident.patrolRoute = job && ["outer","inner","central"].includes(job.patrolRoute) ? job.patrolRoute : "";
     resident.enabled = job ? job.enabled !== false : true;
     resident.role = professions[resident.profession].label;
     resident.met = Array.isArray(saved.met) && saved.met.includes(resident.id);
@@ -998,159 +1030,3 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     dialogName.textContent = resident.name;
     dialogRole.textContent = resident.role;
     const reserveDays = foodReserveDays();
-    const villageCondition = morale >= 75
-      ? "O povoado está animado e o trabalho rende mais."
-      : morale >= 45
-        ? "O povoado está estável, mas precisamos manter as provisões."
-        : morale >= 25
-          ? "O ânimo está baixo. Uma refeição comunitária ajudaria."
-          : "O povoado está desanimado; precisamos cuidar das pessoas.";
-    const foodCondition = reserveDays > 1
-      ? "Temos frutas para " + reserveDays + " dias de refeições."
-      : reserveDays === 1
-        ? "Nosso estoque só cobre mais um dia de refeições."
-        : "Estamos sem frutas para as refeições diárias.";
-    dialogText.textContent = resident.greeting + " Hoje estou " + (resident.moving ? "indo para meu local de trabalho. " : "no meu ponto da rotina diária. ") + villageCondition + " " + foodCondition;
-    dialog.hidden = false;
-    onToast("Você conversou com " + resident.name + ".");
-  }
-
-  talkButton.addEventListener("click", () => {
-    if (nearestResident) openResidentDialogue(nearestResident);
-  });
-
-  let nearestResident = null;
-  let rosterClock = 0;
-  function update(dt) {
-    const currentDay = Math.max(1, Number(state.day) || 1);
-    if (currentDay > lastUpkeepDay) {
-      let fedDays = 0;
-      let missedDays = 0;
-      const previousProsperityLevel = prosperityLevel();
-      while (lastUpkeepDay < currentDay) {
-        lastUpkeepDay++;
-        const ration = consumeDailyRation();
-        if (ration.fed) {
-          morale = Math.min(100, morale + 4);
-          fedDays++;
-        } else {
-          morale = Math.max(0, morale - 8);
-          missedDays++;
-        }
-      }
-      prosperityXp += fedDays;
-      saveVillageProgress();
-      refreshStockpileUI();
-      if (prosperityLevel() > previousProsperityLevel) onToast("A aldeia central alcançou o nível " + prosperityLevel() + " de prosperidade graças às refeições diárias.");
-      if (fedDays && missedDays) onToast("O povoado recebeu " + fedDays + " refeição(ões), mas faltou comida em " + missedDays + " dia(s).");
-      else if (fedDays) onToast("Os moradores fizeram suas refeições diárias. O ânimo melhorou.");
-      else onToast("Faltaram frutas para alimentar o povoado. O ânimo dos moradores diminuiu.");
-    }
-    const hour = Number(state.timeOfDay) || 8;
-    for (const resident of residents) {
-      const schedule = scheduleFor(resident, hour);
-      if (schedule.key !== resident.routeKey) {
-        resident.routeKey = schedule.key;
-        resident.routeIndex = 0;
-        resident.target = schedule.points[0];
-      }
-      if (resident.target) {
-        const dx = resident.target[0] - resident.group.position.x;
-        const dz = resident.target[1] - resident.group.position.z;
-        const distance = Math.hypot(dx, dz);
-        if (distance < .35) {
-          if (schedule.points.length > 1) {
-            resident.routeIndex = (resident.routeIndex + 1) % schedule.points.length;
-            resident.target = schedule.points[resident.routeIndex];
-          } else {
-            resident.setMoving(false);
-          }
-        } else {
-          const speed = .82;
-          const step = Math.min(distance, speed * Math.max(0, dt));
-          resident.group.position.x += dx / distance * step;
-          resident.group.position.z += dz / distance * step;
-          resident.group.rotation.y = Math.atan2(dx, dz);
-          resident.group.position.y = terrainHeight(resident.group.position.x, resident.group.position.z);
-          resident.setMoving(step > .002);
-        }
-      } else {
-        resident.setMoving(false);
-      }
-      if (resident.mixer) resident.mixer.update(dt);
-      const shift = WORK_SHIFTS[workShift];
-      const workingTime = hour >= shift.start && hour < 11.5 || hour >= 13.5 && hour < shift.end;
-      const job = professions[resident.profession];
-      if (resident.enabled && job && (job.resource || resident.profession === "guard") && workingTime) {
-        workElapsed[resident.id] += Math.max(0, dt);
-        const workCycle = workCycleFor(resident);
-        if (workElapsed[resident.id] >= workCycle) {
-          workElapsed[resident.id] -= workCycle;
-          const leveledUp = awardWorkExperience(resident);
-          const bonus = productionBonus(resident);
-          if (leveledUp) {
-            updateResidentNameTag(resident);
-            renderWorkPanel();
-            onToast(resident.name + " evoluiu na profissão! Agora está no nível " + skills[resident.id].level + ".");
-          } else {
-            updateSkillProgressUI(resident);
-          }
-          if (resident.profession === "guard") {
-            refreshSecurityUI();
-            continue;
-          }
-          const farmResult = resident.profession === "farmer" && typeof onFarmAction === "function" && stockpileTotal() < storageCapacity() ? onFarmAction() : null;
-          if (farmResult && typeof farmResult === "object" && farmResult.resource && Number(farmResult.amount) > 0) {
-            const produced = Number(farmResult.amount) + bonus;
-            const stored = storeResource(farmResult.resource, produced);
-            recordProduction(resident, farmResult.resource, produced, stored);
-            saveVillageProgress();
-            refreshStockpileUI();
-            onToast((farmResult.message || "Lina trabalhou na horta.") + (stored < produced ? " Depósito cheio: " + stored + "/" + produced + " unidades armazenadas." : (bonus ? " Bônus de experiência: +" + bonus + " unidade(s)." : "")));
-          } else if (farmResult) {
-            onToast(farmResult);
-          } else {
-            const produced = job.amount + bonus;
-            const stored = storeResource(job.resource, produced);
-            recordProduction(resident, job.resource, produced, stored);
-            saveVillageProgress();
-            refreshStockpileUI();
-            onToast(stored > 0 ? resident.name + " armazenou " + stored + " " + job.resourceLabel + " no depósito comunitário." + (stored < produced ? " O depósito está cheio; amplie-o em GESTÃO." : "") : "Depósito comunitário cheio! Amplie a capacidade em GESTÃO para retomar a produção.");
-          }
-        }
-      }
-    }
-
-    let closest = null;
-    let closestDistance = 4.3;
-    for (const resident of residents) {
-      const distance = Math.hypot(player.position.x - resident.group.position.x, player.position.z - resident.group.position.z);
-      if (distance < closestDistance) {
-        closest = resident;
-        closestDistance = distance;
-      }
-    }
-    nearestResident = closest;
-    talkButton.hidden = !closest || !dialog.hidden;
-    if (closest && dialog.hidden) talkButton.textContent = "CONVERSAR COM " + closest.name.toUpperCase();
-
-    rosterClock += dt;
-    if (rosterClock > 1.5) {
-      rosterClock = 0;
-      const hourText = hour.toFixed(0).padStart(2, "0") + "h";
-      const productionLine = workPanel.querySelector("#village-work-summary");
-      if (productionLine) {
-        const active = residents.filter(r => r.enabled && r.profession !== "idle").length;
-        productionLine.textContent = active + "/" + residents.length + " moradores em atividade · ciclos durante o expediente.";
-      }
-      refreshSecurityUI();
-      roster.querySelector("div:last-child").textContent = hour >= 20 || hour < 5.5
-        ? "Todos descansam · " + hourText
-        : hour >= 11.5 && hour < 13.5
-          ? "Pausa para refeição · " + hourText
-          : "Trabalho no povoado · " + hourText;
-    }
-  }
-
-  return { update, getStockpile, takeFromStockpile, getMorale: () => morale };
-}
