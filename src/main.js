@@ -309,6 +309,7 @@ for(let i=0;i<55;i++){
  treePositions.push({x:Math.cos(a)*r,z:Math.sin(a)*r});
 }
 const treeModels=[];
+const windTrees=[];
 async function loadTree(name){
  return new Promise(resolve=>{
   let finished=false;
@@ -327,7 +328,99 @@ function scatterModel(model,x,z,scale=1){
  const m=model.clone(true);
  m.position.set(x,terrainHeight(x,z),z); m.rotation.y=worldRandom()*Math.PI*2;
  const s=scale*(.78+worldRandom()*.5); m.scale.multiplyScalar(s);
- m.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}}); scene.add(m); treeModels.push(m); return m;
+ m.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}}); scene.add(m); treeModels.push(m);
+ m.userData.windBaseRotationY=m.rotation.y;m.userData.windPhase=(x*12.9898+z*78.233)*.17;m.userData.windAmplitude=.018+Math.abs(Math.sin(x*4.17+z*2.31))*.018;windTrees.push(m);return m;
+}
+// Vento, folhas e áudio ambiente: elementos puramente visuais/sonoros, fora do salvamento.
+const windLeafCount=44;
+let windLeaves=null,windLeafData=[];
+const windLeafDummy=new THREE.Object3D();
+function createWindLeaves(){
+ const geometry=new THREE.PlaneGeometry(.12,.065);
+ const material=new THREE.MeshBasicMaterial({color:0x91a95b,side:THREE.DoubleSide,transparent:true,opacity:.78,depthWrite:false});
+ windLeaves=new THREE.InstancedMesh(geometry,material,windLeafCount);
+ windLeaves.frustumCulled=false;windLeaves.castShadow=false;windLeaves.receiveShadow=false;
+ let seed=0x7a31c9e5;
+ const random=()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return(seed>>>0)/4294967296;};
+ for(let i=0;i<windLeafCount;i++){
+  windLeafData.push({x:(random()-.5)*170,z:(random()-.5)*170,y:2.2+random()*5.5,phase:random()*Math.PI*2,speed:.55+random()*.75,drift:.45+random()*.8,spin:random()*6.28});
+ }
+ scene.add(windLeaves);
+}
+function updateWindEnvironment(dt,time){
+ const breeze=Math.sin(time*.42)*.55+Math.sin(time*.19+1.4)*.45;
+ for(const tree of windTrees){
+  const phase=time*.72+(tree.userData.windPhase||0);
+  const amount=tree.userData.windAmplitude||.02;
+  tree.rotation.x=Math.sin(phase)*amount;
+  tree.rotation.z=Math.cos(phase*.83)*amount*.72;
+  tree.rotation.y=(tree.userData.windBaseRotationY||0)+breeze*.006;
+ }
+ if(!windLeaves)return;
+ for(let i=0;i<windLeafData.length;i++){
+  const leaf=windLeafData[i];
+  leaf.x+=(.42+leaf.drift*.52+breeze*.2)*dt;
+  leaf.z+=Math.sin(time*.55+leaf.phase)*.16*dt;
+  leaf.y+=Math.sin(time*.8+leaf.phase)*.12*dt;
+  leaf.spin+=dt*(.7+leaf.speed);
+  if(leaf.x>92||leaf.z>92||leaf.z< -92||leaf.y<1.5){
+   leaf.x=-92-(i%7)*2;leaf.z=(Math.sin(leaf.phase+time*.13))*78;leaf.y=3.2+(i%5)*.8;leaf.phase+=1.7;
+  }
+  windLeafDummy.position.set(leaf.x,terrainHeight(leaf.x,leaf.z)+leaf.y,leaf.z);
+  windLeafDummy.rotation.set(Math.sin(leaf.phase+time)*.35,leaf.spin,Math.cos(leaf.phase+time*.7)*.28);
+  const scale=.72+(i%4)*.13;windLeafDummy.scale.set(scale,scale,scale);windLeafDummy.updateMatrix();
+  windLeaves.setMatrixAt(i,windLeafDummy.matrix);
+ }
+ windLeaves.instanceMatrix.needsUpdate=true;
+}
+let forestAudioContext=null,forestNoiseSource=null,forestAudioEnabled=false,nextBirdChirpAt=0;
+let forestAudioButton=null;
+function createForestAudioControl(){
+ if(forestAudioButton)return;
+ forestAudioButton=document.createElement("button");
+ forestAudioButton.type="button";forestAudioButton.textContent="🔇 SOM DA FLORESTA";
+ Object.assign(forestAudioButton.style,{position:"fixed",right:"12px",top:"58px",zIndex:"30",padding:"9px 12px",border:"1px solid rgba(225,211,171,.45)",borderRadius:"18px",background:"rgba(25,39,29,.82)",color:"#f1e8d0",font:"600 11px system-ui",letterSpacing:".04em",backdropFilter:"blur(6px)",touchAction:"manipulation"});
+ forestAudioButton.setAttribute("aria-label","Ativar ou desativar sons ambientes da floresta");
+ forestAudioButton.addEventListener("click",async()=>{
+  const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+  if(!AudioContextClass){forestAudioButton.textContent="ÁUDIO INDISPONÍVEL";return;}
+  if(!forestAudioContext){
+   forestAudioContext=new AudioContextClass();
+   const length=forestAudioContext.sampleRate*3;
+   const buffer=forestAudioContext.createBuffer(1,length,forestAudioContext.sampleRate);
+   const data=buffer.getChannelData(0);
+   for(let i=0;i<length;i++)data[i]=(Math.random()*2-1)*.32;
+   forestNoiseSource=forestAudioContext.createBufferSource();forestNoiseSource.buffer=buffer;forestNoiseSource.loop=true;
+   const filter=forestAudioContext.createBiquadFilter();filter.type="bandpass";filter.frequency.value=1050;filter.Q.value=.45;
+   const gain=forestAudioContext.createGain();gain.gain.value=0;
+   forestNoiseSource.connect(filter);filter.connect(gain);gain.connect(forestAudioContext.destination);forestNoiseSource.start();
+   forestAudioContext.forestGain=gain;
+  }
+  await forestAudioContext.resume();
+  forestAudioEnabled=!forestAudioEnabled;
+  const now=forestAudioContext.currentTime;
+  forestAudioContext.forestGain.gain.cancelScheduledValues(now);
+  forestAudioContext.forestGain.gain.setTargetAtTime(forestAudioEnabled?.018:0,now,.35);
+  nextBirdChirpAt=now+2.5;
+  forestAudioButton.textContent=forestAudioEnabled?"🔊 SOM DA FLORESTA":"🔇 SOM DA FLORESTA";
+ });
+ document.body.appendChild(forestAudioButton);
+}
+function updateForestAudio(){
+ if(!forestAudioEnabled||!forestAudioContext||forestAudioContext.state!=="running")return;
+ const now=forestAudioContext.currentTime;
+ if(now<nextBirdChirpAt)return;
+ nextBirdChirpAt=now+8+Math.random()*9;
+ const oscillator=forestAudioContext.createOscillator(),gain=forestAudioContext.createGain();
+ oscillator.type="sine";
+ const start=now+.015,frequency=1750+Math.random()*650;
+ oscillator.frequency.setValueAtTime(frequency,start);
+ oscillator.frequency.exponentialRampToValueAtTime(frequency*1.34,start+.13);
+ oscillator.frequency.exponentialRampToValueAtTime(frequency*.82,start+.31);
+ gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(.012,start+.035);
+ gain.gain.exponentialRampToValueAtTime(.0001,start+.34);
+ oscillator.connect(gain);gain.connect(forestAudioContext.destination);
+ oscillator.start(start);oscillator.stop(start+.36);
 }
 function addRock(x,z,s=1,collectible=false){
  const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.7*s,1),new THREE.MeshStandardMaterial({color:0x77786b,roughness:1}));
@@ -1011,6 +1104,7 @@ async function buildForest(){
    tree.scale.multiplyScalar(.62+decorationRandom()*.28);
    tree.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true;}});
    scene.add(tree);treeModels.push(tree);
+   tree.userData.windBaseRotationY=tree.rotation.y;tree.userData.windPhase=(x*9.17+z*5.31)*.13;tree.userData.windAmplitude=.014+Math.abs(Math.sin(x*2.7+z*1.9))*.014;windTrees.push(tree);
   }
  }
  // Troncos caídos e raízes expostas são malhas leves, sem colisão, coleta ou dados de salvamento.
@@ -4136,7 +4230,7 @@ function update(dt){
 function animate(now){
  requestAnimationFrame(animate);
  const dt=Math.min((now-last)/1000,.05);last=now;
- update(dt);if(activeBuildPlacement)updateBuildPreview();if(now-lastSave>5000){saveGame();lastSave=now;}renderer.render(scene,camera);
+ update(dt);updateWindEnvironment(dt,now*.001);updateForestAudio();if(activeBuildPlacement)updateBuildPreview();if(now-lastSave>5000){saveGame();lastSave=now;}renderer.render(scene,camera);
 }
 addEventListener("keydown",e=>{if(e.key==="Escape"&&activeBuildPlacement)cancelBuildPlacement();});
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));});
@@ -4144,6 +4238,8 @@ async function start(){
  $("loadingText").textContent="Criando o terreno e a floresta...";
  $("loadingBar").style.width="20%";
  await buildForest();
+ createWindLeaves();
+ createForestAudioControl();
  createForestFireflies();
  if(state.campfire&&Number.isFinite(state.campfireX)&&Number.isFinite(state.campfireZ))createCampfire(state.campfireX,state.campfireZ);
  if(state.shelter&&Number.isFinite(state.shelterX)&&Number.isFinite(state.shelterZ))createShelter(state.shelterX,state.shelterZ);
