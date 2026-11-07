@@ -19,9 +19,9 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   let morale = Math.min(100, Math.max(0, Number(saved.morale ?? 50) || 0));
   let prosperityXp = Math.max(0, Math.floor(Number(saved.prosperityXp) || 0));
   let storageLevel = Math.max(0, Math.min(3, Math.floor(Number(saved.storageLevel) || 0)));
-  const legacyStorageFloor = Object.values(stockpile).reduce((sum, amount) => sum + amount, 0);
   let lastUpkeepDay = Number.isFinite(Number(saved.lastUpkeepDay)) ? Math.max(1, Number(saved.lastUpkeepDay)) : Math.max(1, Number(state.day) || 1);
   const stockpile = Object.fromEntries(["wood","stone","berries","meat","herbs","hide","fiber","wool","honey"].map(key => [key, Math.max(0, Number(saved.stockpile?.[key]) || 0)]));
+  const legacyStorageFloor = Object.values(stockpile).reduce((sum, amount) => sum + amount, 0);
   const residents = [
     {
       id: "lina", name: "Lina", role: "Agricultora", profession: "farmer", model: "Worker_Female.gltf",
