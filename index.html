@@ -49,6 +49,35 @@
       <div id="desktopHelp">WASD mover · Shift correr · E coletar · Arraste para girar a câmera</div>
     </div>
   </div>
+  <div id="save-check-fixed" style="position:fixed;z-index:99999;left:50%;bottom:calc(12px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);font:12px Arial,sans-serif">
+    <button id="save-check-open" type="button" style="border:2px solid #e5c477;border-radius:22px;padding:11px 16px;background:#263b2b;color:#fff0c8;font-weight:bold;box-shadow:0 3px 14px #000b;touch-action:manipulation">🔎 VER SALVAMENTO</button>
+    <div id="save-check-panel" hidden style="position:absolute;bottom:54px;left:50%;transform:translateX(-50%);width:min(90vw,360px);padding:14px;border:1px solid #e5c477;border-radius:12px;background:#17251bf5;color:#fff0d1;box-shadow:0 8px 30px #000c;line-height:1.5">
+      <strong style="display:block;color:#f0d58a;margin-bottom:8px">DIAGNÓSTICO DA ALDEIA · SOMENTE LEITURA</strong>
+      <div id="save-check-values" style="padding:9px;border-radius:7px;background:#2a3d2d;overflow-wrap:anywhere"></div>
+      <p style="font-size:10px;color:#d2d8c4">Não altera nem apaga seus moradores, construções ou salvamentos.</p>
+      <button id="save-check-close" type="button" style="padding:8px 12px;border:1px solid #d6bd7c;border-radius:7px;background:#42583a;color:white">FECHAR</button>
+    </div>
+  </div>
+  <script>
+    (function(){
+      var open=document.getElementById("save-check-open"), panel=document.getElementById("save-check-panel"), values=document.getElementById("save-check-values");
+      function read(key){
+        try{
+          var raw=localStorage.getItem(key); if(!raw)return "não encontrado";
+          var data=JSON.parse(raw); if(!data||typeof data!=="object")return "inválido";
+          var recruits=Array.isArray(data.recruits)?data.recruits.filter(function(p){return p&&p.id}).length:0;
+          var houses=Math.max(0,Math.min(6,Math.floor(Number(data.houses)||0)));
+          var homes=data.homes&&typeof data.homes==="object"?Object.keys(data.homes).length:0;
+          return (3+recruits)+" moradores · "+houses+" casas · "+homes+" vínculos de moradia";
+        }catch(e){return "inválido";}
+      }
+      open.addEventListener("click",function(){
+        values.textContent="Atual: "+read("cronicas-floresta-village-v1")+" | Cópia: "+read("cronicas-floresta-village-v1-backup")+" | Recuperação: "+(localStorage.getItem("cronicas-floresta-village-v1-recovery-used")?"registrada":"não registrada");
+        panel.hidden=false;
+      });
+      document.getElementById("save-check-close").addEventListener("click",function(){panel.hidden=true;});
+    })();
+  </script>
   <script type="module" src="./src/main.js?v=village-contributor-ledger-v1"></script>
 </body>
 </html>
