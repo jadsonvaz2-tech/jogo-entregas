@@ -232,6 +232,19 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   residentStatusSelect.value = residentStatusFilter;
   residentFilterCount.parentNode.insertBefore(residentStatusLabel,residentFilterCount);
   residentFilterCount.parentNode.insertBefore(residentStatusSelect,residentFilterCount);
+  const residentBulkActions = document.createElement("div");
+  residentBulkActions.id = "village-resident-bulk-actions";
+  residentBulkActions.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;margin:8px 0";
+  const activateVisibleButton = document.createElement("button");
+  activateVisibleButton.type = "button";
+  activateVisibleButton.textContent = "▶ ATIVAR EXIBIDOS";
+  activateVisibleButton.setAttribute("aria-label","Ativar tarefas dos moradores exibidos");
+  const pauseVisibleButton = document.createElement("button");
+  pauseVisibleButton.type = "button";
+  pauseVisibleButton.textContent = "Ⅱ PAUSAR EXIBIDOS";
+  pauseVisibleButton.setAttribute("aria-label","Pausar tarefas dos moradores exibidos");
+  residentBulkActions.append(activateVisibleButton,pauseVisibleButton);
+  residentFilterCount.parentNode.insertBefore(residentBulkActions,residentFilterCount);
   const RESIDENT_SORTS = ["name","level","production","profession"];
   let residentSort = RESIDENT_SORTS.includes(saved.residentSort) ? saved.residentSort : "name";
   const residentSortSelect = document.createElement("select");
@@ -1052,6 +1065,25 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     }
     residentFilterCount.textContent=visible+" de "+residents.length+" morador(es) exibido(s) · "+working+" trabalhando · "+paused+" pausado(s).";
   }
+  function setVisibleResidentsWorkState(enabled) {
+    let changed=0;
+    for(const row of workList.children){
+      if(row.hidden) continue;
+      const resident=residents.find(item=>item.id===row.dataset.residentId);
+      if(!resident || resident.profession==="idle" || resident.enabled===enabled) continue;
+      resident.enabled=enabled;
+      resident.routeKey="";
+      resident.target=null;
+      resident.routeIndex=0;
+      changed++;
+    }
+    if(!changed){onToast(enabled ? "Nenhum morador exibido precisa ser ativado." : "Nenhum morador exibido precisa ser pausado.");return;}
+    saveVillageProgress();
+    renderWorkPanel();
+    onToast(changed+" morador(es) "+(enabled ? "ativado(s)" : "pausado(s)")+".");
+  }
+  activateVisibleButton.addEventListener("click",()=>setVisibleResidentsWorkState(true));
+  pauseVisibleButton.addEventListener("click",()=>setVisibleResidentsWorkState(false));
   residentSearchInput.addEventListener("input",applyResidentFilters);
   residentProfessionFilter.addEventListener("change",applyResidentFilters);
   residentStatusSelect.addEventListener("change",()=>{
