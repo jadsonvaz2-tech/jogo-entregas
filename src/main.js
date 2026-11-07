@@ -7,7 +7,7 @@ import { createWorldSettlements, WORLD_ROAD_PATHS } from "./systems/settlements.
 import { createExpandedWorld } from "./systems/world-expansion.js?v=underground-exploration-2026-11-07-1";
 import { createDistantVillageResidents } from "./systems/distant-village-residents.js";
 import { createSettlementEconomy } from "./systems/settlement-economy.js";
-import { createCommunityExpeditions } from "./systems/community-expeditions.js?v=community-expeditions-2026-11-07-1";
+import { createCommunityExpeditions } from "./systems/community-expeditions.js?v=community-expedition-diary-2026-11-07-1";
 let villageResidents=null;
 let distantVillageResidents=null;
 let settlementEconomy=null;

@@ -156,3 +156,16 @@
 #explorationCollectButton[hidden]{display:none}
 
 #expeditionsQuickButton{border:1px solid #e2c47b;background:linear-gradient(135deg,#876a35,#594323);color:#fff4d2;border-radius:5px;padding:7px 9px;font:bold 9px Arial,sans-serif;letter-spacing:.45px;box-shadow:0 1px 6px #0007;touch-action:manipulation}#expeditionsQuickButton:active{transform:scale(.97)}@media(max-width:430px){#inventory{gap:5px;padding:8px}#expeditionsQuickButton{padding:7px 7px;font-size:8px}}
+
+/* Diário persistente das expedições comunitárias. */
+.expedition-diary-title{display:block;margin:12px 0 8px;color:#e6c98c;font-size:11px;letter-spacing:.07em}
+.expedition-diary-list{display:grid;gap:8px}
+.expedition-diary-entry{padding:9px;border:1px solid #8e7950;border-radius:8px;background:linear-gradient(145deg,#29372a,#1b281e)}
+.expedition-diary-entry-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:5px}
+.expedition-diary-entry-top strong{color:#f0d49a;font-size:11px}
+.expedition-diary-entry-top time{flex-shrink:0;color:#b9c3ad;font-size:9px}
+.expedition-diary-line{display:grid;grid-template-columns:82px minmax(0,1fr);gap:5px;margin:4px 0;font-size:10px;line-height:1.4;overflow-wrap:anywhere}
+.expedition-diary-line b{color:#d9c18e}
+.expedition-diary-line span{color:#e2e5d8}
+.expedition-diary-empty{margin:7px 0;color:#bbc6b3;font-size:10px;line-height:1.5}
+@media(max-width:420px){.expedition-diary-entry{padding:8px}.expedition-diary-line{grid-template-columns:76px minmax(0,1fr)}.expedition-diary-entry-top{flex-wrap:wrap}}

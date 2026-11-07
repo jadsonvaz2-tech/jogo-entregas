@@ -84,6 +84,45 @@ export function createCommunityExpeditions({villageResidents,state,onToast,onDis
   onToast(choice.result);
  };
 
+ const renderHistory=()=>{
+  const holder=el("expeditionHistory");
+  if(!holder)return;
+  holder.innerHTML="";
+  const heading=document.createElement("strong");
+  heading.className="expedition-diary-title";
+  heading.textContent="📖 DIÁRIO DE EXPEDIÇÕES · "+saved.history.length+" registros";
+  holder.append(heading);
+  if(!saved.history.length){
+   const empty=document.createElement("p");empty.className="expedition-diary-empty";
+   empty.textContent="Nenhuma expedição concluída. Quando o primeiro grupo retornar, suas viagens e descobertas ficarão registradas aqui.";
+   holder.append(empty);return;
+  }
+  const list=document.createElement("div");list.className="expedition-diary-list";
+  const addLine=(card,label,value)=>{
+   if(!value)return;
+   const line=document.createElement("p");line.className="expedition-diary-line";
+   const strong=document.createElement("b");strong.textContent=label+" ";
+   const span=document.createElement("span");span.textContent=String(value);
+   line.append(strong,span);card.append(line);
+  };
+  for(const item of saved.history){
+   const card=document.createElement("article");card.className="expedition-diary-entry";
+   const top=document.createElement("div");top.className="expedition-diary-entry-top";
+   const destination=document.createElement("strong");destination.textContent=item.destination||"Destino desconhecido";
+   const date=document.createElement("time");
+   const timestamp=Number(item.at)||0;
+   date.textContent=timestamp?new Date(timestamp).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"}):"Registro anterior";
+   top.append(destination,date);card.append(top);
+   const names=Array.isArray(item.memberNames)&&item.memberNames.length?item.memberNames.join(", "):(item.members?item.members+" moradores":"Grupo não informado");
+   addLine(card,"Grupo:",names);
+   addLine(card,"Descoberta:",item.discovery||item.eventResult||"Percurso concluído sem descoberta especial registrada.");
+   const rewardText=Array.isArray(item.rewardDetails)&&item.rewardDetails.length?item.rewardDetails.join(", "):(item.result||"Nenhuma recompensa adicional");
+   addLine(card,"Recompensas:",rewardText);
+   addLine(card,"Resultado:",item.outcome||item.eventResult||"Grupo retornou à aldeia em segurança.");
+   list.append(card);
+  }
+  holder.append(list);
+ };
  const refresh=()=>{
   const people=roster(),gear=requirements();
   if(!active){el("expeditionActive").textContent="Nenhum grupo está fora da aldeia.";el("expeditionProgress").style.width="0%";el("expeditionStart").disabled=false;}
@@ -97,7 +136,7 @@ export function createCommunityExpeditions({villageResidents,state,onToast,onDis
   el("expeditionGearStatus").textContent="Equipamento comunitário: "+(gear.weapon?"arma de aço ✓":"arma de aço em falta")+" · "+(gear.armor?"armadura de aço ✓":"armadura de aço em falta")+" · "+(gear.shield?"escudo ✓":"escudo opcional");
   el("expeditionKitStatus").textContent="Depósito: "+stock("fieldKits")+" kits comuns · "+stock("reinforcedFieldKits")+" reforçados · "+stock("berries")+" frutas · "+stock("meat")+" carnes";
   el("expeditionCompleted").textContent="Expedições concluídas: "+saved.completed;
-  el("expeditionHistory").textContent=saved.history.length?saved.history.slice(0,3).map(item=>item.destination+" · "+item.members+" moradores · "+item.result).join(" | "):"As primeiras descobertas ainda aguardam.";
+  renderHistory();
   renderEvent();
   root.querySelectorAll("input[name=expedition-member]").forEach(input=>{input.disabled=!!active;});
   el("expeditionDestination").disabled=!!active;el("expeditionLoad").disabled=!!active;
@@ -142,7 +181,9 @@ export function createCommunityExpeditions({villageResidents,state,onToast,onDis
   try{onDiscovery?.({destination:mission.destination,eventType:mission.event?.type||null,eventResolved:!!mission.eventResolved,memberNames:mission.memberNames||[]});}catch(error){console.warn("Não foi possível registrar a descoberta da expedição.",error);}
   villageResidents.setExpeditionAway?.(mission.members,false);
   saved.completed++;
-  const record={destination:d.label,members:mission.members.length,result:rewards.join(", ")||"retorno sem carga adicional",at:Date.now()};
+  const eventNames={creature:"Encontro com criatura",ruins:"Ruínas antigas encontradas",camp:"Acampamento temporário"};
+  const discovery=mission.event?((eventNames[mission.event.type]||"Acontecimento na trilha")+(mission.eventResolved?": "+(mission.eventResult||"evento concluído"):"; grupo seguiu viagem")):"Trilha explorada e destino alcançado.";
+  const record={destination:d.label,members:mission.members.length,memberNames:(mission.memberNames||[]).slice(),result:rewards.join(", ")||"retorno sem carga adicional",rewardDetails:rewards.slice(),discovery,eventResult:mission.eventResolved?(mission.eventResult||"Acontecimento concluído"):"",outcome:mission.eventResolved?(mission.eventResult||"Grupo retornou à aldeia."):"Grupo retornou à aldeia em segurança.",at:Date.now(),departedAt:mission.departedAt,load:mission.load};
   saved.history.unshift(record);saved.history=saved.history.slice(0,8);active=null;persist();makeRoster();refresh();
   onToast("Expedição concluída! "+record.result+". Os moradores voltaram à aldeia.");
  };
