@@ -293,9 +293,6 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   bulkProfessionPlaceholder.value = "";
   bulkProfessionPlaceholder.textContent = "Profissão para exibidos...";
   bulkProfessionSelect.appendChild(bulkProfessionPlaceholder);
-  for(const [value,profession] of Object.entries(professions)){
-    const option=document.createElement("option");option.value=value;option.textContent=profession.label;bulkProfessionSelect.appendChild(option);
-  }
   const applyBulkProfessionButton = document.createElement("button");
   applyBulkProfessionButton.type = "button";
   applyBulkProfessionButton.textContent = "ATRIBUIR PROFISSÃO";
@@ -464,6 +461,9 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     guard: { label: "Vigia", resource: null, resourceLabel: "—", amount: 0, detail: "Faz rondas pelos limites da aldeia, ganha experiência patrulhando e melhora a cobertura de vigilância." },
     idle: { label: "Sem tarefa", resource: null, resourceLabel: "—", amount: 0 }
   };
+  for(const [value,profession] of Object.entries(professions)){
+    const option=document.createElement("option");option.value=value;option.textContent=profession.label;bulkProfessionSelect.appendChild(option);
+  }
   const workElapsed = Object.fromEntries(residents.map(resident=>[resident.id,0]));
   const professionWorkPoints = {
     farmer: [[-8.2, 1.5], [-7.1, 4.2]],
