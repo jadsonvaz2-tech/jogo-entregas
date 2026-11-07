@@ -237,7 +237,18 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
 
   function productionHistoryText(resident) {
     const totals = productionTotals[resident.id];
-    return "HISTÓRICO · " + totals.berries + " frutas · " + totals.wood + " madeiras · " + totals.stone + " pedras";
+    const total = totals.berries + totals.wood + totals.stone;
+    const milestones = [
+      { amount: 25, title: "AJUDANTE DEDICADO" },
+      { amount: 100, title: "ARTESÃO EXPERIENTE" },
+      { amount: 250, title: "MESTRE DO POVOADO" }
+    ];
+    const reached = milestones.filter(item => total >= item.amount).pop();
+    const next = milestones.find(item => total < item.amount);
+    const title = reached ? reached.title : "NOVATO";
+    const progress = next ? Math.floor(Math.min(1, total / next.amount) * 100) : 100;
+    const nextText = next ? "PRÓXIMO TÍTULO: " + next.title + " · " + total + "/" + next.amount + " (" + progress + "%)" : "TODOS OS TÍTULOS DE PRODUÇÃO CONQUISTADOS";
+    return "HISTÓRICO · " + totals.berries + " frutas · " + totals.wood + " madeiras · " + totals.stone + " pedras · TÍTULO: " + title + " · " + nextText;
   }
 
   function experienceNeeded(level) { return level * 5; }
