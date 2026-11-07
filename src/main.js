@@ -1254,9 +1254,9 @@ function loadGame(){
   if(Array.isArray(saved.gardenPlots))state.gardenPlots=saved.gardenPlots.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,8).map(v=>({...v,plantedAt:Number.isFinite(v.plantedAt)?v.plantedAt:0}));
   if(Array.isArray(saved.watchtowers))state.watchtowers=saved.watchtowers.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,6);
   if(Array.isArray(saved.marketStalls))state.marketStalls=saved.marketStalls.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,4);
-  if(Array.isArray(saved.chickenCoops))state.chickenCoops=saved.chickenCoops.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,4).map(v=>({...v,lastEggAt:Number.isFinite(v.lastEggAt)?v.lastEggAt:Date.now()}));
-  if(Array.isArray(saved.apiaries))state.apiaries=saved.apiaries.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,4).map(v=>({...v,lastHoneyAt:Number.isFinite(v.lastHoneyAt)?v.lastHoneyAt:Date.now()}));
-  if(Array.isArray(saved.sheepPens))state.sheepPens=saved.sheepPens.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,3).map(v=>({...v,lastWoolAt:Number.isFinite(v.lastWoolAt)?v.lastWoolAt:Date.now()}));
+  if(Array.isArray(saved.chickenCoops))state.chickenCoops=saved.chickenCoops.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,4).map(v=>({...v,lastEggAt:Number.isFinite(v.lastEggAt)?v.lastEggAt:Date.now(),feedCycles:Number.isFinite(v.feedCycles)?Math.max(0,Math.min(10,v.feedCycles)):5}));
+  if(Array.isArray(saved.apiaries))state.apiaries=saved.apiaries.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,4).map(v=>({...v,lastHoneyAt:Number.isFinite(v.lastHoneyAt)?v.lastHoneyAt:Date.now(),feedCycles:Number.isFinite(v.feedCycles)?Math.max(0,Math.min(10,v.feedCycles)):5}));
+  if(Array.isArray(saved.sheepPens))state.sheepPens=saved.sheepPens.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,3).map(v=>({...v,lastWoolAt:Number.isFinite(v.lastWoolAt)?v.lastWoolAt:Date.now(),feedCycles:Number.isFinite(v.feedCycles)?Math.max(0,Math.min(10,v.feedCycles)):5}));
   if(Array.isArray(saved.doorPanels))state.doorPanels=saved.doorPanels.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100).map(v=>({...v,open:v.open===true}));
   if(Array.isArray(saved.windowShutters))state.windowShutters=saved.windowShutters.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z)&&Number.isFinite(v.yaw)).slice(0,100).map(v=>({...v,open:v.open===true}));
   if(Number.isFinite(saved.campfireX))state.campfireX=saved.campfireX;
@@ -1465,14 +1465,26 @@ function updateHUD(){
   $("craftWoolGarment").textContent=state.woolGarment?"ROUPA DE LÃ FABRICADA":"FABRICAR ROUPA DE LÃ · 3 LÃ + 2 FIBRAS";
   $("craftSheepPen").disabled=state.wood<12||state.fiber<5||state.sheepPens.length>=3;
   $("collectWool").hidden=state.nearSheepPenIndex<0;
-  $("collectWool").disabled=state.nearSheepPenIndex<0||!state.sheepPens[state.nearSheepPenIndex]||Math.floor((Date.now()-state.sheepPens[state.nearSheepPenIndex].lastWoolAt)/300000)<1;
+  const nearbyPen=state.sheepPens[state.nearSheepPenIndex];
+  $("collectWool").disabled=!nearbyPen||nearbyPen.feedCycles<1||Math.floor((Date.now()-nearbyPen.lastWoolAt)/300000)<1;
+  $("feedSheep").hidden=state.nearSheepPenIndex<0;
+  $("feedSheep").disabled=!nearbyPen||state.fiber<2||nearbyPen.feedCycles>=10;
+  if(nearbyPen)$("feedSheep").textContent="🌾 Alimentar ovelhas · 2 fibras ("+nearbyPen.feedCycles+"/10 ciclos)";
   $("craftApiary").disabled=state.wood<8||state.fiber<4||state.apiaries.length>=4;
   $("collectHoney").hidden=state.nearApiaryIndex<0;
-  $("collectHoney").disabled=state.nearApiaryIndex<0||!state.apiaries[state.nearApiaryIndex]||Math.floor((Date.now()-state.apiaries[state.nearApiaryIndex].lastHoneyAt)/240000)<1;
+  const nearbyApiary=state.apiaries[state.nearApiaryIndex];
+  $("collectHoney").disabled=!nearbyApiary||nearbyApiary.feedCycles<1||Math.floor((Date.now()-nearbyApiary.lastHoneyAt)/240000)<1;
+  $("feedBees").hidden=state.nearApiaryIndex<0;
+  $("feedBees").disabled=!nearbyApiary||state.herbs<2||nearbyApiary.feedCycles>=10;
+  if(nearbyApiary)$("feedBees").textContent="🌼 Cuidar colmeia · 2 ervas ("+nearbyApiary.feedCycles+"/10 ciclos)";
   $("eatHoney").disabled=state.honey<1||state.hunger>=100&&state.thirst>=100;
   $("craftCoop").disabled=state.wood<9||state.fiber<3||state.chickenCoops.length>=4;
   $("collectEggs").hidden=state.nearCoopIndex<0;
-  $("collectEggs").disabled=state.nearCoopIndex<0||!state.chickenCoops[state.nearCoopIndex]||Math.floor((Date.now()-state.chickenCoops[state.nearCoopIndex].lastEggAt)/180000)<1;
+  const nearbyCoop=state.chickenCoops[state.nearCoopIndex];
+  $("collectEggs").disabled=!nearbyCoop||nearbyCoop.feedCycles<1||Math.floor((Date.now()-nearbyCoop.lastEggAt)/180000)<1;
+  $("feedChickens").hidden=state.nearCoopIndex<0;
+  $("feedChickens").disabled=!nearbyCoop||state.berries<2||nearbyCoop.feedCycles>=10;
+  if(nearbyCoop)$("feedChickens").textContent="🌽 Alimentar galinhas · 2 frutas ("+nearbyCoop.feedCycles+"/10 ciclos)";
   $("eatEgg").disabled=state.eggs<1;
   $("craftMarket").disabled=state.wood<10||state.fiber<4||state.marketStalls.length>=4;
   const marketNear=state.nearMarketIndex>=0;
@@ -1711,6 +1723,9 @@ $("craftStorageChest").addEventListener("click",craftStorageChest);
  $("craftMarket").addEventListener("click",craftMarketStall);
  $("craftCoop").addEventListener("click",craftChickenCoop);
  $("collectEggs").addEventListener("click",collectCoopEggs);
+ $("feedChickens").addEventListener("click",feedChickens);
+ $("feedBees").addEventListener("click",feedBees);
+ $("feedSheep").addEventListener("click",feedSheep);
  $("eatEgg").addEventListener("click",eatEgg);
  $("craftApiary").addEventListener("click",craftApiary);
  $("craftSheepPen").addEventListener("click",craftSheepPen);
@@ -1894,7 +1909,7 @@ function findFenceConnection(targetX,targetZ,extension){
   const x=Math.round((player.position.x+Math.sin(yaw)*7)/3)*3;
   const z=Math.round((player.position.z+Math.cos(yaw)*7)/3)*3;
   if(state.sheepPens.some(v=>Math.hypot(v.x-x,v.z-z)<7)){toast("Já existe um aprisco muito próximo. Escolha outro local.");return;}
-  const pen={x,z,yaw,lastWoolAt:Date.now()};
+  const pen={x,z,yaw,lastWoolAt:Date.now(),feedCycles:5};
   state.wood-=12;state.fiber-=5;state.sheepPens.push(pen);createSheepPen(pen);
   updateHUD();saveGame();toast("Aprisco construído! As ovelhas começarão a produzir lã.");
  }
@@ -1942,12 +1957,19 @@ function findFenceConnection(targetX,targetZ,extension){
   group.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
   group.position.set(pen.x,terrainHeight(pen.x,pen.z),pen.z);group.rotation.y=pen.yaw;scene.add(group);return group;
  }
+ function feedSheep(){
+  const pen=state.sheepPens[state.nearSheepPenIndex];
+  if(!pen){toast("Aproxime-se de um aprisco.");return;}
+  if(state.fiber<2||pen.feedCycles>=10){toast(pen.feedCycles>=10?"As ovelhas já têm alimento suficiente.":"Você precisa de 2 fibras para preparar alimento.");return;}
+  state.fiber-=2;pen.feedCycles=Math.min(10,pen.feedCycles+5);if(pen.feedCycles===5)pen.lastWoolAt=Date.now();
+  updateHUD();saveGame();toast("Alimento preparado para as ovelhas: "+pen.feedCycles+"/10 ciclos.");
+ }
  function collectWool(){
   const pen=state.sheepPens[state.nearSheepPenIndex];
   if(!pen){toast("Aproxime-se de um aprisco.");return;}
-  const produced=Math.min(3,Math.floor(Math.max(0,Date.now()-pen.lastWoolAt)/300000));
-  if(produced<1){toast("As ovelhas ainda estão produzindo lã. Aguarde um pouco.");return;}
-  state.wool+=produced;pen.lastWoolAt+=produced*300000;
+  const produced=Math.min(3,pen.feedCycles,Math.floor(Math.max(0,Date.now()-pen.lastWoolAt)/300000));
+  if(produced<1){toast(pen.feedCycles<1?"As ovelhas precisam de alimento antes de produzir lã.":"As ovelhas ainda estão produzindo lã. Aguarde um pouco.");if(pen.feedCycles<1)pen.lastWoolAt=Date.now();return;}
+  state.wool+=produced;pen.feedCycles-=produced;pen.lastWoolAt+=produced*300000;if(pen.feedCycles<1)pen.lastWoolAt=Date.now();
   updateHUD();saveGame();toast("Você recolheu "+produced+" porção(ões) de lã!");
  }
  function craftSmokehouse(){
@@ -2047,7 +2069,7 @@ function findFenceConnection(targetX,targetZ,extension){
   const x=Math.round((player.position.x+Math.sin(yaw)*6)/3)*3;
   const z=Math.round((player.position.z+Math.cos(yaw)*6)/3)*3;
   if(state.apiaries.some(v=>Math.hypot(v.x-x,v.z-z)<5)){toast("Já existe uma colmeia muito próxima. Escolha outro local.");return;}
-  const apiary={x,z,yaw,lastHoneyAt:Date.now()};
+  const apiary={x,z,yaw,lastHoneyAt:Date.now(),feedCycles:5};
   state.wood-=8;state.fiber-=4;state.apiaries.push(apiary);createApiary(apiary);
   updateHUD();saveGame();toast("Colmeia construída! As abelhas começarão a produzir mel.");
  }
@@ -2086,13 +2108,19 @@ function findFenceConnection(targetX,targetZ,extension){
   group.position.set(apiary.x,terrainHeight(apiary.x,apiary.z),apiary.z);
   group.rotation.y=apiary.yaw;scene.add(group);return group;
  }
+ function feedBees(){
+  const apiary=state.apiaries[state.nearApiaryIndex];
+  if(!apiary){toast("Aproxime-se de uma colmeia.");return;}
+  if(state.herbs<2||apiary.feedCycles>=10){toast(apiary.feedCycles>=10?"A colmeia já está bem cuidada.":"Você precisa de 2 ervas para cuidar da colmeia.");return;}
+  state.herbs-=2;apiary.feedCycles=Math.min(10,apiary.feedCycles+5);if(apiary.feedCycles===5)apiary.lastHoneyAt=Date.now();
+  updateHUD();saveGame();toast("Colmeia abastecida: "+apiary.feedCycles+"/10 ciclos de produção.");
+ }
  function collectHoney(){
   const apiary=state.apiaries[state.nearApiaryIndex];
   if(!apiary){toast("Aproxime-se de uma colmeia.");return;}
-  const elapsed=Math.max(0,Date.now()-apiary.lastHoneyAt);
-  const produced=Math.min(3,Math.floor(elapsed/240000));
-  if(produced<1){toast("O mel ainda está sendo produzido. Aguarde um pouco.");return;}
-  state.honey+=produced;apiary.lastHoneyAt+=produced*240000;
+  const produced=Math.min(3,apiary.feedCycles,Math.floor(Math.max(0,Date.now()-apiary.lastHoneyAt)/240000));
+  if(produced<1){toast(apiary.feedCycles<1?"A colmeia precisa de cuidados antes de produzir mel.":"O mel ainda está sendo produzido. Aguarde um pouco.");if(apiary.feedCycles<1)apiary.lastHoneyAt=Date.now();return;}
+  state.honey+=produced;apiary.feedCycles-=produced;apiary.lastHoneyAt+=produced*240000;if(apiary.feedCycles<1)apiary.lastHoneyAt=Date.now();
   updateHUD();saveGame();toast("Você recolheu "+produced+" pote(s) de mel!");
  }
  function eatHoney(){
@@ -2110,7 +2138,7 @@ function findFenceConnection(targetX,targetZ,extension){
   if(state.chickenCoops.some(coop=>Math.hypot(coop.x-x,coop.z-z)<5)){
    toast("Já existe um galinheiro muito próximo. Escolha outro local.");return;
   }
-  const coop={x,z,yaw,lastEggAt:Date.now()};
+  const coop={x,z,yaw,lastEggAt:Date.now(),feedCycles:5};
   state.wood-=9;state.fiber-=3;
   state.chickenCoops.push(coop);createChickenCoop(coop);
   updateHUD();saveGame();toast("Galinheiro construído! As galinhas começarão a produzir ovos.");
@@ -2162,13 +2190,19 @@ function findFenceConnection(targetX,targetZ,extension){
   group.position.set(coop.x,terrainHeight(coop.x,coop.z),coop.z);
   group.rotation.y=coop.yaw;scene.add(group);return group;
  }
+ function feedChickens(){
+  const coop=state.chickenCoops[state.nearCoopIndex];
+  if(!coop){toast("Aproxime-se de um galinheiro.");return;}
+  if(state.berries<2||coop.feedCycles>=10){toast(coop.feedCycles>=10?"As galinhas já têm alimento suficiente.":"Você precisa de 2 frutas para alimentar as galinhas.");return;}
+  state.berries-=2;coop.feedCycles=Math.min(10,coop.feedCycles+5);if(coop.feedCycles===5)coop.lastEggAt=Date.now();
+  updateHUD();saveGame();toast("Galinhas alimentadas: "+coop.feedCycles+"/10 ciclos de produção.");
+ }
  function collectCoopEggs(){
   const coop=state.chickenCoops[state.nearCoopIndex];
   if(!coop){toast("Aproxime-se de um galinheiro.");return;}
-  const elapsed=Math.max(0,Date.now()-coop.lastEggAt);
-  const produced=Math.min(3,Math.floor(elapsed/180000));
-  if(produced<1){toast("As galinhas ainda estão botando ovos. Aguarde um pouco.");return;}
-  state.eggs+=produced;coop.lastEggAt+=produced*180000;
+  const produced=Math.min(3,coop.feedCycles,Math.floor(Math.max(0,Date.now()-coop.lastEggAt)/180000));
+  if(produced<1){toast(coop.feedCycles<1?"As galinhas precisam de alimento antes de botar ovos.":"As galinhas ainda estão botando ovos. Aguarde um pouco.");if(coop.feedCycles<1)coop.lastEggAt=Date.now();return;}
+  state.eggs+=produced;coop.feedCycles-=produced;coop.lastEggAt+=produced*180000;if(coop.feedCycles<1)coop.lastEggAt=Date.now();
   updateHUD();saveGame();toast("Você recolheu "+produced+" ovo(s) frescos!");
  }
  function eatEgg(){
