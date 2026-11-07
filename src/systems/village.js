@@ -367,6 +367,18 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
 
   function productionBonus(resident) { return Math.floor((skills[resident.id].level - 1) / 2); }
 
+  function workCycleFor(resident) {
+    const baseWorkCycle = morale >= 75 ? 40 : morale < 25 ? 55 : 45;
+    const prosperityReduction = (prosperityLevel() - 1) * 3;
+    const masteryReduction = Math.min(8, (skills[resident.id].level - 1) * .9);
+    return Math.max(24, baseWorkCycle - prosperityReduction - masteryReduction);
+  }
+
+  function workEfficiencyLabel(resident) {
+    const cycle = workCycleFor(resident);
+    return "CICLO DE PRODUÇÃO · " + cycle.toFixed(0) + "s" + (skills[resident.id].level > 1 ? " · especialista acelera o trabalho" : "");
+  }
+
   function awardWorkExperience(resident) {
     const skill = skills[resident.id];
     if (skill.level >= 10) return false;
@@ -385,7 +397,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const skillProgress = skill.level >= 10 ? 100 : Math.min(100, Math.round(skill.xp / experienceNeeded(skill.level) * 100));
     const production = row.querySelector(".production");
     if (production) {
-      const skillLine = skill.level >= 10 ? "NÍVEL 10 · MESTRE" : "NÍVEL " + skill.level + " · XP " + skill.xp + "/" + experienceNeeded(skill.level) + (bonus ? " · +" + bonus + " por ciclo" : "");
+      const skillLine = (skill.level >= 10 ? "NÍVEL 10 · MESTRE" : "NÍVEL " + skill.level + " · XP " + skill.xp + "/" + experienceNeeded(skill.level)) + (bonus ? " · +" + bonus + " por ciclo" : "") + " · " + workEfficiencyLabel(resident);
       production.textContent = job.resource ? (job.detail || ("Produz " + job.amount + " " + job.resourceLabel + " por ciclo de trabalho.")) + " " + skillLine : "Sem produção atribuída. " + skillLine;
     }
     const fill = row.querySelector('[aria-label="Progresso da profissão de ' + resident.name + '"] > div');
@@ -461,7 +473,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       const job = professions[resident.profession];
       const skill = skills[resident.id];
       const bonus = productionBonus(resident);
-      const skillLine = skill.level >= 10 ? "NÍVEL 10 · MESTRE" : "NÍVEL " + skill.level + " · XP " + skill.xp + "/" + experienceNeeded(skill.level) + (bonus ? " · +" + bonus + " por ciclo" : "");
+      const skillLine = (skill.level >= 10 ? "NÍVEL 10 · MESTRE" : "NÍVEL " + skill.level + " · XP " + skill.xp + "/" + experienceNeeded(skill.level)) + (bonus ? " · +" + bonus + " por ciclo" : "") + " · " + workEfficiencyLabel(resident);
       production.textContent = job.resource ? (job.detail || ("Produz " + job.amount + " " + job.resourceLabel + " por ciclo de trabalho.")) + " " + skillLine : "Sem produção atribuída. " + skillLine;
       const skillTrack = document.createElement("div");
       skillTrack.setAttribute("aria-label", "Progresso da profissão de " + resident.name);
@@ -749,8 +761,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       const job = professions[resident.profession];
       if (resident.enabled && job && job.resource && workingTime) {
         workElapsed[resident.id] += Math.max(0, dt);
-        const baseWorkCycle = morale >= 75 ? 40 : morale < 25 ? 55 : 45;
-        const workCycle = Math.max(30, baseWorkCycle - (prosperityLevel() - 1) * 3);
+        const workCycle = workCycleFor(resident);
         if (workElapsed[resident.id] >= workCycle) {
           workElapsed[resident.id] -= workCycle;
           const leveledUp = awardWorkExperience(resident);
