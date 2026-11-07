@@ -32,7 +32,12 @@ jobs:
             "assets/3d/Clover_1.gltf",
             "assets/3d/Flower_3_Group.gltf",
             "assets/3d/Mushroom_Common.gltf",
-            "assets/3d/Mushroom_Laetiporus.gltf"
+            "assets/3d/Mushroom_Laetiporus.gltf",
+            "assets/3d/RockPath_Round_Small_1.gltf",
+            "assets/3d/RockPath_Round_Small_2.gltf",
+            "assets/3d/RockPath_Round_Small_3.gltf",
+            "assets/3d/RockPath_Round_Thin.gltf",
+            "assets/3d/RockPath_Round_Wide.gltf"
           ];
           for (const file of models) {
             const gltf = JSON.parse(readFileSync(file, "utf8"));

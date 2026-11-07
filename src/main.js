@@ -796,10 +796,10 @@ function createResource(x,z,type="wood",target=null){
  registerResource({object:stump,x,z,type,target,active:true});
 }
 async function buildForest(){
- const [common,pine,twisted,rock,grassShort,grassTall,wispyGrass,wispyGrassTall,rockPathA,rockPathB,bushFlowers,fern,clover,flowerGroup] = await Promise.all([
+ const [common,pine,twisted,rock,grassShort,grassTall,wispyGrass,wispyGrassTall,rockPathA,rockPathB,rockPathC,rockPathThin,rockPathWide,bushFlowers,fern,clover,flowerGroup,mushroomCommon,mushroomGolden] = await Promise.all([
   loadTree("CommonTree_1"),loadTree("Pine_1"),loadTree("TwistedTree_1"),loadTree("Rock_Medium_1"),
   loadTree("Grass_Common_Short"),loadTree("Grass_Common_Tall"),loadTree("Grass_Wispy_Short"),loadTree("Grass_Wispy_Tall"),
-  loadTree("RockPath_Round_Small_1"),loadTree("RockPath_Round_Small_2"),
+  loadTree("RockPath_Round_Small_1"),loadTree("RockPath_Round_Small_2"),loadTree("RockPath_Round_Small_3"),loadTree("RockPath_Round_Thin"),loadTree("RockPath_Round_Wide"),
   loadTree("Bush_Common_Flowers"),loadTree("Fern_1"),loadTree("Clover_1"),loadTree("Flower_3_Group"),
   loadTree("Mushroom_Common"),loadTree("Mushroom_Laetiporus")
  ]);
@@ -812,10 +812,12 @@ async function buildForest(){
   scatterModel(model,x,z,.48+worldRandom()*.32);
  }
  // Pedras arredondadas do próprio pacote marcam trechos rochosos do relevo.
- const rockyPatches=[rockPathA,rockPathB].filter(Boolean);
- for(let i=0;i<18&&rockyPatches.length;i++){
+ const rockyPatches=[rockPathA,rockPathB,rockPathC,rockPathThin,rockPathWide].filter(Boolean);
+ for(let i=0;i<32&&rockyPatches.length;i++){
   const a=worldRandom()*Math.PI*2,r=16+worldRandom()*78,x=Math.cos(a)*r,z=Math.sin(a)*r;
-  if(terrainHeight(x,z)>1.2)scatterModel(rockyPatches[i%rockyPatches.length],x,z,.42+worldRandom()*.24);
+  if(terrainHeight(x,z)>1.2)continue;
+  const detail=scatterModel(rockyPatches[i%rockyPatches.length],x,z,.34+worldRandom()*.28);
+  if(detail)detail.rotation.y=worldRandom()*Math.PI*2;
  }
  treePositions.forEach((p,i)=>{
   if(Math.hypot(p.x,p.z)<10)return;
