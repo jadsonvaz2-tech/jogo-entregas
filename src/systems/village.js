@@ -4,6 +4,22 @@ import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
 const SAVE_KEY = "cronicas-floresta-village-v1";
 
 export function createVillageResidents({ THREE, scene, player, terrainHeight, state, onToast, onSave, onFarmAction, managementRoot = null }) {
+  const professions = {
+    farmer: { label: "Agricultora", resource: "berries", resourceLabel: "frutas", amount: 2, detail: "Cuida das hortas: planta 3 frutas e colhe 6 quando amadurecem." },
+    lumberjack: { label: "Lenhador", resource: "wood", resourceLabel: "madeiras", amount: 1 },
+    mason: { label: "Pedreiro", resource: "stone", resourceLabel: "pedras", amount: 1 },
+    hunter: { label: "Caçador", resource: "meat", resourceLabel: "carnes", amount: 1, detail: "Rastreia animais e traz carne para as provisões." },
+    herbalist: { label: "Herborista", resource: "herbs", resourceLabel: "ervas", amount: 2, detail: "Recolhe ervas medicinais para curativos e poções." },
+    gatherer: { label: "Coletor", resource: "fiber", resourceLabel: "fibras", amount: 2, detail: "Reúne fibras vegetais para cordas e construções." },
+    tanner: { label: "Curtidor", resource: "hide", resourceLabel: "peles", amount: 1, detail: "Prepara peles para roupas e equipamentos." },
+    shepherd: { label: "Pastor", resource: "wool", resourceLabel: "lãs", amount: 1, detail: "Cuida dos rebanhos e separa lã para a comunidade." },
+    beekeeper: { label: "Apicultor", resource: "honey", resourceLabel: "méis", amount: 1, detail: "Cuida das colmeias e recolhe mel." },
+    guard: { label: "Vigia", resource: null, resourceLabel: "—", amount: 0, detail: "Faz rondas pelos limites da aldeia, ganha experiência patrulhando e melhora a cobertura de vigilância." },
+    idle: { label: "Sem tarefa", resource: null, resourceLabel: "—", amount: 0 }
+  };
+  for(const [value,profession] of Object.entries(professions)){
+    const option=document.createElement("option");option.value=value;option.textContent=profession.label;bulkProfessionSelect.appendChild(option);
+  }
   const loader = new GLTFLoader();
   const saved = (() => {
     const raw = localStorage.getItem(SAVE_KEY);
@@ -448,22 +464,6 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     return [resident.id, { xp: Math.max(0, Math.floor(Number(savedSkill.xp) || 0)), level: Math.min(10, Math.max(1, Math.floor(Number(savedSkill.level) || 1))) }];
   }));
 
-  const professions = {
-    farmer: { label: "Agricultora", resource: "berries", resourceLabel: "frutas", amount: 2, detail: "Cuida das hortas: planta 3 frutas e colhe 6 quando amadurecem." },
-    lumberjack: { label: "Lenhador", resource: "wood", resourceLabel: "madeiras", amount: 1 },
-    mason: { label: "Pedreiro", resource: "stone", resourceLabel: "pedras", amount: 1 },
-    hunter: { label: "Caçador", resource: "meat", resourceLabel: "carnes", amount: 1, detail: "Rastreia animais e traz carne para as provisões." },
-    herbalist: { label: "Herborista", resource: "herbs", resourceLabel: "ervas", amount: 2, detail: "Recolhe ervas medicinais para curativos e poções." },
-    gatherer: { label: "Coletor", resource: "fiber", resourceLabel: "fibras", amount: 2, detail: "Reúne fibras vegetais para cordas e construções." },
-    tanner: { label: "Curtidor", resource: "hide", resourceLabel: "peles", amount: 1, detail: "Prepara peles para roupas e equipamentos." },
-    shepherd: { label: "Pastor", resource: "wool", resourceLabel: "lãs", amount: 1, detail: "Cuida dos rebanhos e separa lã para a comunidade." },
-    beekeeper: { label: "Apicultor", resource: "honey", resourceLabel: "méis", amount: 1, detail: "Cuida das colmeias e recolhe mel." },
-    guard: { label: "Vigia", resource: null, resourceLabel: "—", amount: 0, detail: "Faz rondas pelos limites da aldeia, ganha experiência patrulhando e melhora a cobertura de vigilância." },
-    idle: { label: "Sem tarefa", resource: null, resourceLabel: "—", amount: 0 }
-  };
-  for(const [value,profession] of Object.entries(professions)){
-    const option=document.createElement("option");option.value=value;option.textContent=profession.label;bulkProfessionSelect.appendChild(option);
-  }
   const workElapsed = Object.fromEntries(residents.map(resident=>[resident.id,0]));
   const professionWorkPoints = {
     farmer: [[-8.2, 1.5], [-7.1, 4.2]],
