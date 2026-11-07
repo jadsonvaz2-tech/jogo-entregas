@@ -10,6 +10,7 @@ import { createSettlementEconomy } from "./systems/settlement-economy.js?v=four-
 import { createCommunityExpeditions } from "./systems/community-expeditions.js?v=expedition-world-routes-2026-11-07-1";
 import { createDistantExploration } from "./systems/distant-exploration.js?v=secret-characters-2026-11-07-1";
 import { createCommunityEvents } from "./systems/community-events.js?v=community-festivals-2026-11-07-1";
+import { createTravelNetwork } from "./systems/travel-network.js?v=inns-travelers-trade-2026-11-07-1";
 let villageResidents=null;
 let distantVillageResidents=null;
 let settlementEconomy=null;
@@ -18,6 +19,7 @@ let undergroundWorld=null;
 let communityExpeditions=null;
 let distantExploration=null;
 let communityEvents=null;
+let travelNetwork=null;
 
 const $ = (id) => document.getElementById(id);
 const raw = new URL("../assets/3d/", import.meta.url).href;
@@ -4613,7 +4615,7 @@ function animate(now){
  requestAnimationFrame(animate);
  if(mobilePerformanceMode&&now-lastRender<1000/30)return;
  const dt=Math.min((now-last)/1000,.05);last=now;lastRender=now;
- update(dt);if(performance.now()-lastMapDraw>180){paintWorldMap(miniMapCanvas,miniMapContext,false);if(fullMapOpen)paintWorldMap(fullMapCanvas,fullMapContext,true);lastMapDraw=performance.now();}if(storyEncounter)storyEncounter.update();if(villageResidents)villageResidents.update(dt);if(communityExpeditions)communityExpeditions.update(dt);if(distantExploration)distantExploration.update(dt);if(distantVillageResidents)distantVillageResidents.update(dt);if(communityEvents)communityEvents.update(state);if(settlementEconomy)settlementEconomy.update(dt);updateWindEnvironment(dt,now*.001);updateForestAudio();if(activeBuildPlacement)updateBuildPreview();if(now-lastSave>5000){saveGame();if(distantVillageResidents)distantVillageResidents.save();lastSave=now;}renderer.render(scene,camera);
+ update(dt);if(performance.now()-lastMapDraw>180){paintWorldMap(miniMapCanvas,miniMapContext,false);if(fullMapOpen)paintWorldMap(fullMapCanvas,fullMapContext,true);lastMapDraw=performance.now();}if(storyEncounter)storyEncounter.update();if(villageResidents)villageResidents.update(dt);if(communityExpeditions)communityExpeditions.update(dt);if(distantExploration)distantExploration.update(dt);if(distantVillageResidents)distantVillageResidents.update(dt);if(communityEvents)communityEvents.update(state);if(travelNetwork)travelNetwork.update(dt);if(settlementEconomy)settlementEconomy.update(dt);updateWindEnvironment(dt,now*.001);updateForestAudio();if(activeBuildPlacement)updateBuildPreview();if(now-lastSave>5000){saveGame();if(distantVillageResidents)distantVillageResidents.save();lastSave=now;}renderer.render(scene,camera);
 }
 addEventListener("keydown",e=>{if(e.key==="Escape"&&activeBuildPlacement)cancelBuildPlacement();});
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,renderPixelRatio));});
@@ -4646,6 +4648,7 @@ async function start(){
  startupStage="criando as aldeias e estradas";
  const settlements = createWorldSettlements({ THREE, scene, terrainHeight });
  communityEvents=startOptional("as festas e feiras comunitárias",()=>createCommunityEvents({THREE,scene,terrainHeight,centers:settlements.centers,onToast:toast}));
+ travelNetwork=startOptional("as hospedarias e caravanas",()=>createTravelNetwork({THREE,scene,terrainHeight,centers:settlements.centers,paths:settlements.paths,player,state,onToast:toast,onSave:saveGame}));
  const expandedWorld=await createExpandedWorld({ THREE, scene, terrainHeight, player, state, registerResource, onToast:toast, onSave:saveGame });
   undergroundWorld=expandedWorld.undergroundWorld;
  const distanceToSegment = (px, pz, ax, az, bx, bz) => {
