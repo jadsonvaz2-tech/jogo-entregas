@@ -4320,9 +4320,16 @@ function animate(now){
 addEventListener("keydown",e=>{if(e.key==="Escape"&&activeBuildPlacement)cancelBuildPlacement();});
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));});
 async function start(){
+ let startupStage="preparando o mundo";
+ const startOptional=(label,create)=>{
+  startupStage=label;
+  try{return create();}
+  catch(error){console.error("Falha ao iniciar "+label+":",error);toast("Aviso: "+label+" não pôde ser carregado. O restante do mundo continuará.");return null;}
+ };
  $("loadingText").textContent="Criando o terreno e a floresta...";
  $("loadingBar").style.width="20%";
  await buildForest();
+ startupStage="criando as aldeias e estradas";
  const settlements = createWorldSettlements({ THREE, scene, terrainHeight });
  const distanceToSegment = (px, pz, ax, az, bx, bz) => {
   const dx = bx - ax, dz = bz - az, length2 = dx * dx + dz * dz || 1;
@@ -4371,12 +4378,14 @@ async function start(){
  for(const gate of state.gates)createGate(gate);
  $("loadingBar").style.width="72%";
  $("loadingText").textContent="Carregando o viajante...";
+ startupStage="carregando o personagem";
  const loaded=await loadCharacter();
  if(!loaded)toast("Modelo do viajante indisponível: usando personagem provisório.");
- storyEncounter=createStoryEncounter({THREE,scene,player,terrainHeight,state,onSave:saveGame,onToast:toast});
- villageResidents=createVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,onSave:saveGame,onFarmAction:villageFarmAction,managementRoot:$("playerVillageManagementSlot")});
- settlementEconomy=createSettlementEconomy({THREE,player,state,onToast:toast,onChange:()=>{updateHUD();saveGame();}});
- distantVillageResidents=createDistantVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,economy:settlementEconomy});
+ storyEncounter=startOptional("a missão e o personagem Edrik",()=>createStoryEncounter({THREE,scene,player,terrainHeight,state,onSave:saveGame,onToast:toast}));
+ villageResidents=startOptional("os moradores da aldeia central",()=>createVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,onSave:saveGame,onFarmAction:villageFarmAction,managementRoot:$("playerVillageManagementSlot")}));
+ settlementEconomy=startOptional("a economia das aldeias",()=>createSettlementEconomy({THREE,player,state,onToast:toast,onChange:()=>{updateHUD();saveGame();}}));
+ distantVillageResidents=startOptional("os moradores das outras aldeias",()=>createDistantVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,economy:settlementEconomy}));
+ startupStage="finalizando a entrada no mundo";
  $("loadingBar").style.width="100%";
  updateHUD();
  setTimeout(()=>{$("loading").style.opacity="0";setTimeout(()=>$("loading").remove(),700);},350);
@@ -4384,4 +4393,4 @@ async function start(){
  animate(performance.now());
 }
 addEventListener("beforeunload",()=>{saveGame();if(distantVillageResidents)distantVillageResidents.save();});
-start().catch(err=>{console.error(err);$("loadingText").textContent="Não foi possível carregar o cenário. Atualize a página.";toast("Falha ao iniciar o mundo.");});
+start().catch(err=>{console.error("Falha ao iniciar o mundo na etapa: "+(typeof startupStage!=="undefined"?startupStage:"inicialização"),err);const loadingText=$("loadingText");if(loadingText)loadingText.textContent="Falha ao carregar: "+(typeof startupStage!=="undefined"?startupStage:"inicialização")+". Toque para tentar novamente.";const loading=$("loading");if(loading){loading.style.pointerEvents="auto";loading.onclick=()=>location.reload();}toast("Falha ao iniciar o mundo. Seu salvamento foi mantido.");});
