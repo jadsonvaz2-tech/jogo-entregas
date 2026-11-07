@@ -874,19 +874,61 @@ async function buildForest(){
  addGrass();
  // Decoração adicional: só é criada depois de todos os recursos persistentes,
  // preservando a sequência determinística e os IDs usados pelo salvamento local.
+ // Vegetação ornamental em pequenos núcleos naturais, com variação local independente do RNG do mundo.
+ // Os cinco sorteios antigos por exemplar são consumidos para manter idêntica a sequência dos recursos coletáveis.
  const decorativePatches=[
-  {model:bushFlowers,count:9,minRadius:20,maxRadius:88,minScale:.58,maxScale:.82},
-  {model:fern,count:14,minRadius:14,maxRadius:78,minScale:.48,maxScale:.72},
-  {model:clover,count:24,minRadius:12,maxRadius:66,minScale:.34,maxScale:.52},
-  {model:flowerGroup,count:10,minRadius:18,maxRadius:82,minScale:.38,maxScale:.58}
+  {model:bushFlowers,count:14,legacyCount:9,minScale:.56,maxScale:.86,minSpacing:2.1},
+  {model:fern,count:22,legacyCount:14,minScale:.44,maxScale:.76,minSpacing:1.25},
+  {model:clover,count:36,legacyCount:24,minScale:.32,maxScale:.56,minSpacing:.72},
+  {model:flowerGroup,count:18,legacyCount:10,minScale:.36,maxScale:.62,minSpacing:1.05}
  ];
+ let decorationSeed=0x51f15e;
+ const decorationRandom=()=>{
+  decorationSeed^=decorationSeed<<13;decorationSeed^=decorationSeed>>>17;decorationSeed^=decorationSeed<<5;
+  return (decorationSeed>>>0)/4294967296;
+ };
  for(const patch of decorativePatches){
   if(!patch.model)continue;
+  for(let i=0;i<patch.legacyCount;i++)for(let n=0;n<5;n++)worldRandom();
+ }
+ const naturalClearings=Array.from({length:8},(_,i)=>{
+  const angle=i*2.39996322973+.31;
+  const radius=28+(i%3)*17;
+  return {x:Math.cos(angle)*radius,z:Math.sin(angle)*radius};
+ });
+ const placedGroundDetails=[];
+ function isNaturalSpot(x,z,minSpacing=0){
+  if(Math.hypot(x,z)<12.5||terrainHeight(x,z)>4.8)return false;
+  if(treePositions.some(p=>Math.hypot(p.x-x,p.z-z)<2.7))return false;
+  if(minSpacing>0&&placedGroundDetails.some(p=>Math.hypot(p.x-x,p.z-z)<minSpacing))return false;
+  return true;
+ }
+ function addGroundDecoration(model,x,z,scale,rotation,castShadow=false){
+  if(!model)return null;
+  const object=model.clone(true);
+  object.position.set(x,terrainHeight(x,z),z);
+  object.rotation.y=rotation;
+  object.scale.multiplyScalar(scale);
+  object.traverse(o=>{if(o.isMesh){o.castShadow=castShadow;o.receiveShadow=true;}});
+  scene.add(object);treeModels.push(object);
+  placedGroundDetails.push({x,z});
+  return object;
+ }
+ for(let patchIndex=0;patchIndex<decorativePatches.length;patchIndex++){
+  const patch=decorativePatches[patchIndex];
+  if(!patch.model)continue;
   for(let i=0;i<patch.count;i++){
-   const angle=worldRandom()*Math.PI*2;
-   const radius=patch.minRadius+worldRandom()*(patch.maxRadius-patch.minRadius);
-   const x=Math.cos(angle)*radius,z=Math.sin(angle)*radius;
-   scatterModel(patch.model,x,z,patch.minScale+worldRandom()*(patch.maxScale-patch.minScale));
+   const center=naturalClearings[(i*3+patchIndex*2)%naturalClearings.length];
+   let point=null;
+   for(let attempt=0;attempt<18;attempt++){
+    const angle=decorationRandom()*Math.PI*2;
+    const radius=1.2+Math.sqrt(decorationRandom())*(patchIndex===2?5.8:4.8);
+    const x=center.x+Math.cos(angle)*radius,z=center.z+Math.sin(angle)*radius;
+    if(isNaturalSpot(x,z,patch.minSpacing)){point={x,z};break;}
+   }
+   if(!point)continue;
+   const scale=patch.minScale+decorationRandom()*(patch.maxScale-patch.minScale);
+   addGroundDecoration(patch.model,point.x,point.z,scale,.0+decorationRandom()*Math.PI*2);
   }
  }
  // Cogumelos coletáveis: gerados depois dos recursos antigos para preservar
@@ -925,6 +967,21 @@ async function buildForest(){
   model.scale.multiplyScalar(.20+(i%3)*.035);
   model.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true;}});
   scene.add(model);treeModels.push(model);
+ }
+ // Pedras menores em agrupamentos irregulares junto às clareiras, sem colisão com árvores ou início do jogo.
+ for(let i=0;i<18&&pebbleModels.length;i++){
+  const center=naturalClearings[(i*5+1)%naturalClearings.length];
+  let point=null;
+  for(let attempt=0;attempt<16;attempt++){
+   const angle=decorationRandom()*Math.PI*2,radius=1.1+decorationRandom()*4.2;
+   const x=center.x+Math.cos(angle)*radius,z=center.z+Math.sin(angle)*radius;
+   if(Math.hypot(x,z)<13||treePositions.some(p=>Math.hypot(p.x-x,p.z-z)<2.8))continue;
+   if(pebbleSpots.some(p=>Math.hypot(p.x-x,p.z-z)<1.45))continue;
+   point={x,z};break;
+  }
+  if(!point)continue;
+  pebbleSpots.push(point);
+  addGroundDecoration(pebbleModels[(i+2)%pebbleModels.length],point.x,point.z,.17+decorationRandom()*.13,decorationRandom()*Math.PI*2,false);
  }
 }
 
