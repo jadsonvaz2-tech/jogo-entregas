@@ -127,6 +127,12 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     #village-work .stockpile-item{display:flex;justify-content:space-between;align-items:center;gap:4px;padding:6px;background:#293b2d;border:1px solid #65714d;border-radius:6px;color:#eee5cf;font-size:11px}
     #village-work .stockpile-item b{color:#f5d98c;font-size:13px}
     #village-work .stockpile-capacity{margin-top:7px;padding:7px;background:#3a482f;border-radius:6px;color:#f0d58a;font-weight:800;text-align:center}
+    #village-work .stockpile-item{display:block}
+    #village-work .stockpile-item .stockpile-resource{display:flex;justify-content:space-between;gap:5px;align-items:center}
+    #village-work .stockpile-item .personal-count{display:block;margin:3px 0;color:#c4cfaa;font-size:9px}
+    #village-work .stockpile-item .stockpile-actions{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+    #village-work .stockpile-item .stockpile-actions button{margin:0;padding:5px 2px;font-size:9px;min-height:27px}
+    #village-work .stockpile-item .stockpile-actions button:disabled{opacity:.4}
     @media(max-width:600px){#village-work{top:390px;right:7px;width:174px;max-height:35vh;padding:7px;font-size:10px}#village-work select{padding:6px;font-size:10px}#village-work .stockpile-grid{grid-template-columns:1fr 1fr}#village-work .stockpile-item{font-size:10px;padding:5px}}
     @media(min-width:800px){#village-work{top:390px;right:20px;width:220px;max-height:48vh}}
   `;
@@ -340,6 +346,30 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     upgradeStorageButton.textContent = "AMPLIAR DEPÓSITO · NÍVEL " + (storageLevel + 1) + " · " + cost.wood + " MADEIRAS + " + cost.stone + " PEDRAS";
   }
 
+  function transferStockpileResource(resource, direction) {
+    if (!Object.prototype.hasOwnProperty.call(stockpile, resource)) return;
+    const personal = Math.max(0, Math.floor(Number(state[resource]) || 0));
+    if (direction === "deposit") {
+      const amount = Math.min(personal, Math.max(0, storageCapacity() - stockpileTotal()));
+      if (amount < 1) {
+        onToast(personal < 1 ? "Você não possui esse recurso na mochila." : "O depósito comunitário está cheio. Amplie sua capacidade em GESTÃO.");
+        return;
+      }
+      state[resource] = personal - amount;
+      stockpile[resource] += amount;
+      onToast("Você guardou " + amount + " unidade(s) no depósito comunitário.");
+    } else {
+      const amount = stockpile[resource];
+      if (amount < 1) { onToast("Não há esse recurso no depósito comunitário."); return; }
+      state[resource] = personal + amount;
+      stockpile[resource] = 0;
+      onToast("Você retirou " + amount + " unidade(s) do depósito comunitário.");
+    }
+    saveVillageProgress();
+    if (onSave) onSave();
+    refreshStockpileUI();
+  }
+
   function refreshStockpileUI() {
     const resources = [
       ["🪵","Madeira","wood"],["🪨","Pedra","stone"],["🫐","Frutas","berries"],
@@ -348,16 +378,30 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     ];
     const total = stockpileTotal();
     stockpileDisplay.innerHTML = '<div class="stockpile-heading">DEPÓSITO COMUNITÁRIO · RECURSOS DA ALDEIA</div>' +
-      '<div class="stockpile-grid">' + resources.map(([icon,label,key]) =>
-        '<div class="stockpile-item"><span>' + icon + ' ' + label + '</span><b>' + stockpile[key] + '</b></div>'
-      ).join("") + '</div><div class="stockpile-capacity">TOTAL ARMAZENADO · ' + total + ' / ' + storageCapacity() + ' unidades</div>';
+      '<div class="stockpile-grid">' + resources.map(([icon,label,key]) => {
+        const personal = Math.max(0, Math.floor(Number(state[key]) || 0));
+        return '<div class="stockpile-item" data-resource="' + key + '">' +
+          '<div class="stockpile-resource"><span>' + icon + ' ' + label + '</span><b>' + stockpile[key] + '</b></div>' +
+          '<span class="personal-count">Na sua mochila: ' + personal + '</span>' +
+          '<div class="stockpile-actions"><button type="button" data-transfer="deposit">GUARDAR</button><button type="button" data-transfer="withdraw">RETIRAR</button></div></div>';
+      }).join("") + '</div><div class="stockpile-capacity">TOTAL ARMAZENADO · ' + total + ' / ' + storageCapacity() + ' unidades</div>';
+    for (const card of stockpileDisplay.querySelectorAll(".stockpile-item")) {
+      const resource = card.dataset.resource;
+      const personal = Math.max(0, Math.floor(Number(state[resource]) || 0));
+      const deposit = card.querySelector('[data-transfer="deposit"]');
+      const withdraw = card.querySelector('[data-transfer="withdraw"]');
+      deposit.disabled = personal < 1 || total >= storageCapacity();
+      withdraw.disabled = stockpile[resource] < 1;
+      deposit.addEventListener("click", () => transferStockpileResource(resource, "deposit"));
+      withdraw.addEventListener("click", () => transferStockpileResource(resource, "withdraw"));
+    }
     collectStockpileButton.disabled = total < 1;
     refreshStorageUpgradeUI();
     moraleDisplay.textContent = "ÂNIMO DO POVOADO · " + Math.round(morale) + "/100 · " + moraleDescription();
     const level = prosperityLevel();
     const nextThreshold = [0,3,8,15,24][level] ?? 24;
     const progress = level >= 5 ? "MAIOR NÍVEL ALCANÇADO" : (nextThreshold - prosperityXp) + " contribuição(ões) para o próximo nível";
-    workPanel.querySelector("#village-prosperity").textContent = "PROSPERIDADE · NÍVEL " + level + "/5 · " + (level >= 5 ? progress : progress) + " · refeições e dias abastecidos fortalecem a aldeia.";
+    workPanel.querySelector("#village-prosperity").textContent = "PROSPERIDADE · NÍVEL " + level + "/5 · " + progress + " · refeições e dias abastecidos fortalecem a aldeia.";
     const canServeBerries = stockpile.berries >= 5;
     const canServeMeat = stockpile.meat >= 3;
     communalMealButton.disabled = (!canServeBerries && !canServeMeat) || morale >= 100;
