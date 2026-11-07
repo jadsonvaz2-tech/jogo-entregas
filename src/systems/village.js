@@ -150,6 +150,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     idle: { label: "Sem tarefa", resource: null, resourceLabel: "—", amount: 0 }
   };
   const workElapsed = { lina: 0, odo: 0, toma: 0 };
+  for (const resident of residents) if (!Object.prototype.hasOwnProperty.call(workElapsed,resident.id)) workElapsed[resident.id]=0;
   const professionWorkPoints = {
     farmer: [[-8.2, 1.5], [-7.1, 4.2]],
     lumberjack: [[9.1, 1.4], [8.4, -2.2]],
@@ -180,7 +181,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const professionKeys = ["farmer","lumberjack","mason"];
     const profession = professionKeys[(residents.length - 3) % professionKeys.length];
     const resident = {
-      id:"central-recruit-"+Date.now()+"-"+residents.length, name, role:professions[profession].label, profession,
+      id:"central-recruit-"+Date.now()+"-"+residents.length, name, role:professions[profession].label, profession, isRecruit:true,
       model:residents.length % 2 ? "Worker_Male.gltf" : "Worker_Female.gltf",
       start:home, home, work:professionWorkPoints[profession], greeting:"Sou " + name + ". Vim construir uma vida nesta aldeia e ajudar a comunidade."
     };
