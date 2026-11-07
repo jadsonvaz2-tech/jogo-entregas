@@ -7,14 +7,32 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   const loader = new GLTFLoader();
   const saved = (() => {
     const raw = localStorage.getItem(SAVE_KEY);
-    try {
-      const data = JSON.parse(raw || "null");
-      return data && typeof data === "object" ? data : {};
-    } catch (error) {
-      console.warn("Não foi possível ler o progresso dos moradores.", error);
-      try { if (raw) localStorage.setItem(SAVE_KEY + "-recovery-raw", raw); } catch (backupError) { console.warn("Não foi possível preservar o salvamento dos moradores.", backupError); }
-      return {};
+    const backupRaw = localStorage.getItem(SAVE_KEY + "-backup");
+    const parse = (value) => {
+      try {
+        const data = JSON.parse(value || "null");
+        return data && typeof data === "object" ? data : null;
+      } catch (error) { return null; }
+    };
+    const primary = parse(raw);
+    const backup = parse(backupRaw);
+    if (!primary && raw) {
+      console.warn("Salvamento principal dos moradores inválido; verificando cópia de segurança.");
+      try { localStorage.setItem(SAVE_KEY + "-recovery-raw", raw); } catch (error) {}
     }
+    const score = (data) => {
+      if (!data) return -1;
+      const recruits = Array.isArray(data.recruits) ? data.recruits.filter(person => person && person.id).length : 0;
+      const houses = Math.max(0, Math.min(6, Math.floor(Number(data.houses) || 0)));
+      const homes = data.homes && typeof data.homes === "object" ? Object.keys(data.homes).length : 0;
+      return recruits * 100 + houses * 10 + homes;
+    };
+    if (backup && score(backup) > score(primary)) {
+      console.warn("Recuperando progresso da aldeia da cópia de segurança mais completa.");
+      try { localStorage.setItem(SAVE_KEY + "-recovery-used", new Date().toISOString()); } catch (error) {}
+      return backup;
+    }
+    return primary || {};
   })();
 
   const savedJobs = saved.jobs && typeof saved.jobs === "object" ? saved.jobs : {};
