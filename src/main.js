@@ -2,13 +2,14 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
 import { createStoryEncounter } from "./systems/story.js";
-import { createVillageResidents } from "./systems/village.js?v=villager-daily-life-2026-11-07-1";
+import { createVillageResidents } from "./systems/village.js?v=community-festivals-2026-11-07-1";
 import { createWorldSettlements, WORLD_ROAD_PATHS } from "./systems/settlements.js?v=four-villages-2026-11-07-2";
 import { createExpandedWorld } from "./systems/world-expansion.js?v=underground-exploration-2026-11-07-1";
-import { createDistantVillageResidents } from "./systems/distant-village-residents.js?v=villager-daily-life-2026-11-07-1";
+import { createDistantVillageResidents } from "./systems/distant-village-residents.js?v=community-festivals-2026-11-07-1";
 import { createSettlementEconomy } from "./systems/settlement-economy.js?v=four-villages-2026-11-07-2";
 import { createCommunityExpeditions } from "./systems/community-expeditions.js?v=expedition-world-routes-2026-11-07-1";
 import { createDistantExploration } from "./systems/distant-exploration.js?v=secret-characters-2026-11-07-1";
+import { createCommunityEvents } from "./systems/community-events.js?v=community-festivals-2026-11-07-1";
 let villageResidents=null;
 let distantVillageResidents=null;
 let settlementEconomy=null;
@@ -16,6 +17,7 @@ let storyEncounter=null;
 let undergroundWorld=null;
 let communityExpeditions=null;
 let distantExploration=null;
+let communityEvents=null;
 
 const $ = (id) => document.getElementById(id);
 const raw = new URL("../assets/3d/", import.meta.url).href;
@@ -4611,7 +4613,7 @@ function animate(now){
  requestAnimationFrame(animate);
  if(mobilePerformanceMode&&now-lastRender<1000/30)return;
  const dt=Math.min((now-last)/1000,.05);last=now;lastRender=now;
- update(dt);if(performance.now()-lastMapDraw>180){paintWorldMap(miniMapCanvas,miniMapContext,false);if(fullMapOpen)paintWorldMap(fullMapCanvas,fullMapContext,true);lastMapDraw=performance.now();}if(storyEncounter)storyEncounter.update();if(villageResidents)villageResidents.update(dt);if(communityExpeditions)communityExpeditions.update(dt);if(distantExploration)distantExploration.update(dt);if(distantVillageResidents)distantVillageResidents.update(dt);if(settlementEconomy)settlementEconomy.update(dt);updateWindEnvironment(dt,now*.001);updateForestAudio();if(activeBuildPlacement)updateBuildPreview();if(now-lastSave>5000){saveGame();if(distantVillageResidents)distantVillageResidents.save();lastSave=now;}renderer.render(scene,camera);
+ update(dt);if(performance.now()-lastMapDraw>180){paintWorldMap(miniMapCanvas,miniMapContext,false);if(fullMapOpen)paintWorldMap(fullMapCanvas,fullMapContext,true);lastMapDraw=performance.now();}if(storyEncounter)storyEncounter.update();if(villageResidents)villageResidents.update(dt);if(communityExpeditions)communityExpeditions.update(dt);if(distantExploration)distantExploration.update(dt);if(distantVillageResidents)distantVillageResidents.update(dt);if(communityEvents)communityEvents.update(state);if(settlementEconomy)settlementEconomy.update(dt);updateWindEnvironment(dt,now*.001);updateForestAudio();if(activeBuildPlacement)updateBuildPreview();if(now-lastSave>5000){saveGame();if(distantVillageResidents)distantVillageResidents.save();lastSave=now;}renderer.render(scene,camera);
 }
 addEventListener("keydown",e=>{if(e.key==="Escape"&&activeBuildPlacement)cancelBuildPlacement();});
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,renderPixelRatio));});
@@ -4643,6 +4645,7 @@ async function start(){
  await buildForest();
  startupStage="criando as aldeias e estradas";
  const settlements = createWorldSettlements({ THREE, scene, terrainHeight });
+ communityEvents=startOptional("as festas e feiras comunitárias",()=>createCommunityEvents({THREE,scene,terrainHeight,centers:settlements.centers,onToast:toast}));
  const expandedWorld=await createExpandedWorld({ THREE, scene, terrainHeight, player, state, registerResource, onToast:toast, onSave:saveGame });
   undergroundWorld=expandedWorld.undergroundWorld;
  const distanceToSegment = (px, pz, ax, az, bx, bz) => {
