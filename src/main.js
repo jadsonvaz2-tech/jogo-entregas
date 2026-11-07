@@ -4,13 +4,14 @@ import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
 import { createStoryEncounter } from "./systems/story.js";
 import { createVillageResidents } from "./systems/village.js?v=visible-save-diagnostics-1";
 import { createWorldSettlements, WORLD_ROAD_PATHS } from "./systems/settlements.js?v=natural-road-relief-2026-11-07-1";
-import { createExpandedWorld } from "./systems/world-expansion.js?v=expanded-biomes-2026-11-07-1";
+import { createExpandedWorld } from "./systems/world-expansion.js?v=underground-exploration-2026-11-07-1";
 import { createDistantVillageResidents } from "./systems/distant-village-residents.js";
 import { createSettlementEconomy } from "./systems/settlement-economy.js";
 let villageResidents=null;
 let distantVillageResidents=null;
 let settlementEconomy=null;
 let storyEncounter=null;
+let undergroundWorld=null;
 
 const $ = (id) => document.getElementById(id);
 const raw = new URL("../assets/3d/", import.meta.url).href;
@@ -1265,6 +1266,7 @@ const slopeLocalNormal=new THREE.Vector3();
 const slopeInverseYaw=new THREE.Quaternion();
 const slopeTilt=new THREE.Quaternion();
 function updateCharacterTerrainTilt(){
+ if(undergroundWorld?.isInside()){characterVisual.quaternion.identity();return;}
  const sample=.85,x=player.position.x,z=player.position.z;
  const gradientX=(terrainHeight(x+sample,z)-terrainHeight(x-sample,z))/(sample*2);
  const gradientZ=(terrainHeight(x,z+sample)-terrainHeight(x,z-sample))/(sample*2);
@@ -1345,12 +1347,13 @@ function loadGame(){
 }
 function saveGame(){
  try{
+  const savedPosition=undergroundWorld?.getSavePosition?.()||player.position;
   const key="cronicas-floresta-save";
   const previous=localStorage.getItem(key);
   if(previous){
    try{JSON.parse(previous);localStorage.setItem(key+"-backup",previous);}catch(backupError){localStorage.setItem(key+"-recovery-raw",previous);}
   }
-  localStorage.setItem(key,JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,ironOre:state.ironOre,coal:state.coal,ironIngots:state.ironIngots,steelIngots:state.steelIngots,steelSword:state.steelSword,steelHelmet:state.steelHelmet,steelChestplate:state.steelChestplate,steelAxe:state.steelAxe,steelPickaxe:state.steelPickaxe,steelShield:state.steelShield,steelShieldGuarding:state.steelShieldGuarding,steelSpear:state.steelSpear,steelFurnace:state.steelFurnace,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,herbs:state.herbs,herbBeds:state.herbBeds,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,leatherArmor:state.leatherArmor,reinforcedAxe:state.reinforcedAxe,reinforcedPickaxe:state.reinforcedPickaxe,ironAxe:state.ironAxe,ironPickaxe:state.ironPickaxe,ironSword:state.ironSword,ironHelmet:state.ironHelmet,ironChestplate:state.ironChestplate,smithy:state.smithy,meat:state.meat,cookedMeat:state.cookedMeat,smokedMeat:state.smokedMeat,smokehouse:state.smokehouse,healingSalve:state.healingSalve,herbalistHut:state.herbalistHut,leather:state.leather,tannery:state.tannery,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,huntedWolves:state.huntedWolves,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,wells:state.wells,gardenPlots:state.gardenPlots,watchtowers:state.watchtowers,marketStalls:state.marketStalls,coins:state.coins,chickenCoops:state.chickenCoops,apiaries:state.apiaries,honey:state.honey,sheepPens:state.sheepPens,wool:state.wool,loom:state.loom,woolGarment:state.woolGarment,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
+  localStorage.setItem(key,JSON.stringify({x:savedPosition.x,z:savedPosition.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,ironOre:state.ironOre,coal:state.coal,ironIngots:state.ironIngots,steelIngots:state.steelIngots,steelSword:state.steelSword,steelHelmet:state.steelHelmet,steelChestplate:state.steelChestplate,steelAxe:state.steelAxe,steelPickaxe:state.steelPickaxe,steelShield:state.steelShield,steelShieldGuarding:state.steelShieldGuarding,steelSpear:state.steelSpear,steelFurnace:state.steelFurnace,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,herbs:state.herbs,herbBeds:state.herbBeds,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,leatherArmor:state.leatherArmor,reinforcedAxe:state.reinforcedAxe,reinforcedPickaxe:state.reinforcedPickaxe,ironAxe:state.ironAxe,ironPickaxe:state.ironPickaxe,ironSword:state.ironSword,ironHelmet:state.ironHelmet,ironChestplate:state.ironChestplate,smithy:state.smithy,meat:state.meat,cookedMeat:state.cookedMeat,smokedMeat:state.smokedMeat,smokehouse:state.smokehouse,healingSalve:state.healingSalve,herbalistHut:state.herbalistHut,leather:state.leather,tannery:state.tannery,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,huntedWolves:state.huntedWolves,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,wells:state.wells,gardenPlots:state.gardenPlots,watchtowers:state.watchtowers,marketStalls:state.marketStalls,coins:state.coins,chickenCoops:state.chickenCoops,apiaries:state.apiaries,honey:state.honey,sheepPens:state.sheepPens,wool:state.wool,loom:state.loom,woolGarment:state.woolGarment,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -4290,9 +4293,10 @@ function update(dt){
   const dx=direction.x*Math.cos(angle)+direction.z*Math.sin(angle);
   const dz=-direction.x*Math.sin(angle)+direction.z*Math.cos(angle);
   // O deslocamento acompanha o relevo: subir reduz um pouco a velocidade e descer permite ganhar ritmo.
-  const currentGround=terrainHeight(player.position.x,player.position.z);
+  const groundAt=(x,z)=>undergroundWorld?.getGroundHeight(x,z)??terrainHeight(x,z);
+  const currentGround=groundAt(player.position.x,player.position.z);
   const lookAhead=1.6;
-  const terrainRise=terrainHeight(player.position.x+dx*lookAhead,player.position.z+dz*lookAhead)-currentGround;
+  const terrainRise=groundAt(player.position.x+dx*lookAhead,player.position.z+dz*lookAhead)-currentGround;
   // As botas de couro oferecem aderência extra em subidas e descidas íngremes.
    const bootGrip=state.leatherBoots?.78:1;
    const slopeSpeed=THREE.MathUtils.clamp(1-terrainRise*.24*bootGrip,.78,1.12);
@@ -4332,7 +4336,8 @@ function update(dt){
   if(state.woolGarment)coldRate*=.72;
   state.temperature=THREE.MathUtils.clamp(state.temperature+dt*(daylight*.32-coldRate),0,100);
  }
- const floorY=terrainHeight(player.position.x,player.position.z);
+ if(undergroundWorld)undergroundWorld.update();
+  const floorY=undergroundWorld?.getGroundHeight(player.position.x,player.position.z)??terrainHeight(player.position.x,player.position.z);
  if(isJumping){
   verticalVelocity-=12*dt;
   player.position.y+=verticalVelocity*dt;
@@ -4419,7 +4424,8 @@ async function start(){
  await buildForest();
  startupStage="criando as aldeias e estradas";
  const settlements = createWorldSettlements({ THREE, scene, terrainHeight });
- await createExpandedWorld({ THREE, scene, terrainHeight });
+ const expandedWorld=await createExpandedWorld({ THREE, scene, terrainHeight, player, state, registerResource, onToast:toast, onSave:saveGame });
+  undergroundWorld=expandedWorld.undergroundWorld;
  const distanceToSegment = (px, pz, ax, az, bx, bz) => {
   const dx = bx - ax, dz = bz - az, length2 = dx * dx + dz * dz || 1;
   const t = THREE.MathUtils.clamp(((px - ax) * dx + (pz - az) * dz) / length2, 0, 1);
