@@ -213,11 +213,30 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     return false;
   }
 
+  function updateSkillProgressUI(resident) {
+    const row = workList.querySelector('[data-resident-id="' + resident.id + '"]');
+    if (!row) return;
+    const skill = skills[resident.id];
+    const job = professions[resident.profession];
+    const bonus = productionBonus(resident);
+    const skillProgress = skill.level >= 10 ? 100 : Math.min(100, Math.round(skill.xp / experienceNeeded(skill.level) * 100));
+    const production = row.querySelector(".production");
+    if (production) {
+      const skillLine = skill.level >= 10 ? "NÍVEL 10 · MESTRE" : "NÍVEL " + skill.level + " · XP " + skill.xp + "/" + experienceNeeded(skill.level) + (bonus ? " · +" + bonus + " por ciclo" : "");
+      production.textContent = job.resource ? (job.detail || ("Produz " + job.amount + " " + job.resourceLabel + " por ciclo de trabalho.")) + " " + skillLine : "Sem produção atribuída. " + skillLine;
+    }
+    const fill = row.querySelector('[aria-label="Progresso da profissão de ' + resident.name + '"] > div');
+    if (fill) fill.style.width = skillProgress + "%";
+    const caption = row.querySelector(".production[style*='text-align:right']");
+    if (caption) caption.textContent = skill.level >= 10 ? "MAESTRIA ALCANÇADA" : "PROGRESSO PARA O PRÓXIMO NÍVEL · " + skillProgress + "%";
+  }
+
   function renderWorkPanel() {
     workList.innerHTML = "";
     for (const resident of residents) {
       const row = document.createElement("div");
       row.className = "work-row";
+      row.dataset.residentId = resident.id;
       const head = document.createElement("div");
       head.className = "work-head";
       const name = document.createElement("b");
@@ -536,6 +555,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
             updateResidentNameTag(resident);
             renderWorkPanel();
             onToast(resident.name + " evoluiu na profissão! Agora está no nível " + skills[resident.id].level + ".");
+          } else {
+            updateSkillProgressUI(resident);
           }
           const farmResult = resident.profession === "farmer" && typeof onFarmAction === "function" ? onFarmAction() : null;
           if (farmResult && typeof farmResult === "object" && farmResult.resource && Number(farmResult.amount) > 0) {
