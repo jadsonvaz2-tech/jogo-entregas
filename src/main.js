@@ -3,7 +3,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
 import { createStoryEncounter } from "./systems/story.js";
 import { createVillageResidents } from "./systems/village.js?v=visible-save-diagnostics-1";
-import { createWorldSettlements } from "./systems/settlements.js";
+import { createWorldSettlements, WORLD_ROAD_PATHS } from "./systems/settlements.js?v=road-relief-1";
 import { createDistantVillageResidents } from "./systems/distant-village-residents.js";
 import { createSettlementEconomy } from "./systems/settlement-economy.js";
 let villageResidents=null;
@@ -38,14 +38,52 @@ sun.shadow.mapSize.set(1024,1024);
 sun.shadow.camera.left=-55; sun.shadow.camera.right=55; sun.shadow.camera.top=55; sun.shadow.camera.bottom=-55;
 scene.add(sun);
 
+// Perfis determinísticos de relevo alinhados às estradas principais.
+const roadReliefRoutes = WORLD_ROAD_PATHS.map(points => {
+ const cumulative = [0];
+ let total = 0;
+ for (let i = 1; i < points.length; i++) {
+  total += Math.hypot(points[i][0] - points[i - 1][0], points[i][1] - points[i - 1][1]);
+  cumulative.push(total);
+ }
+ return { points, cumulative, total };
+});
+function roadReliefHeight(x,z){
+ let closest = null;
+ for (const route of roadReliefRoutes) {
+  for (let i = 0; i < route.points.length - 1; i++) {
+   const a = route.points[i], b = route.points[i + 1];
+   const dx = b[0] - a[0], dz = b[1] - a[1];
+   const length2 = dx * dx + dz * dz || 1;
+   const t = THREE.MathUtils.clamp(((x - a[0]) * dx + (z - a[1]) * dz) / length2, 0, 1);
+   const px = a[0] + dx * t, pz = a[1] + dz * t;
+   const distance2 = (x - px) * (x - px) + (z - pz) * (z - pz);
+   if (!closest || distance2 < closest.distance2) {
+    const segmentLength = Math.sqrt(length2);
+    closest = {
+     distance2,
+     progress: (route.cumulative[i] + segmentLength * t) / route.total
+    };
+   }
+  }
+ }
+ if (!closest || closest.distance2 > 32 * 32) return 0;
+ const progress = closest.progress;
+ const startFade = THREE.MathUtils.smoothstep(progress, 0, .11);
+ const endFade = THREE.MathUtils.smoothstep(1 - progress, 0, .11);
+ const crest = 3.4 * Math.exp(-Math.pow((progress - .39) / .22, 2));
+ const dip = 1.05 * Math.exp(-Math.pow((progress - .73) / .17, 2));
+ const lateralBlend = Math.exp(-closest.distance2 / (2 * 17 * 17));
+ return (crest - dip) * startFade * endFade * lateralBlend;
+}
 function terrainHeight(x,z){
- // Ondulações largas criam colinas e lombadas naturais sem alterar o nível do acampamento inicial.
+ // Colinas existentes preservadas, agora com lombadas e baixios suaves acompanhando as rotas.
  const distance=Math.hypot(x,z);
  const edgeBlend=1-Math.exp(-(distance*distance)/520);
  const broadHills=Math.sin(x*.018+z*.012)*2.8+Math.cos(z*.021-x*.009)*2.2+Math.sin((x-z)*.015)*1.7;
  const localHills=Math.sin(x*.035)*1.8+Math.cos(z*.041)*1.6+Math.sin((x+z)*.022)*2.4;
  const clearing=Math.exp(-(x*x+z*z)/500)*-.5;
- return localHills+broadHills*edgeBlend+clearing;
+ return localHills+broadHills*edgeBlend+clearing+roadReliefHeight(x,z);
 }
 const groundGeo = new THREE.PlaneGeometry(260,260,160,160);
 groundGeo.rotateX(-Math.PI/2);

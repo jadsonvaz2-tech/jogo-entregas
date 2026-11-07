@@ -1,4 +1,9 @@
 // Núcleos de povoação estáticos e determinísticos: não alteram nem migram os salvamentos existentes.
+export const WORLD_ROAD_PATHS = [
+  [[0, 0], [10, 3], [21, 5], [31, 12], [43, 19], [57, 31]],
+  [[0, 0], [-11, -7], [-22, -13], [-34, -20], [-47, -29], [-59, -39]]
+];
+
 export function createWorldSettlements({ THREE, scene, terrainHeight }) {
   const materials = {
     plaster: new THREE.MeshStandardMaterial({ color: 0xb7a17b, roughness: 1 }),
@@ -11,16 +16,14 @@ export function createWorldSettlements({ THREE, scene, terrainHeight }) {
     dark: new THREE.MeshStandardMaterial({ color: 0x28251f, roughness: 1 }),
     glass: new THREE.MeshStandardMaterial({ color: 0x607a7a, roughness: .45, metalness: .08 }),
     path: new THREE.MeshStandardMaterial({ color: 0x766348, roughness: 1 }),
+    shoulder: new THREE.MeshStandardMaterial({ color: 0x8a795e, roughness: 1 }),
     fence: new THREE.MeshStandardMaterial({ color: 0x60452d, roughness: 1 })
   };
   const centers = [
     { name: "Aldeia do Vale", x: 57, z: 31, radius: 17, kind: "vale" },
     { name: "Povoado da Colina", x: -59, z: -39, radius: 16, kind: "colina" }
   ];
-  const paths = [
-    [[0, 0], [10, 3], [21, 5], [31, 12], [43, 19], [57, 31]],
-    [[0, 0], [-11, -7], [-22, -13], [-34, -20], [-47, -29], [-59, -39]]
-  ];
+  const paths = WORLD_ROAD_PATHS;
 
   function addBox(parent, size, position, material, rotation = null) {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(size[0], size[1], size[2]), material);
@@ -117,31 +120,45 @@ export function createWorldSettlements({ THREE, scene, terrainHeight }) {
   }
 
   function addRoad(points) {
-    const curvePoints = points.map(([x, z]) => new THREE.Vector3(x, terrainHeight(x, z) + .055, z));
+    // A estrada e o acostamento seguem a altura real do relevo em cada vértice.
+    const curvePoints = points.map(([x, z]) => new THREE.Vector3(x, 0, z));
     const curve = new THREE.CatmullRomCurve3(curvePoints);
-    const samples = curve.getPoints(150);
-    const vertices = [], indices = [];
-    for (let i = 0; i < samples.length; i++) {
-      const p = samples[i];
-      const before = samples[Math.max(0, i - 1)];
-      const after = samples[Math.min(samples.length - 1, i + 1)];
-      const dx = after.x - before.x, dz = after.z - before.z;
-      const length = Math.hypot(dx, dz) || 1;
-      const nx = -dz / length, nz = dx / length;
-      for (const side of [-1, 1]) {
-        const x = p.x + nx * 1.45 * side, z = p.z + nz * 1.45 * side;
-        vertices.push(x, terrainHeight(x, z) + .07, z);
+    const samples = curve.getPoints(180);
+    const addRibbon = (halfWidth, lift, material, crowned = false) => {
+      const vertices = [], indices = [];
+      for (let i = 0; i < samples.length; i++) {
+        const p = samples[i];
+        const before = samples[Math.max(0, i - 1)];
+        const after = samples[Math.min(samples.length - 1, i + 1)];
+        const dx = after.x - before.x, dz = after.z - before.z;
+        const length = Math.hypot(dx, dz) || 1;
+        const nx = -dz / length, nz = dx / length;
+        for (const lateral of [-1, 0, 1]) {
+          const x = p.x + nx * halfWidth * lateral;
+          const z = p.z + nz * halfWidth * lateral;
+          const crown = crowned ? (1 - Math.abs(lateral)) * .035 : 0;
+          vertices.push(x, terrainHeight(x, z) + lift + crown, z);
+        }
+        if (i < samples.length - 1) {
+          for (let row = 0; row < 2; row++) {
+            const a = i * 3 + row;
+            const b = (i + 1) * 3 + row;
+            indices.push(a, b, a + 1, a + 1, b, b + 1);
+          }
+        }
       }
-      if (i < samples.length - 1) {
-        const a = i * 2;
-        indices.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
-      }
-    }
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
-    geometry.setIndex(indices); geometry.computeVertexNormals();
-    const road = new THREE.Mesh(geometry, materials.path);
-    road.receiveShadow = true; road.castShadow = false; scene.add(road);
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+      const ribbon = new THREE.Mesh(geometry, material);
+      ribbon.receiveShadow = true;
+      ribbon.castShadow = false;
+      scene.add(ribbon);
+    };
+    // Acostamento largo e faixa central levemente coroada, sem criar degraus nas encostas.
+    addRibbon(2.1, .035, materials.shoulder);
+    addRibbon(1.62, .075, materials.path, true);
   }
 
   centers.forEach((center, index) => {

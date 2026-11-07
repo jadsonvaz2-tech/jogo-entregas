@@ -15,7 +15,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Validate JavaScript syntax
-        run: node --input-type=module --check < src/main.js
+        run: |
+          node --input-type=module --check < src/main.js
+          node --input-type=module --check < src/systems/settlements.js
       - name: Validate required 3D model dependencies
         run: |
           node --input-type=module <<'NODE'
