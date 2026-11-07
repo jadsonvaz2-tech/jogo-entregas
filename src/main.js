@@ -3183,7 +3183,7 @@ function updateCampfireVisuals(dt){
   puff.object.material.opacity=(1-rise)*.17;
  }
 }
-function craftCloak()
+function craftCloak(){
  if(state.coldCloak){toast("Você já está usando o manto térmico.");return;}
  if(state.fiber<5||state.wood<2){toast("Faltam materiais: 5 fibras e 2 madeiras.");return;}
  state.fiber-=5;state.wood-=2;state.coldCloak=true;createCloakVisual();updateHUD();saveGame();toast("Manto térmico fabricado! Você perde menos calor no frio.");
