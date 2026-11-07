@@ -267,8 +267,21 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     return "POVOADO DESANIMADO";
   }
 
+  function dailyFoodNeed() { return Math.max(1, residents.length); }
+
   function foodReserveDays() {
-    return Math.floor(stockpile.berries / 3);
+    return Math.floor((stockpile.berries + stockpile.meat * 2) / dailyFoodNeed());
+  }
+
+  function consumeDailyRation() {
+    let needed = dailyFoodNeed();
+    const berriesUsed = Math.min(stockpile.berries, needed);
+    stockpile.berries -= berriesUsed;
+    needed -= berriesUsed;
+    const meatUsed = Math.min(stockpile.meat, Math.ceil(needed / 2));
+    stockpile.meat -= meatUsed;
+    needed -= meatUsed * 2;
+    return { fed: needed <= 0, berriesUsed, meatUsed };
   }
 
   function refreshStockpileUI() {
@@ -276,10 +289,13 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const total = Object.values(stockpile).reduce((sum,value)=>sum+value,0);
     collectStockpileButton.disabled = total < 1;
     moraleDisplay.textContent = "ÂNIMO DO POVOADO · " + Math.round(morale) + "/100 · " + moraleDescription();
-    communalMealButton.disabled = stockpile.berries < 5 || morale >= 100;
+    const canServeBerries = stockpile.berries >= 5;
+    const canServeMeat = stockpile.meat >= 3;
+    communalMealButton.disabled = (!canServeBerries && !canServeMeat) || morale >= 100;
+    communalMealButton.textContent = canServeBerries ? "PREPARAR REFEIÇÃO · 5 FRUTAS" : "PREPARAR REFEIÇÃO · 3 CARNES";
     const reserveDays = foodReserveDays();
     const reserveText = reserveDays === 1 ? "1 dia" : reserveDays + " dias";
-    upkeepStatus.textContent = "RAÇÕES · 3 frutas/dia · reserva para " + reserveText + (reserveDays < 2 ? " · REABASTECER" : " · suficiente");
+    upkeepStatus.textContent = "RAÇÕES · " + dailyFoodNeed() + " por dia · frutas ou carne (vale 2 rações) · reserva para " + reserveText + (reserveDays < 2 ? " · REABASTECER" : " · suficiente");
     workSummary.textContent = residents.filter(r => r.enabled && r.profession !== "idle").length + "/" + residents.length + " moradores em atividade · produção guardada no depósito.";
   }
 
@@ -300,8 +316,10 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   refreshStockpileUI();
 
   communalMealButton.addEventListener("click", () => {
-    if (stockpile.berries < 5 || morale >= 100) return;
-    stockpile.berries -= 5;
+    if (morale >= 100) return;
+    if (stockpile.berries >= 5) stockpile.berries -= 5;
+    else if (stockpile.meat >= 3) stockpile.meat -= 3;
+    else return;
     morale = Math.min(100, morale + 15);
     saveVillageProgress();
     refreshStockpileUI();
@@ -652,8 +670,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       let missedDays = 0;
       while (lastUpkeepDay < currentDay) {
         lastUpkeepDay++;
-        if (stockpile.berries >= 3) {
-          stockpile.berries -= 3;
+        const ration = consumeDailyRation();
+        if (ration.fed) {
           morale = Math.min(100, morale + 4);
           fedDays++;
         } else {
