@@ -636,20 +636,28 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     onToast("Você recolheu a produção comunitária: " + Object.entries(amounts).filter(([,amount])=>amount>0).map(([resource,amount])=>amount+" "+({wood:"madeiras",stone:"pedras",berries:"frutas",meat:"carnes",herbs:"ervas",hide:"peles",fiber:"fibras",wool:"lãs",honey:"méis"}[resource]||resource)).join(", ")+".");
   });
 
+  function guardPatrolFor(resident) {
+    const routes = [
+      { label: "perímetro externo", points: [[-12,-12],[12,-12],[12,12],[-12,12]] },
+      { label: "caminho interno", points: [[-9,-9],[9,-9],[9,9],[-9,9]] },
+      { label: "faixa central", points: [[-12,-7],[12,-7],[12,7],[-12,7]] }
+    ];
+    const guardIndex = residents.filter(person => person.profession === "guard").indexOf(resident);
+    const route = routes[(Math.max(0, guardIndex) % routes.length)];
+    const points = guardIndex % 2 === 1 ? [...route.points].reverse() : [...route.points];
+    return { label: route.label, points };
+  }
+
   function refreshSecurityUI() {
     const activeGuards = residents.filter(resident => resident.profession === "guard" && resident.enabled);
     const guards = activeGuards.length;
     const averageLevel = guards ? activeGuards.reduce((sum, resident) => sum + (skills[resident.id]?.level || 1), 0) / guards : 0;
     const level = guards === 0 ? "SEM PATRULHA" : guards === 1 ? "VIGILÂNCIA BÁSICA" : guards <= 3 ? "VIGILÂNCIA REGULAR" : "VIGILÂNCIA REFORÇADA";
     const experience = guards ? " · EXPERIÊNCIA MÉDIA Nv. " + averageLevel.toFixed(1) + "/10" : "";
-    const patrolTeam = guards ? " · " + activeGuards.map(resident => resident.name + " Nv." + (skills[resident.id]?.level || 1)).join(", ") : "";
+    const patrolTeam = guards ? " · " + activeGuards.map(resident => resident.name + " Nv." + (skills[resident.id]?.level || 1) + " · " + guardPatrolFor(resident).label).join("; ") : "";
     const detail = guards === 0
       ? "Nenhum morador está fazendo rondas. Atribua a profissão Vigia para iniciar a patrulha."
-      : guards === 1
-        ? "1 vigia percorre os pontos de ronda durante a jornada de trabalho. Cada ciclo completo de patrulha concede experiência."
-        : guards <= 3
-          ? guards + " vigias percorrem as rotas da aldeia durante a jornada. Cada ciclo completo concede experiência."
-          : guards + " vigias mantêm rondas distribuídas pelo povoado e evoluem com a experiência de patrulha.";
+      : "As rondas são distribuídas entre perímetro externo, caminho interno e faixa central. Cada ciclo completo concede experiência.";
     securityDisplay.textContent = "VIGILÂNCIA · " + level + " · " + guards + " VIGIA(S)" + experience + patrolTeam + ". " + detail;
   }
 
@@ -965,7 +973,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     if (workingHours && (!resident.enabled || resident.profession === "idle")) {
       return { key: "resting-" + resident.id, points: [resident.home] };
     }
-    const workPoints = professionWorkPoints[resident.profession];
+    const workPoints = resident.profession === "guard" ? guardPatrolFor(resident).points : professionWorkPoints[resident.profession];
     if (workingHours && workPoints) {
       return hour < 11.5
         ? { key: "morning-work-" + resident.profession, points: workPoints }
