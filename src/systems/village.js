@@ -52,6 +52,9 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     #village-dialog[hidden]{display:none}
     #village-dialog h2{margin:0 0 4px;color:#e6c979;font-size:21px}
     #village-dialog .role{margin:0 0 12px;color:#bfc99d;font:700 10px system-ui;letter-spacing:.1em;text-transform:uppercase}
+    #village-dialog .trust{margin:0 0 14px;padding:9px 10px;border:1px solid #ffffff20;border-radius:8px;background:#101b1680;font:11px/1.4 system-ui;color:#e8d9ad}
+    #village-dialog .trust-track{height:5px;margin-top:6px;border-radius:5px;background:#ffffff24;overflow:hidden}
+    #village-dialog .trust-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,#8d9f65,#e6c979)}
     #village-dialog p{margin:0 0 16px}
     #village-dialog button{padding:10px 15px;border:1px solid #d6b45d;border-radius:9px;background:#52634a;color:#fff1cc;font:700 12px system-ui}
     #village-dialog .close{float:right;background:transparent}
@@ -103,12 +106,13 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   const dialog = document.createElement("section");
   dialog.id = "village-dialog";
   dialog.hidden = true;
-  dialog.innerHTML = '<button class="close" type="button">FECHAR ✕</button><h2 id="village-dialog-name"></h2><div class="role" id="village-dialog-role"></div><p id="village-dialog-text"></p><button id="village-dialog-done" type="button">CONTINUAR</button>';
+  dialog.innerHTML = '<button class="close" type="button">FECHAR ✕</button><h2 id="village-dialog-name"></h2><div class="role" id="village-dialog-role"></div><div class="trust" id="village-dialog-trust"></div><p id="village-dialog-text"></p><button id="village-dialog-done" type="button">CONTINUAR</button>';
   document.body.appendChild(dialog);
 
   const dialogName = dialog.querySelector("#village-dialog-name");
   const dialogRole = dialog.querySelector("#village-dialog-role");
   const dialogText = dialog.querySelector("#village-dialog-text");
+  const dialogTrust = dialog.querySelector("#village-dialog-trust");
   const closeDialog = () => { dialog.hidden = true; };
   dialog.querySelector(".close").addEventListener("click", closeDialog);
   dialog.querySelector("#village-dialog-done").addEventListener("click", closeDialog);
@@ -116,6 +120,16 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   const skills = Object.fromEntries(residents.map(resident => {
     const savedSkill = saved.skills && typeof saved.skills === "object" ? saved.skills[resident.id] || {} : {};
     return [resident.id, { xp: Math.max(0, Math.floor(Number(savedSkill.xp) || 0)), level: Math.min(10, Math.max(1, Math.floor(Number(savedSkill.level) || 1))) }];
+  }));
+
+  const relationships = Object.fromEntries(residents.map(resident => {
+    const savedRelationship = saved.relationships && typeof saved.relationships === "object" ? saved.relationships[resident.id] || {} : {};
+    const points = Math.min(12, Math.max(0, Math.floor(Number(savedRelationship.points) || 0)));
+    return [resident.id, {
+      points,
+      level: Math.min(5, Math.max(1, Math.floor(Number(savedRelationship.level) || (1 + Math.floor(points / 3))))),
+      lastTalkDay: Math.max(0, Math.floor(Number(savedRelationship.lastTalkDay) || 0))
+    }];
   }));
 
   const professions = {
@@ -135,7 +149,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     try {
       const jobs = {};
       for (const resident of residents) jobs[resident.id] = { profession: resident.profession, enabled: resident.enabled };
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, lastUpkeepDay, skills }));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, lastUpkeepDay, skills, relationships }));
     } catch (error) {
       console.warn("Não foi possível salvar o progresso dos moradores.", error);
     }
@@ -461,7 +475,28 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
 
   function openResidentDialogue(resident) {
     resident.met = true;
-    saveVillageProgress();
+    const relationship = relationships[resident.id];
+    const currentDay = Math.max(1, Number(state.day) || 1);
+    let relationshipMessage = "Você já conversou com " + resident.name + " hoje.";
+    if (currentDay > relationship.lastTalkDay) {
+      relationship.lastTalkDay = currentDay;
+      relationship.points = Math.min(12, relationship.points + 1);
+      const nextLevel = Math.min(5, 1 + Math.floor(relationship.points / 3));
+      if (nextLevel > relationship.level) {
+        relationship.level = nextLevel;
+        morale = Math.min(100, morale + 2);
+        relationshipMessage = "A confiança cresceu! " + resident.name + " agora é nível " + relationship.level + ". O ânimo do povoado recebeu +2.";
+      } else {
+        relationshipMessage = "A confiança aumentou. Volte amanhã para fortalecer essa amizade.";
+      }
+      saveVillageProgress();
+      refreshStockpileUI();
+    } else {
+      saveVillageProgress();
+    }
+    const trustNames = ["Desconhecido", "Conhecido", "Companheiro", "Amigo", "Aliado"];
+    const trustProgress = relationship.level >= 5 ? 100 : (relationship.points % 3) / 3 * 100;
+    dialogTrust.innerHTML = "<b>CONFIANÇA · " + trustNames[relationship.level - 1] + " · NÍVEL " + relationship.level + "/5</b><div>" + relationship.points + "/12 encontros · " + relationshipMessage + "</div><div class=\\"trust-track\\"><div class=\\"trust-fill\\" style=\\"width:" + trustProgress + "%\\"></div></div>";
     dialogName.textContent = resident.name;
     dialogRole.textContent = resident.role;
     const reserveDays = foodReserveDays();
