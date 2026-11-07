@@ -243,7 +243,17 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   pauseVisibleButton.type = "button";
   pauseVisibleButton.textContent = "Ⅱ PAUSAR EXIBIDOS";
   pauseVisibleButton.setAttribute("aria-label","Pausar tarefas dos moradores exibidos");
-  residentBulkActions.append(activateVisibleButton,pauseVisibleButton);
+  const bulkPrioritySelect = document.createElement("select");
+  bulkPrioritySelect.id = "village-resident-bulk-priority";
+  bulkPrioritySelect.setAttribute("aria-label","Prioridade para moradores exibidos");
+  for(const [value,label] of [["low","Prioridade baixa"],["normal","Prioridade normal"],["high","Prioridade alta"]]){
+    const option=document.createElement("option");option.value=value;option.textContent=label;bulkPrioritySelect.appendChild(option);
+  }
+  const applyBulkPriorityButton = document.createElement("button");
+  applyBulkPriorityButton.type = "button";
+  applyBulkPriorityButton.textContent = "APLICAR PRIORIDADE";
+  applyBulkPriorityButton.setAttribute("aria-label","Aplicar prioridade aos moradores exibidos");
+  residentBulkActions.append(activateVisibleButton,pauseVisibleButton,bulkPrioritySelect,applyBulkPriorityButton);
   residentFilterCount.parentNode.insertBefore(residentBulkActions,residentFilterCount);
   const RESIDENT_SORTS = ["name","level","production","profession"];
   let residentSort = RESIDENT_SORTS.includes(saved.residentSort) ? saved.residentSort : "name";
@@ -1082,6 +1092,23 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     renderWorkPanel();
     onToast(changed+" morador(es) "+(enabled ? "ativado(s)" : "pausado(s)")+".");
   }
+  function setVisibleResidentsPriority(priority) {
+    if(!WORK_PRIORITIES.includes(priority)){onToast("Selecione uma prioridade válida.");return;}
+    let changed=0;
+    for(const row of workList.children){
+      if(row.hidden) continue;
+      const resident=residents.find(item=>item.id===row.dataset.residentId);
+      if(!resident || resident.profession==="idle" || (resident.priority||"normal")===priority) continue;
+      resident.priority=priority;
+      changed++;
+    }
+    if(!changed){onToast("Nenhum morador exibido precisa dessa prioridade.");return;}
+    saveVillageProgress();
+    renderWorkPanel();
+    const label=bulkPrioritySelect.options[bulkPrioritySelect.selectedIndex].text;
+    onToast("Prioridade "+label.replace("Prioridade ","").toLowerCase()+" aplicada a "+changed+" morador(es).");
+  }
+  applyBulkPriorityButton.addEventListener("click",()=>setVisibleResidentsPriority(bulkPrioritySelect.value));
   activateVisibleButton.addEventListener("click",()=>setVisibleResidentsWorkState(true));
   pauseVisibleButton.addEventListener("click",()=>setVisibleResidentsWorkState(false));
   residentSearchInput.addEventListener("input",applyResidentFilters);
