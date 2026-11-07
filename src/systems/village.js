@@ -23,6 +23,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   const WORK_SHIFTS = { reduced:{label:"Jornada reduzida · 7h–17h",start:7,end:17,detail:"Menos horas de trabalho e mais tempo de descanso."}, normal:{label:"Jornada normal · 6h–19h30",start:6,end:19.5,detail:"Equilíbrio entre produção e descanso."}, extended:{label:"Jornada estendida · 5h–21h",start:5,end:21,detail:"Mais tempo de produção, com menos descanso."} };
   let workShift = Object.prototype.hasOwnProperty.call(WORK_SHIFTS,saved.workShift) ? saved.workShift : "normal";
   const FOOD_RESERVE_TARGETS = [1,3,5,7];
+  const WORK_PRIORITIES = ["low","normal","high"];
   let foodReserveTargetDays = FOOD_RESERVE_TARGETS.includes(Number(saved.foodReserveTargetDays)) ? Number(saved.foodReserveTargetDays) : 3;
   const stockpile = Object.fromEntries(["wood","stone","berries","meat","herbs","hide","fiber","wool","honey"].map(key => [key, Math.max(0, Number(saved.stockpile?.[key]) || 0)]));
   const legacyStorageFloor = Object.values(stockpile).reduce((sum, amount) => sum + amount, 0);
@@ -295,7 +296,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   function saveVillageProgress() {
     try {
       const jobs = {};
-      for (const resident of residents) jobs[resident.id] = { profession: resident.profession, enabled: resident.enabled };
+      for (const resident of residents) jobs[resident.id] = { profession: resident.profession, enabled: resident.enabled, priority: resident.priority || "normal" };
       const recruits = residents.filter(r => r.isRecruit).map(r => ({ id:r.id, name:r.name, role:r.role, profession:r.profession, model:r.model, start:r.start, home:r.home, homeSlot:r.homeSlot, work:r.work, greeting:r.greeting }));
       const homes = Object.fromEntries(residents.map(r => [r.id,{slot:r.homeSlot,position:r.home}]));
       localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, prosperityXp, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes, storageLevel, workShift, foodReserveTargetDays }));
@@ -507,13 +508,15 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const prosperityReduction = (prosperityLevel() - 1) * 3;
     const masteryReduction = Math.min(8, (skills[resident.id].level - 1) * .9);
     const foodPriority = (resident.profession === "farmer" || resident.profession === "hunter") && foodReserveDays() < foodReserveTargetDays;
-    return Math.max(24, (baseWorkCycle - prosperityReduction - masteryReduction) * (foodPriority ? .78 : 1));
+    const priorityFactor = resident.priority === "high" ? .86 : resident.priority === "low" ? 1.18 : 1;
+    return Math.max(24, (baseWorkCycle - prosperityReduction - masteryReduction) * (foodPriority ? .78 : 1) * priorityFactor);
   }
 
   function workEfficiencyLabel(resident) {
     const cycle = workCycleFor(resident);
     const foodPriority = (resident.profession === "farmer" || resident.profession === "hunter") && foodReserveDays() < foodReserveTargetDays;
-    return "CICLO DE PRODUÇÃO · " + cycle.toFixed(0) + "s" + (foodPriority ? " · prioridade de alimentos" : (skills[resident.id].level > 1 ? " · especialista acelera o trabalho" : ""));
+    const workPriorityLabel = resident.priority === "high" ? "prioridade alta" : resident.priority === "low" ? "prioridade baixa" : "prioridade normal";
+    return "CICLO DE PRODUÇÃO · " + cycle.toFixed(0) + "s · " + workPriorityLabel + (foodPriority ? " · prioridade de alimentos" : (skills[resident.id].level > 1 ? " · especialista acelera o trabalho" : ""));
   }
 
   function awardWorkExperience(resident) {
@@ -593,6 +596,22 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
         renderWorkPanel();
         onToast(resident.name + " agora exerce a função: " + professions[resident.profession].label + ".");
       });
+      const priorityLabel = document.createElement("label");
+      priorityLabel.className = "production";
+      priorityLabel.textContent = "PRIORIDADE DE TRABALHO";
+      const prioritySelect = document.createElement("select");
+      prioritySelect.setAttribute("aria-label", "Prioridade de trabalho de " + resident.name);
+      for (const [value, label] of [["low","Baixa · ritmo tranquilo"],["normal","Normal · equilibrada"],["high","Alta · produção acelerada"]]) {
+        const option = document.createElement("option"); option.value = value; option.textContent = label; prioritySelect.appendChild(option);
+      }
+      prioritySelect.value = resident.priority || "normal";
+      prioritySelect.addEventListener("change", () => {
+        if (!WORK_PRIORITIES.includes(prioritySelect.value)) return;
+        resident.priority = prioritySelect.value;
+        saveVillageProgress();
+        renderWorkPanel();
+        onToast("Prioridade de " + resident.name + ": " + prioritySelect.options[prioritySelect.selectedIndex].text + ".");
+      });
       const toggle = document.createElement("button");
       toggle.type = "button";
       toggle.textContent = resident.enabled ? "PAUSAR TAREFA" : "ATIVAR TAREFA";
@@ -623,7 +642,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       skillCaption.className = "production";
       skillCaption.style.cssText = "font-size:9px;text-align:right;color:#d6c58f";
       skillCaption.textContent = skill.level >= 10 ? "MAESTRIA ALCANÇADA" : "PROGRESSO PARA O PRÓXIMO NÍVEL · " + skillProgress + "%";
-      row.append(head, homeSelect, select, toggle, production, skillTrack, skillCaption);
+      row.append(head, homeSelect, select, priorityLabel, prioritySelect, toggle, production, skillTrack, skillCaption);
       workList.appendChild(row);
     }
     refreshStockpileUI();
@@ -751,6 +770,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   for (const resident of residents) {
     const job = savedJobs[resident.id];
     if (job && Object.prototype.hasOwnProperty.call(professions, job.profession)) resident.profession = job.profession;
+    resident.priority = job && WORK_PRIORITIES.includes(job.priority) ? job.priority : "normal";
     resident.enabled = job ? job.enabled !== false : true;
     resident.role = professions[resident.profession].label;
     resident.met = Array.isArray(saved.met) && saved.met.includes(resident.id);
