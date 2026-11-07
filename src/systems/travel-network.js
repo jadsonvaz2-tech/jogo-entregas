@@ -1,5 +1,5 @@
 // Hospedarias, viajantes e caravanas. O sistema usa apenas o estado já existente do jogo.
-export function createTravelNetwork({ THREE, scene, terrainHeight, centers, paths, player, state, onToast = () => {}, onSave = () => {} }) {
+export function createTravelNetwork({ THREE, scene, terrainHeight, centers, paths, player, state, economy, onToast = () => {}, onSave = () => {} }) {
   const wood = new THREE.MeshStandardMaterial({color:0x60432c,roughness:1});
   const timber = new THREE.MeshStandardMaterial({color:0x3d2a1d,roughness:1});
   const plaster = new THREE.MeshStandardMaterial({color:0xb9a17a,roughness:1});
@@ -72,7 +72,19 @@ export function createTravelNetwork({ THREE, scene, terrainHeight, centers, path
     for(let i=0;i<lengths.length;i++){if(target<=lengths[i])return path[i].clone().lerp(path[i+1],target/lengths[i]);target-=lengths[i];}
     return path[path.length-1].clone();
   }
+  let lastTradeDay=Number(state.day)||1;
+  function moveTradeGoods(day){
+    if(!economy||!Array.isArray(economy.towns)||economy.towns.length<2)return;
+    for(let i=0;i<economy.towns.length;i++){
+      const from=economy.towns[i],to=economy.towns[(i+1)%economy.towns.length];
+      const resource=["wood","berries","meat","hide","wool"][i%5];
+      if((from.stock[resource]||0)>6){from.stock[resource]-=2;to.stock[resource]=Math.min(99,(to.stock[resource]||0)+2);}
+    }
+    if(typeof economy.save==="function")economy.save();
+    if(day%3===0)onToast("Uma caravana trouxe mercadorias e notícias para as aldeias.");
+  }
   return {update(dt){
+    const day=Number(state.day)||1;if(day>lastTradeDay){for(let d=lastTradeDay+1;d<=Math.min(day,lastTradeDay+7);d++)moveTradeGoods(d);lastTradeDay=day;}
     for(const caravan of caravans){
       caravan.progress=(caravan.progress+Math.max(0,dt)*caravan.speed)%(2);
       const t=caravan.progress<=1?caravan.progress:2-caravan.progress;
