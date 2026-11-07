@@ -3,6 +3,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
 import { createStoryEncounter } from "./systems/story.js";
 import { createVillageResidents } from "./systems/village.js";
+import { createWorldSettlements } from "./systems/settlements.js";
 let villageResidents=null;
 let storyEncounter=null;
 
@@ -4309,6 +4310,19 @@ async function start(){
  $("loadingText").textContent="Criando o terreno e a floresta...";
  $("loadingBar").style.width="20%";
  await buildForest();
+ const settlements = createWorldSettlements({ THREE, scene, terrainHeight });
+ const distanceToSegment = (px, pz, ax, az, bx, bz) => {
+  const dx = bx - ax, dz = bz - az, length2 = dx * dx + dz * dz || 1;
+  const t = THREE.MathUtils.clamp(((px - ax) * dx + (pz - az) * dz) / length2, 0, 1);
+  return Math.hypot(px - (ax + dx * t), pz - (az + dz * t));
+ };
+ // Abre clareiras nas povoações e no corredor das estradas sem alterar a sequência dos recursos coletáveis.
+ for (const object of treeModels) {
+  const x = object.position.x, z = object.position.z;
+  const insideSettlement = settlements.centers.some(center => Math.hypot(x - center.x, z - center.z) < center.radius);
+  const besideRoad = settlements.paths.some(path => path.slice(1).some((point, index) => distanceToSegment(x, z, path[index][0], path[index][1], point[0], point[1]) < 3.1));
+  if (insideSettlement || besideRoad) scene.remove(object);
+ }
  createWindLeaves();
  createForestAudioControl();
  createForestFireflies();
