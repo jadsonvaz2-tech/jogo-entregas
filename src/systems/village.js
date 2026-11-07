@@ -777,6 +777,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     resident.group.add(resident.nameTag);
     resident.socialMarker = makeSocialMarker();
     resident.group.add(resident.socialMarker);
+    resident.activityProps = makeDailyActivityProps();
+    resident.group.add(resident.activityProps);
     resident.actions = {}; resident.mixer = null; resident.moving = false; resident.target = null;
     resident.routeKey = ""; resident.routeIndex = 0; resident.pauseRemaining = 0; resident.idleAction = null; resident.walkAction = null;
     resident.setMoving = moving => {
@@ -1754,6 +1756,44 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     else if (resident.fallback?.head) { resident.fallback.head.rotation.x = nod; resident.fallback.head.rotation.z = Math.cos(resident.socialPhase * .5) * .025 * amount; }
     if (resident.socialMarker) resident.socialMarker.visible = socializing && !resident.moving;
   }
+  function makeDailyActivityProps() {
+    const root = new THREE.Group(); root.position.set(.42,.78,.18);
+    const wicker = new THREE.MeshStandardMaterial({color:0x9a7040,roughness:1});
+    const darkWood = new THREE.MeshStandardMaterial({color:0x5a3d25,roughness:1});
+    const metal = new THREE.MeshStandardMaterial({color:0x77786b,metalness:.28,roughness:.75});
+    const water = new THREE.MeshStandardMaterial({color:0x8c9b68,roughness:.9});
+    const feed = new THREE.MeshStandardMaterial({color:0xd5b46d,roughness:1});
+    const basket = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(.19,.24,.3,9),wicker); body.position.y=.02; basket.add(body);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(.2,.025,5,12),darkWood); rim.rotation.x=Math.PI/2; rim.position.y=.18; basket.add(rim);
+    const handle = new THREE.Mesh(new THREE.TorusGeometry(.19,.022,5,12,Math.PI),darkWood); handle.rotation.y=Math.PI/2; handle.position.y=.2; basket.add(handle);
+    root.add(basket);
+    const watering = new THREE.Group();
+    const can = new THREE.Mesh(new THREE.CylinderGeometry(.13,.16,.25,8),metal); can.position.y=.02; watering.add(can);
+    const canRim = new THREE.Mesh(new THREE.TorusGeometry(.13,.018,5,10),metal); canRim.rotation.x=Math.PI/2; canRim.position.y=.15; watering.add(canRim);
+    const spout = new THREE.Mesh(new THREE.CylinderGeometry(.035,.045,.28,6),metal); spout.rotation.z=-Math.PI/2.5; spout.position.set(.18,.08,0); watering.add(spout);
+    const wateringHandle = new THREE.Mesh(new THREE.TorusGeometry(.12,.018,5,10,Math.PI),metal); wateringHandle.rotation.y=Math.PI/2; wateringHandle.position.set(-.02,.13,0); watering.add(wateringHandle);
+    root.add(watering);
+    const feeding = new THREE.Group();
+    const bucket = new THREE.Mesh(new THREE.CylinderGeometry(.15,.19,.25,8),darkWood); bucket.position.y=.02; feeding.add(bucket);
+    const grain = new THREE.Mesh(new THREE.SphereGeometry(.12,7,5),feed); grain.position.y=.16; grain.scale.y=.35; feeding.add(grain);
+    const bucketRim = new THREE.Mesh(new THREE.TorusGeometry(.16,.018,5,10),wicker); bucketRim.rotation.x=Math.PI/2; bucketRim.position.y=.15; feeding.add(bucketRim);
+    root.add(feeding);
+    root.userData.parts={basket,watering,feeding}; root.visible=false; return root;
+  }
+  function updateDailyActivityPose(resident,dt,activity) {
+    const prop=resident.activityProps; if(!prop)return;
+    const parts=prop.userData.parts;
+    parts.basket.visible=activity==="carry-basket";
+    parts.watering.visible=activity==="garden";
+    parts.feeding.visible=activity==="feed-animals";
+    prop.visible=!!activity && activity!=="walk" && activity!=="visit";
+    resident.activityPhase=((resident.activityPhase||0)+Math.max(0,dt)*2.1)%(Math.PI*2);
+    const working=!!activity&&!resident.moving, swing=Math.sin(resident.activityPhase);
+    prop.rotation.z=(activity==="garden"||activity==="feed-animals"?-.12:.035)*swing*(working?1:.35);
+    if(resident.modelRoot){resident.modelRoot.rotation.x=(activity==="garden"||activity==="feed-animals"?.055:0)*Math.max(0,swing)*(working?1:.25);resident.modelRoot.rotation.z=(activity==="carry-basket"?.018:0)*swing;}
+    else if(resident.fallback?.head) resident.fallback.head.rotation.z=(activity==="garden"||activity==="feed-animals"?.035:0)*swing;
+  }
   function loadResidentModel(resident, group, fallback) {
     const url = new URL("../../assets/3d/" + resident.model, import.meta.url).href;
     let finished = false;
@@ -1854,6 +1894,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     resident.group.add(resident.nameTag);
     resident.socialMarker = makeSocialMarker();
     resident.group.add(resident.socialMarker);
+    resident.activityProps = makeDailyActivityProps();
+    resident.group.add(resident.activityProps);
     resident.actions = {};
     resident.mixer = null;
     resident.moving = false;
@@ -1891,6 +1933,23 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
         : { key: "afternoon-work-" + resident.profession, points: [...workPoints].reverse() };
     }
     return { key: "home", points: [resident.home] };
+  }
+
+  function dailyActivityFor(resident,hour,day) {
+    const seed=[...resident.id].reduce((value,char)=>(value*31+char.charCodeAt(0))>>>0,7);
+    const windows=[[9,9.5],[10,10.5],[14,14.5],[16,16.5]], [start,end]=windows[(seed+day)%windows.length];
+    if(hour<start||hour>=end)return null;
+    const kind=["carry-basket","garden","feed-animals","walk","visit"][(seed+day*3)%5];
+    const gardens=Array.isArray(state.gardenPlots)?state.gardenPlots.filter(item=>Number.isFinite(Number(item?.x))&&Number.isFinite(Number(item?.z))):[];
+    const animals=[...(state.chickenCoops||[]),...(state.sheepPens||[]),...(state.apiaries||[])].filter(item=>Number.isFinite(Number(item?.x))&&Number.isFinite(Number(item?.z)));
+    const buildings=[professionWorkPoints.blacksmith,professionWorkPoints.carpenter,professionWorkPoints.stonecutter,professionWorkPoints.weaver,professionWorkPoints.leatherworker,professionWorkPoints.quartermaster].filter(Boolean);
+    let points;
+    if(kind==="garden")points=gardens.length?gardens.slice(0,2).map(item=>[Number(item.x),Number(item.z)]):professionWorkPoints.farmer;
+    else if(kind==="feed-animals")points=animals.length?animals.slice(0,2).map(item=>[Number(item.x),Number(item.z)]):professionWorkPoints.shepherd;
+    else if(kind==="carry-basket"){const store=state.storageChest&&Number.isFinite(Number(state.storageChestX))?[Number(state.storageChestX),Number(state.storageChestZ)]:[0,-17];points=[professionWorkPoints.farmer[0],store];}
+    else if(kind==="visit"){const chosen=buildings[(seed+day)%buildings.length]||professionWorkPoints.blacksmith;points=chosen.map(point=>[...point]);}
+    else points=[[resident.home[0],resident.home[1]],[resident.home[0]+2.8,resident.home[1]+1.8],[resident.home[0]-2.2,resident.home[1]+2.4]];
+    return {key:"daily-"+kind,points:points.map(point=>[...point])};
   }
 
   function updateResidentNameTag(resident) {
@@ -1985,6 +2044,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       if (expeditionAwayIds.has(resident.id)) { if (resident.group) resident.group.visible = false; continue; }
       let schedule = scheduleFor(resident, hour);
       if (socialTargets.has(resident.id)) schedule = { key: "social-break", points: [socialTargets.get(resident.id)] };
+      else { const dailyActivity = dailyActivityFor(resident,hour,currentDay); if(dailyActivity)schedule=dailyActivity; }
       if (schedule.key !== resident.routeKey) {
         resident.routeKey = schedule.key;
         resident.routeIndex = 0;
@@ -2021,13 +2081,14 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       if (resident.mixer) resident.mixer.update(dt);
       updateWorkPose(resident, dt, schedule.key.includes("work") && resident.enabled && resident.profession !== "idle");
       updateSocialPose(resident, dt, schedule.key === "social-break" && !resident.moving);
+      updateDailyActivityPose(resident,dt,schedule.key.startsWith("daily-")?schedule.key.slice(6):null);
       if (schedule.key === "social-break" && !resident.moving && socialTargets.size > 1) {
         const centerX = [...socialTargets.values()].reduce((sum, point) => sum + point[0], 0) / socialTargets.size;
         const centerZ = [...socialTargets.values()].reduce((sum, point) => sum + point[1], 0) / socialTargets.size;
         resident.group.rotation.y = Math.atan2(centerX - resident.group.position.x, centerZ - resident.group.position.z);
       }
       const shift = WORK_SHIFTS[workShift];
-      const workingTime = hour >= shift.start && hour < 11.5 || hour >= 13.5 && hour < shift.end;
+      const workingTime = (hour >= shift.start && hour < 11.5 || hour >= 13.5 && hour < shift.end) && !schedule.key.startsWith("daily-");
       const job = professions[resident.profession];
       if (resident.enabled && job && (job.resource || ["guard","miner","blacksmith","steelworker","armorer","carpenter","stonecutter","weaver","leatherworker","quartermaster","campaignTailor"].includes(resident.profession)) && workingTime && (resident.profession !== "blacksmith" || !!state.smithy) && (resident.profession !== "steelworker" || (!!state.smithy && !!state.steelFurnace)) && (resident.profession !== "armorer" || !!state.smithy) && (resident.profession !== "carpenter" || !!workshops.carpentry) && (resident.profession !== "stonecutter" || !!workshops.stonecutting) && (resident.profession !== "weaver" || !!workshops.weaving) && (resident.profession !== "leatherworker" || !!workshops.leatherwork) && (resident.profession !== "quartermaster" || state.expeditionTents?.length > 0) && (resident.profession !== "campaignTailor" || (!!workshops.weaving && !!workshops.leatherwork && state.expeditionTents?.length > 0))) {
         workElapsed[resident.id] += Math.max(0, dt);

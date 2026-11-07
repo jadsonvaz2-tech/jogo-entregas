@@ -98,6 +98,10 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
         farm.add(crop);
       }
     }
+    const trough = new THREE.Mesh(new THREE.BoxGeometry(1.25,.22,.42),townMaterials.wood); trough.position.set(3.35,.24,1.4); trough.castShadow=true; farm.add(trough);
+    const troughFood = new THREE.Mesh(new THREE.BoxGeometry(.9,.08,.26),townMaterials.crop); troughFood.position.set(3.35,.39,1.4); farm.add(troughFood);
+    const henBody = new THREE.MeshStandardMaterial({color:0xe4ddc8,roughness:.95}), henHead = new THREE.MeshStandardMaterial({color:0xd0a35b,roughness:.9}), henComb = new THREE.MeshStandardMaterial({color:0x9a4435,roughness:.9});
+    for(let index=0;index<3;index++){const hen=new THREE.Group();const body=new THREE.Mesh(new THREE.SphereGeometry(.23,8,6),henBody);body.scale.set(1.25,.82,.9);hen.add(body);const head=new THREE.Mesh(new THREE.SphereGeometry(.12,7,6),henBody);head.position.set(.18,.17,.02);hen.add(head);const beak=new THREE.Mesh(new THREE.ConeGeometry(.055,.16,5),henHead);beak.rotation.z=-Math.PI/2;beak.position.set(.3,.15,.02);hen.add(beak);const comb=new THREE.Mesh(new THREE.SphereGeometry(.055,6,5),henComb);comb.position.set(.16,.29,.02);hen.add(comb);hen.position.set(2.5+(index%2)*.55,.43,2+Math.floor(index/2)*.48);hen.rotation.y=index*.8;hen.traverse(part=>{if(part.isMesh)part.castShadow=true;});farm.add(hen);}
     farm.position.set(town.x - 13, terrainHeight(town.x - 13, town.z + 11), town.z + 11);
     scene.add(farm);
 
@@ -192,6 +196,44 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
     else if (resident.fallback?.head) { resident.fallback.head.rotation.x = nod; resident.fallback.head.rotation.z = Math.cos(resident.socialPhase * .5) * .025 * amount; }
     if (resident.socialMarker) resident.socialMarker.visible = socializing && !resident.moving;
   }
+  function makeDailyActivityProps() {
+    const root = new THREE.Group(); root.position.set(.42,.78,.18);
+    const wicker = new THREE.MeshStandardMaterial({color:0x9a7040,roughness:1});
+    const darkWood = new THREE.MeshStandardMaterial({color:0x5a3d25,roughness:1});
+    const metal = new THREE.MeshStandardMaterial({color:0x77786b,metalness:.28,roughness:.75});
+    const water = new THREE.MeshStandardMaterial({color:0x8c9b68,roughness:.9});
+    const feed = new THREE.MeshStandardMaterial({color:0xd5b46d,roughness:1});
+    const basket = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(.19,.24,.3,9),wicker); body.position.y=.02; basket.add(body);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(.2,.025,5,12),darkWood); rim.rotation.x=Math.PI/2; rim.position.y=.18; basket.add(rim);
+    const handle = new THREE.Mesh(new THREE.TorusGeometry(.19,.022,5,12,Math.PI),darkWood); handle.rotation.y=Math.PI/2; handle.position.y=.2; basket.add(handle);
+    root.add(basket);
+    const watering = new THREE.Group();
+    const can = new THREE.Mesh(new THREE.CylinderGeometry(.13,.16,.25,8),metal); can.position.y=.02; watering.add(can);
+    const canRim = new THREE.Mesh(new THREE.TorusGeometry(.13,.018,5,10),metal); canRim.rotation.x=Math.PI/2; canRim.position.y=.15; watering.add(canRim);
+    const spout = new THREE.Mesh(new THREE.CylinderGeometry(.035,.045,.28,6),metal); spout.rotation.z=-Math.PI/2.5; spout.position.set(.18,.08,0); watering.add(spout);
+    const wateringHandle = new THREE.Mesh(new THREE.TorusGeometry(.12,.018,5,10,Math.PI),metal); wateringHandle.rotation.y=Math.PI/2; wateringHandle.position.set(-.02,.13,0); watering.add(wateringHandle);
+    root.add(watering);
+    const feeding = new THREE.Group();
+    const bucket = new THREE.Mesh(new THREE.CylinderGeometry(.15,.19,.25,8),darkWood); bucket.position.y=.02; feeding.add(bucket);
+    const grain = new THREE.Mesh(new THREE.SphereGeometry(.12,7,5),feed); grain.position.y=.16; grain.scale.y=.35; feeding.add(grain);
+    const bucketRim = new THREE.Mesh(new THREE.TorusGeometry(.16,.018,5,10),wicker); bucketRim.rotation.x=Math.PI/2; bucketRim.position.y=.15; feeding.add(bucketRim);
+    root.add(feeding);
+    root.userData.parts={basket,watering,feeding}; root.visible=false; return root;
+  }
+  function updateDailyActivityPose(resident,dt,activity) {
+    const prop=resident.activityProps; if(!prop)return;
+    const parts=prop.userData.parts;
+    parts.basket.visible=activity==="carry-basket";
+    parts.watering.visible=activity==="garden";
+    parts.feeding.visible=activity==="feed-animals";
+    prop.visible=!!activity && activity!=="walk" && activity!=="visit";
+    resident.activityPhase=((resident.activityPhase||0)+Math.max(0,dt)*2.1)%(Math.PI*2);
+    const working=!!activity&&!resident.moving, swing=Math.sin(resident.activityPhase);
+    prop.rotation.z=(activity==="garden"||activity==="feed-animals"?-.12:.035)*swing*(working?1:.35);
+    if(resident.modelRoot){resident.modelRoot.rotation.x=(activity==="garden"||activity==="feed-animals"?.055:0)*Math.max(0,swing)*(working?1:.25);resident.modelRoot.rotation.z=(activity==="carry-basket"?.018:0)*swing;}
+    else if(resident.fallback?.head) resident.fallback.head.rotation.z=(activity==="garden"||activity==="feed-animals"?.035:0)*swing;
+  }
   function loadModel(resident) {
     const fallback = resident.fallback;
     const url = new URL("../../assets/3d/" + resident.model, import.meta.url).href;
@@ -257,6 +299,8 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
     resident.group.add(resident.tag);
     resident.socialMarker = makeSocialMarker();
     resident.group.add(resident.socialMarker);
+    resident.activityProps = makeDailyActivityProps();
+    resident.group.add(resident.activityProps);
     residents.push(resident);
     loadModel(resident);
     return resident;
@@ -344,6 +388,20 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
     return { key: "home", points: [resident.homePoint] };
   }
 
+  function dailyActivityFor(resident,hour,day) {
+    const seed=[...resident.id].reduce((value,char)=>(value*31+char.charCodeAt(0))>>>0,11);
+    const windows=[[9,9.5],[10,10.5],[14,14.5],[16,16.5]], [start,end]=windows[(seed+day)%windows.length];
+    if(hour<start||hour>=end)return null;
+    const kind=["carry-basket","garden","feed-animals","walk","visit"][(seed+day*3)%5];
+    let points;
+    if(kind==="garden")points=[[resident.town.x-13,resident.town.z+11],[resident.town.x-11,resident.town.z+12]];
+    else if(kind==="feed-animals")points=[[resident.town.x-9,resident.town.z+13.5],[resident.town.x-8,resident.town.z+14]];
+    else if(kind==="carry-basket")points=[[resident.town.x-13,resident.town.z+11],[resident.town.x,resident.town.z+4]];
+    else if(kind==="visit")points=[[resident.town.x,resident.town.z+4],[resident.town.x+20,resident.town.z-11]];
+    else points=[[resident.homePoint[0],resident.homePoint[1]],[resident.town.x+2.5,resident.town.z+1.5],[resident.town.x-2,resident.town.z+2]];
+    return {key:"daily-"+kind,points};
+  }
+
   function setMoving(resident, moving) {
     if (resident.moving === moving) return;
     resident.moving = moving;
@@ -409,7 +467,9 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
       updateNeeds(resident, absoluteHour);
       let plan = schedule(resident, hour);
       if (socialTargets.has(resident.id)) plan = { key: "social-break", points: [socialTargets.get(resident.id)] };
-      resident.activity = plan.key === "sleep" ? "Dormindo em casa" : plan.key === "social-break" ? "Conversa e encontro com a comunidade" : plan.key === "meal" ? "Refeição e descanso" : plan.key.startsWith("work") ? resident.role + " · trabalhando" : "Voltando para casa";
+      else { const dailyActivity=dailyActivityFor(resident,hour,currentDay); if(dailyActivity)plan=dailyActivity; }
+      const activityLabels={"carry-basket":"Carregando cestos e provisões",garden:"Cuidando da horta","feed-animals":"Alimentando os animais",walk:"Caminhando pela vila",visit:"Visitando construções"};
+      resident.activity = plan.key === "sleep" ? "Dormindo em casa" : plan.key === "social-break" ? "Conversa e encontro com a comunidade" : plan.key.startsWith("daily-") ? activityLabels[plan.key.slice(6)] : plan.key === "meal" ? "Refeição e descanso" : plan.key.startsWith("work") ? resident.role + " · trabalhando" : "Voltando para casa";
       if (plan.key !== resident.routeKey) {
         resident.routeKey = plan.key; resident.routeIndex = 0; resident.pauseRemaining = 0; resident.target = plan.points[0];
       }
@@ -440,6 +500,7 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
       if (resident.mixer) resident.mixer.update(dt);
       updateWorkPose(resident, dt, plan.key.startsWith("work"));
       updateSocialPose(resident, dt, plan.key === "social-break" && !resident.moving);
+      updateDailyActivityPose(resident,dt,plan.key.startsWith("daily-")?plan.key.slice(6):null);
       if (plan.key === "social-break" && !resident.moving) resident.group.rotation.y = Math.atan2(resident.town.x - resident.group.position.x, resident.town.z + .6 - resident.group.position.z);
     }
 
