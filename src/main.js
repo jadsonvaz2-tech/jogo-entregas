@@ -3,7 +3,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
 import { createStoryEncounter } from "./systems/story.js";
 import { createVillageResidents } from "./systems/village.js?v=visible-save-diagnostics-1";
-import { createWorldSettlements, WORLD_ROAD_PATHS } from "./systems/settlements.js?v=medieval-stone-paths-2026-11-07-1";
+import { createWorldSettlements, WORLD_ROAD_PATHS } from "./systems/settlements.js?v=roads-clean-2026-11-07-1";
 import { createDistantVillageResidents } from "./systems/distant-village-residents.js";
 import { createSettlementEconomy } from "./systems/settlement-economy.js";
 let villageResidents=null;
@@ -365,7 +365,6 @@ for(let i=0;i<55;i++){
 }
 const treeModels=[];
 const windTrees=[];
-let medievalPathModels=[];
 async function loadTree(name){
  return new Promise(resolve=>{
   let finished=false;
@@ -979,8 +978,7 @@ async function buildForest(){
   loadTree("Mushroom_Common"),loadTree("Mushroom_Laetiporus"),
   loadTree("Pebble_Round_1"),loadTree("Pebble_Round_2"),loadTree("Pebble_Round_3"),loadTree("Pebble_Round_4"),loadTree("Pebble_Round_5")
  ]);
- medievalPathModels=[rockPathWide,rockPathA,rockPathB,rockPathC,rockPathThin].filter(Boolean);
- const treeVariants=[
+  const treeVariants=[
   [common,common2,common3,common4,common5].filter(Boolean),
   [pine,pine2,pine3,pine4,pine5].filter(Boolean),
   [twisted,twisted2,twisted3,twisted4,twisted5].filter(Boolean)
@@ -4406,7 +4404,7 @@ async function start(){
  $("loadingBar").style.width="20%";
  await buildForest();
  startupStage="criando as aldeias e estradas";
- const settlements = createWorldSettlements({ THREE, scene, terrainHeight, pathModels: medievalPathModels });
+ const settlements = createWorldSettlements({ THREE, scene, terrainHeight });
  const distanceToSegment = (px, pz, ax, az, bx, bz) => {
   const dx = bx - ax, dz = bz - az, length2 = dx * dx + dz * dz || 1;
   const t = THREE.MathUtils.clamp(((px - ax) * dx + (pz - az) * dz) / length2, 0, 1);

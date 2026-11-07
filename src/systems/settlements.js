@@ -4,7 +4,7 @@ export const WORLD_ROAD_PATHS = [
   [[0, 0], [-11, -7], [-22, -13], [-34, -20], [-47, -29], [-59, -39]]
 ];
 
-export function createWorldSettlements({ THREE, scene, terrainHeight, pathModels = [] }) {
+export function createWorldSettlements({ THREE, scene, terrainHeight }) {
   const materials = {
     plaster: new THREE.MeshStandardMaterial({ color: 0xb7a17b, roughness: 1 }),
     plasterLight: new THREE.MeshStandardMaterial({ color: 0xc8b58f, roughness: 1 }),
@@ -160,30 +160,6 @@ export function createWorldSettlements({ THREE, scene, terrainHeight, pathModels
     // Acostamento largo e faixa central levemente coroada, sem criar degraus nas encostas.
     addRibbon(2.1, .035, materials.shoulder);
     addRibbon(1.62, .075, materials.path, true);
-    // Pedras texturizadas do pacote GLTF do próprio projeto formam o piso medieval.
-    // Os módulos acompanham a tangente e a altura do terreno, inclusive nos aclives e declives.
-    if (pathModels.length) {
-      const tileCount = Math.max(2, Math.ceil(curve.getLength() / 2.65));
-      const stonePoints = curve.getPoints(tileCount);
-      for (let i = 0; i < stonePoints.length; i++) {
-        const point = stonePoints[i];
-        const before = stonePoints[Math.max(0, i - 1)];
-        const after = stonePoints[Math.min(stonePoints.length - 1, i + 1)];
-        const model = pathModels[(i + Math.round(points[0][0] * 3)) % pathModels.length];
-        if (!model) continue;
-        const stoneTile = model.clone(true);
-        stoneTile.position.set(point.x, terrainHeight(point.x, point.z) + .13, point.z);
-        stoneTile.rotation.y = Math.atan2(after.x - before.x, after.z - before.z);
-        stoneTile.scale.setScalar(1.08);
-        stoneTile.traverse(part => {
-          if (part.isMesh) {
-            part.castShadow = false;
-            part.receiveShadow = true;
-          }
-        });
-        scene.add(stoneTile);
-      }
-    }
   }
 
   centers.forEach((center, index) => {
