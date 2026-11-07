@@ -445,7 +445,7 @@ function createDeer(x,z,index){
  healthBar.position.set(0,2.02,0);healthBar.visible=false;healthBar.renderOrder=5;deer.add(healthBar);
  deer.position.set(x,terrainHeight(x,z),z);scene.add(deer);
  wildAnimals.push({id,object:deer,body,x,z,heading:worldRandom()*Math.PI*2,moveSpeed:.45,health:2,alive:true,wander:1+worldRandom()*2,healthBar,healthFill,legs,tail,head,neck,ears,eyes,blinkTimer:2+worldRandom()*3,blinkTime:0,breathPhase:worldRandom()*Math.PI*2,grazeTimer:2+worldRandom()*4,grazeBlend:0,alarmBlend:0,grazing:false});
- applyWildlifeModel(deer,"Stag.gltf",1.95,[healthBar]);
+ applyWildlifeModel(deer,"assets/3d/animals/Stag.gltf",1.95,[healthBar]);
 }
 function createWolf(x,z,index){
  const id="wolf-"+index;
@@ -491,14 +491,14 @@ function createWolf(x,z,index){
  warningRing.rotation.x=-Math.PI/2;warningRing.position.y=.045;warningRing.visible=false;wolf.add(warningRing);
  wolf.position.set(x,terrainHeight(x,z),z);scene.add(wolf);
  hostileWolves.push({id,object:wolf,body,chest,x,z,heading:worldRandom()*Math.PI*2,health:3,alive:true,wander:1+worldRandom()*2,moveSpeed:.35,attackCooldown:1+index*.7,attackWindup:0,staggerTime:0,staggerHeading:0,hitStunTime:0,hitHeading:0,warningRing,healthBar,healthFill,legs,tail,head,jaw,ears,eyes,blinkTimer:1.5+worldRandom()*3,blinkTime:0,breathPhase:worldRandom()*Math.PI*2,sniffCooldown:5+worldRandom()*7,sniffTime:0,howlCooldown:(state.timeOfDay>=19||state.timeOfDay<6)?10+worldRandom()*12:32+worldRandom()*28,howlTime:0});
- applyWildlifeModel(wolf,"Wolf.gltf",1.5,[healthBar,warningRing]);
+ applyWildlifeModel(wolf,"assets/3d/animals/Wolf.gltf",1.5,[healthBar,warningRing]);
 }
 let foxAssetPromise=null;
 function loadFoxAsset(){
  if(!foxAssetPromise)foxAssetPromise=new Promise(resolve=>{
   let finished=false;
   const timer=setTimeout(()=>{if(!finished){finished=true;resolve(null);}},18000);
-  loader.load(new URL("../Fox.gltf",import.meta.url).href,g=>{
+  loader.load(new URL("../assets/3d/animals/Fox.gltf",import.meta.url).href,g=>{
    if(finished)return;
    finished=true;clearTimeout(timer);resolve(g);
   },undefined,()=>{

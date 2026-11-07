@@ -2,14 +2,22 @@
 
 Protótipo 3D para navegador, com foco em controles Android e futura preparação para Android/Google Play.
 
-## Estrutura
+## Estrutura do projeto
 
 - `index.html` — entrada do jogo.
 - `src/main.js` — cena 3D, personagem, câmera, controles e mecânicas.
 - `src/style.css` — interface responsiva e HUD.
-- `assets/3d/` — modelos glTF, buffers BIN e texturas PNG originais. Os arquivos ficam juntos para preservar os caminhos relativos definidos dentro dos modelos.
+- `assets/3d/` — biblioteca 3D principal: modelos glTF, buffers BIN e texturas PNG que já eram usados pelo jogo.
+- `assets/3d/animals/` — modelos adicionais de animais importados e usados pelos carregadores de fauna.
+- `assets/3d/imported-root-copies/` — cópias idênticas de arquivos que já existiam em `assets/3d/`, organizadas para preservar os arquivos enviados sem duplicar seu uso no jogo.
 - `.github/workflows/pages.yml` — publicação automática no GitHub Pages.
 - `.nojekyll` — desativa o processamento Jekyll no Pages.
+
+Os arquivos glTF que possuem buffers ou texturas externos devem permanecer junto dos respectivos recursos relativos. Por isso, os modelos da biblioteca original não foram separados individualmente.
+
+## Modelos adicionais disponíveis
+
+A pasta `assets/3d/animals/` contém alpaca, touro, veado, burro, raposa, dois cavalos, husky, shiba inu, cervo e lobo. Raposa, cervo e lobo já são referenciados pelo sistema de fauna. Os demais estão organizados e prontos para integração gradual em sistemas de montaria, animais domésticos e criação.
 
 ## Desenvolvimento
 
