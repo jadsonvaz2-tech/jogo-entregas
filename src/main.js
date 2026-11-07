@@ -4206,7 +4206,10 @@ function update(dt){
  const ky=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0);
  const mx=THREE.MathUtils.clamp(state.moveX+kx,-1,1),my=THREE.MathUtils.clamp(state.moveY+ky,-1,1);
  const moving=!activeBuildPlacement&&Math.hypot(mx,my)>.08;
- const carryWeight=getCarryWeight();\n const carryRatio=carryWeight/CARRY_CAPACITY;\n const loadFactor=carryRatio>=1 ? .68 : carryRatio>=.9 ? .78 : carryRatio>=.75 ? .88 : 1;\n const fast=(state.running||keys.shift)&&state.energy>0&&carryRatio<1;
+ const carryWeight=getCarryWeight();
+ const carryRatio=carryWeight/CARRY_CAPACITY;
+ const loadFactor=carryRatio>=1 ? .68 : carryRatio>=.9 ? .78 : carryRatio>=.75 ? .88 : 1;
+ const fast=(state.running||keys.shift)&&state.energy>0&&carryRatio<1;
  if(moving){
   const direction=new THREE.Vector3(mx,0,my).normalize();
   const angle=state.cameraYaw;
