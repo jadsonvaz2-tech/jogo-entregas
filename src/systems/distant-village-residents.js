@@ -201,7 +201,7 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
       lastSocialDay: Number.isFinite(previous.lastSocialDay) ? previous.lastSocialDay : 0,
       workHours: Number.isFinite(previous.workHours) ? previous.workHours : 0,
       mixer: null, idleAction: null, walkAction: null, moving: false, routeKey: "",
-      routeIndex: 0, target: null, workPhase: 0, group: new THREE.Group()
+      routeIndex: 0, target: null, pauseRemaining: 0, workPhase: 0, group: new THREE.Group()
     };
     const home = [town.x + data.home[0], town.z + data.home[1]];
     resident.homePoint = home;
@@ -347,9 +347,12 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
       const plan = schedule(resident, hour);
       resident.activity = plan.key === "sleep" ? "Dormindo em casa" : plan.key === "meal" ? "Refeição e descanso" : plan.key.startsWith("work") ? resident.role + " · trabalhando" : "Voltando para casa";
       if (plan.key !== resident.routeKey) {
-        resident.routeKey = plan.key; resident.routeIndex = 0; resident.target = plan.points[0];
+        resident.routeKey = plan.key; resident.routeIndex = 0; resident.pauseRemaining = 0; resident.target = plan.points[0];
       }
-      if (resident.target) {
+      if (resident.pauseRemaining > 0) {
+        resident.pauseRemaining = Math.max(0, resident.pauseRemaining - Math.max(0, dt));
+        setMoving(resident, false);
+      } else if (resident.target) {
         const dx = resident.target[0] - resident.group.position.x;
         const dz = resident.target[1] - resident.group.position.z;
         const distance = Math.hypot(dx, dz);
@@ -357,6 +360,7 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
           if (plan.points.length > 1) {
             resident.routeIndex = (resident.routeIndex + 1) % plan.points.length;
             resident.target = plan.points[resident.routeIndex];
+            resident.pauseRemaining = 1.1 + ((resident.routeIndex * 11 + resident.id.length * 5) % 17) / 10;
           } else {
             resident.target = null; setMoving(resident, false);
           }

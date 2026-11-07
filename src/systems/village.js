@@ -774,7 +774,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     resident.nameTag = makeNameTag(resident.name);
     resident.group.add(resident.nameTag);
     resident.actions = {}; resident.mixer = null; resident.moving = false; resident.target = null;
-    resident.routeKey = ""; resident.routeIndex = 0; resident.idleAction = null; resident.walkAction = null;
+    resident.routeKey = ""; resident.routeIndex = 0; resident.pauseRemaining = 0; resident.idleAction = null; resident.walkAction = null;
     resident.setMoving = moving => {
       if (resident.moving === moving) return;
       resident.moving = moving;
@@ -1811,6 +1811,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     resident.target = null;
     resident.routeKey = "";
     resident.routeIndex = 0;
+    resident.pauseRemaining = 0;
     resident.idleAction = null;
     resident.walkAction = null;
     resident.setMoving = (moving) => {
@@ -1915,9 +1916,13 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       if (schedule.key !== resident.routeKey) {
         resident.routeKey = schedule.key;
         resident.routeIndex = 0;
+        resident.pauseRemaining = 0;
         resident.target = schedule.points[0];
       }
-      if (resident.target) {
+      if (resident.pauseRemaining > 0) {
+        resident.pauseRemaining = Math.max(0, resident.pauseRemaining - Math.max(0, dt));
+        resident.setMoving(false);
+      } else if (resident.target) {
         const dx = resident.target[0] - resident.group.position.x;
         const dz = resident.target[1] - resident.group.position.z;
         const distance = Math.hypot(dx, dz);
@@ -1925,6 +1930,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
           if (schedule.points.length > 1) {
             resident.routeIndex = (resident.routeIndex + 1) % schedule.points.length;
             resident.target = schedule.points[resident.routeIndex];
+            resident.pauseRemaining = 1.1 + ((resident.routeIndex * 13 + resident.id.length * 7) % 17) / 10;
           } else {
             resident.setMoving(false);
           }
