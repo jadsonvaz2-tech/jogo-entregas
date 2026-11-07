@@ -11,6 +11,7 @@ import { createCommunityExpeditions } from "./systems/community-expeditions.js?v
 import { createDistantExploration } from "./systems/distant-exploration.js?v=secret-characters-2026-11-07-1";
 import { createCommunityEvents } from "./systems/community-events.js?v=community-festivals-2026-11-07-1";
 import { createTravelNetwork } from "./systems/travel-network.js?v=inns-travelers-trade-2026-11-07-1";
+import { createWeatherSystem } from "./systems/weather.js?v=dynamic-weather-2026-11-07-1";
 let villageResidents=null;
 let distantVillageResidents=null;
 let settlementEconomy=null;
@@ -20,6 +21,7 @@ let communityExpeditions=null;
 let distantExploration=null;
 let communityEvents=null;
 let travelNetwork=null;
+let weatherSystem=null;
 
 const $ = (id) => document.getElementById(id);
 const raw = new URL("../assets/3d/", import.meta.url).href;
@@ -4432,6 +4434,7 @@ function update(dt){
  const nowMs=Date.now();
  for(const r of resources){if(r.type==="fiber"&&!r.active&&r.respawnAt&&nowMs>=r.respawnAt){r.active=true;r.respawnAt=0;r.object.visible=true;toast("Uma planta fibrosa cresceu novamente.");}}
  updateWorldLighting(dt);
+ if(weatherSystem)weatherSystem.update(dt,state.day,state.timeOfDay,player.position);
  updateForestFireflies(dt);
  updateCampfireVisuals(dt);
  updateSteelSpearThrust(dt);
@@ -4647,6 +4650,7 @@ async function start(){
  await buildForest();
  startupStage="criando as aldeias e estradas";
  const settlements = createWorldSettlements({ THREE, scene, terrainHeight });
+ weatherSystem=startOptional("o clima dinâmico",()=>createWeatherSystem({THREE,scene,player,mobilePerformanceMode}));
  communityEvents=startOptional("as festas e feiras comunitárias",()=>createCommunityEvents({THREE,scene,terrainHeight,centers:settlements.centers,onToast:toast}));
 
  const expandedWorld=await createExpandedWorld({ THREE, scene, terrainHeight, player, state, registerResource, onToast:toast, onSave:saveGame });
