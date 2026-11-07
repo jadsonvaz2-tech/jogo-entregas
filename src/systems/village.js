@@ -478,30 +478,101 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     guard: [[-12,-12],[12,-12],[12,12],[-12,12]]
   };
   const housingStatus = workPanel.querySelector("#village-housing-status");
-  // Diagnóstico somente de leitura: compara o salvamento atual e a cópia sem alterar nenhum deles.
-  const saveDiagnostics = document.createElement("div");
+  // Diagnóstico somente de leitura: consulta as cópias locais sem gravar, restaurar ou alterar dados.
+  const saveDiagnostics = document.createElement("section");
   saveDiagnostics.id = "village-save-diagnostics";
-  saveDiagnostics.style.cssText = "margin:7px 0;padding:8px;border:1px solid #8a774b;border-radius:7px;background:#202d22;color:#e9dfc8;font:10px/1.45 system-ui;white-space:pre-line";
+  saveDiagnostics.style.cssText = "margin:7px 0;padding:9px;border:1px solid #8a774b;border-radius:7px;background:#202d22;color:#e9dfc8;font:11px/1.45 system-ui";
+  const diagnosticTitle = document.createElement("strong");
+  diagnosticTitle.textContent = "DIAGNÓSTICO E CÓPIA DE SEGURANÇA · SOMENTE LEITURA";
+  diagnosticTitle.style.cssText = "display:block;color:#f0d58a;margin-bottom:6px";
+  const diagnosticOutput = document.createElement("textarea");
+  diagnosticOutput.id = "village-save-diagnostic-output";
+  diagnosticOutput.readOnly = true;
+  diagnosticOutput.setAttribute("aria-label","Resultado detalhado do diagnóstico de salvamento");
+  diagnosticOutput.style.cssText = "display:block;box-sizing:border-box;width:100%;min-height:150px;margin:6px 0;padding:8px;border:1px solid #65714d;border-radius:6px;background:#17231b;color:#f2e8d0;font:10px/1.45 monospace;white-space:pre;resize:vertical";
+  const copyDiagnosticButton = document.createElement("button");
+  copyDiagnosticButton.type = "button";
+  copyDiagnosticButton.textContent = "📋 COPIAR DIAGNÓSTICO";
+  copyDiagnosticButton.style.cssText = "width:100%;min-height:42px;padding:9px;border:1px solid #b99b5c;border-radius:7px;background:#526b43;color:#fff1cc;font:700 11px system-ui";
+  const diagnosticHint = document.createElement("div");
+  diagnosticHint.setAttribute("aria-live","polite");
+  diagnosticHint.style.cssText = "margin-top:5px;color:#c4cfaa;font-size:10px";
   const renderSaveDiagnostics = () => {
     const readSave = key => {
       try {
         const raw = localStorage.getItem(key);
-        if (!raw) return { exists:false, valid:false, residents:0, houses:0 };
+        if (!raw) return { exists:false, valid:false, raw:null, data:null, error:"" };
         const data = JSON.parse(raw);
-        if (!data || typeof data !== "object") return { exists:true, valid:false, residents:0, houses:0 };
-        const recruits = Array.isArray(data.recruits) ? data.recruits.filter(person => person && person.id).length : 0;
-        return { exists:true, valid:true, residents:3+recruits, houses:Math.max(0,Math.min(6,Math.floor(Number(data.houses)||0))), homes:data.homes && typeof data.homes==="object" ? Object.keys(data.homes).length : 0 };
-      } catch (error) { return { exists:true, valid:false, residents:0, houses:0 }; }
+        if (!data || typeof data !== "object" || Array.isArray(data)) return { exists:true, valid:false, raw, data:null, error:"Formato JSON inesperado" };
+        return { exists:true, valid:true, raw, data, error:"" };
+      } catch (error) { return { exists:true, valid:false, raw:null, data:null, error:"JSON inválido" }; }
     };
     const primary = readSave(SAVE_KEY);
     const backup = readSave(SAVE_KEY + "-backup");
-    const status = item => !item.exists ? "não encontrado" : !item.valid ? "inválido" : item.residents + " moradores · " + item.houses + " casas · " + item.homes + " vínculos de moradia";
-    saveDiagnostics.textContent = "DIAGNÓSTICO DE SALVAMENTO · somente leitura · Atual: " + status(primary) + " · Cópia: " + status(backup) + " · " + (localStorage.getItem(SAVE_KEY + "-recovery-used") ? "Recuperação automática já registrada neste navegador." : "Nenhuma recuperação automática registrada.");
+    const format = (label, item) => {
+      if (!item.exists) return label + ": NÃO ENCONTRADO";
+      if (!item.valid) return label + ": INVÁLIDO (" + item.error + ")";
+      const data = item.data;
+      const recruits = Array.isArray(data.recruits) ? data.recruits.filter(person => person && person.id) : [];
+      const houses = Math.max(0,Math.min(6,Math.floor(Number(data.houses)||0)));
+      const homes = data.homes && typeof data.homes === "object" ? data.homes : {};
+      const lines = [
+        label + ": VÁLIDO",
+        "  Moradores: " + (3 + recruits.length) + " (Lina, Odo, Tomé" + (recruits.length ? ", " + recruits.map(person => String(person.name || "Sem nome") + " [" + String(person.id) + "]").join(", ") : "") + ")",
+        "  Casas construídas: " + houses,
+        "  Registros de moradia: " + Object.keys(homes).length
+      ];
+      for (const [id, home] of Object.entries(homes)) {
+        const resident = id === "lina" ? "Lina" : id === "odo" ? "Odo" : id === "toma" ? "Tomé" : (recruits.find(person => person.id === id)?.name || id);
+        lines.push("    " + resident + ": cama " + (home && home.slot ? String(home.slot) : "não identificada") + (home && Array.isArray(home.position) ? " · posição " + home.position.map(value => Number(value).toFixed(2)).join(", ") : ""));
+      }
+      if (recruits.length) {
+        lines.push("  Recrutados e vínculos:");
+        for (const person of recruits) lines.push("    " + String(person.name || "Sem nome") + " [" + String(person.id) + "] · cama " + String(person.homeSlot || homes[person.id]?.slot || "não atribuída"));
+      }
+      lines.push("  Tamanho do registro: " + (item.raw ? item.raw.length : 0) + " caracteres");
+      return lines.join("\n");
+    };
+    const recovery = localStorage.getItem(SAVE_KEY + "-recovery-used");
+    const report = [
+      "CRÔNICAS DA FLORESTA — DIAGNÓSTICO DA VILA CENTRAL",
+      "Leitura somente: nenhum salvamento foi gravado, apagado ou restaurado.",
+      "Chave principal: " + SAVE_KEY,
+      "Chave da cópia: " + SAVE_KEY + "-backup",
+      "",
+      format("SALVAMENTO ATUAL",primary),
+      "",
+      format("CÓPIA DE SEGURANÇA",backup),
+      "",
+      "Recuperação automática: " + (recovery || "não registrada"),
+      "",
+      "Observação: os vínculos listados são os registros salvos; a ocupação efetiva das camas também aparece em OCUPAÇÃO DAS MORADIAS."
+    ].join("\n");
+    diagnosticOutput.value = report;
+    diagnosticHint.textContent = "O resultado acima pode ser selecionado e copiado. Não use Restaurar backup durante esta conferência.";
   };
-  saveDiagnostics.setAttribute("aria-live","polite");
+  copyDiagnosticButton.addEventListener("click", async () => {
+    const textToCopy = diagnosticOutput.value;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(textToCopy);
+      } else {
+        diagnosticOutput.focus();
+        diagnosticOutput.select();
+        const copied = document.execCommand("copy");
+        if (!copied) throw new Error("Seleção manual necessária");
+      }
+      diagnosticHint.textContent = "Diagnóstico copiado. Agora você pode colar o texto aqui na conversa.";
+    } catch (error) {
+      diagnosticOutput.focus();
+      diagnosticOutput.select();
+      diagnosticHint.textContent = "Não foi possível copiar automaticamente. O texto está selecionado: toque em Copiar no menu do celular.";
+    }
+  });
+  saveDiagnostics.append(diagnosticTitle,diagnosticOutput,copyDiagnosticButton,diagnosticHint);
   workPanel.insertBefore(saveDiagnostics, housingStatus);
-
   renderSaveDiagnostics();
+
   const housingRosterDisplay = workPanel.querySelector("#village-housing-roster");
   const autoAssignHomesButton = workPanel.querySelector("#village-auto-assign-homes");
   const villageAlerts = workPanel.querySelector("#village-alerts");
