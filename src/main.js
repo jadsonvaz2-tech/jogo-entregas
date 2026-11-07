@@ -796,13 +796,13 @@ function createResource(x,z,type="wood",target=null){
  registerResource({object:stump,x,z,type,target,active:true});
 }
 async function buildForest(){
- const [common,pine,twisted,rock,grassShort,grassTall,wispyGrass,wispyGrassTall,rockPathA,rockPathB,rockPathC,rockPathThin,rockPathWide,bushFlowers,fern,clover,flowerGroup,mushroomCommon,mushroomGolden,deadTree1,deadTree2,deadTree3,deadTree4,deadTree5] = await Promise.all([
+ const [common,pine,twisted,rock,grassShort,grassTall,wispyGrass,wispyGrassTall,rockPathA,rockPathB,rockPathC,rockPathThin,rockPathWide,bushFlowers,fern,clover,flowerGroup,mushroomCommon,mushroomGolden,pebbleRound1,pebbleRound2,pebbleRound3,pebbleRound4,pebbleRound5] = await Promise.all([
   loadTree("CommonTree_1"),loadTree("Pine_1"),loadTree("TwistedTree_1"),loadTree("Rock_Medium_1"),
   loadTree("Grass_Common_Short"),loadTree("Grass_Common_Tall"),loadTree("Grass_Wispy_Short"),loadTree("Grass_Wispy_Tall"),
   loadTree("RockPath_Round_Small_1"),loadTree("RockPath_Round_Small_2"),loadTree("RockPath_Round_Small_3"),loadTree("RockPath_Round_Thin"),loadTree("RockPath_Round_Wide"),
   loadTree("Bush_Common_Flowers"),loadTree("Fern_1"),loadTree("Clover_1"),loadTree("Flower_3_Group"),
   loadTree("Mushroom_Common"),loadTree("Mushroom_Laetiporus"),
-  loadTree("DeadTree_1"),loadTree("DeadTree_2"),loadTree("DeadTree_3"),loadTree("DeadTree_4"),loadTree("DeadTree_5")
+  loadTree("Pebble_Round_1"),loadTree("Pebble_Round_2"),loadTree("Pebble_Round_3"),loadTree("Pebble_Round_4"),loadTree("Pebble_Round_5")
  ]);
  const choices=[common,pine,twisted];
  // Vegetação real do pacote de assets: tufos distribuídos nas encostas e clareiras, sem cobrir o acampamento inicial.
@@ -885,28 +885,23 @@ async function buildForest(){
    if(mushroom){registerResource({object:mushroom,x,z,type:"mushroom",active:true});placed++;}
   }
  }
- // Troncos secos decorativos: modelos 3D posicionados por uma sequência local,
- // sem consumir o RNG do mundo nem alterar posições/IDs dos recursos salvos.
- const deadTreeModels=[deadTree1,deadTree2,deadTree3,deadTree4,deadTree5].filter(Boolean);
- const fallenForestSpots=[];
- for(let i=0;i<14&&deadTreeModels.length;i++){
-  let spot=null;
-  for(let attempt=0;attempt<10&&!spot;attempt++){
-   const angle=((i*137.508+attempt*41.37)%360)*Math.PI/180;
-   const radius=29+((i*19+attempt*13)%61);
-   const x=Math.cos(angle)*radius,z=Math.sin(angle)*radius;
-   if(terrainHeight(x,z)>2.8)continue;
-   if(treePositions.some(p=>Math.hypot(p.x-x,p.z-z)<7.5))continue;
-   if(fallenForestSpots.some(p=>Math.hypot(p.x-x,p.z-z)<10))continue;
-   spot={x,z};
-  }
-  if(!spot)continue;
-  fallenForestSpots.push(spot);
-  const model=deadTreeModels[i%deadTreeModels.length].clone(true);
-  model.position.set(spot.x,terrainHeight(spot.x,spot.z),spot.z);
-  model.rotation.y=(i*1.61803398875)%(Math.PI*2);
-  model.scale.multiplyScalar(.62+(i%4)*.11);
-  model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+ // Pedrinhas decorativas espalhadas em clareiras e trechos de floresta.
+ // A sequência local mantém intactos o RNG do mundo e os IDs do salvamento.
+ const pebbleModels=[pebbleRound1,pebbleRound2,pebbleRound3,pebbleRound4,pebbleRound5].filter(Boolean);
+ const pebbleSpots=[];
+ for(let i=0;i<36&&pebbleModels.length;i++){
+  const angle=((i*137.50776405)%360)*Math.PI/180;
+  const radius=13+((i*29)%68);
+  const x=Math.cos(angle)*radius,z=Math.sin(angle)*radius;
+  if(terrainHeight(x,z)>2.2)continue;
+  if(treePositions.some(p=>Math.hypot(p.x-x,p.z-z)<2.4))continue;
+  if(pebbleSpots.some(p=>Math.hypot(p.x-x,p.z-z)<3.4))continue;
+  pebbleSpots.push({x,z});
+  const model=pebbleModels[i%pebbleModels.length].clone(true);
+  model.position.set(x,terrainHeight(x,z),z);
+  model.rotation.y=(i*2.39996322973)%(Math.PI*2);
+  model.scale.multiplyScalar(.20+(i%3)*.035);
+  model.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true;}});
   scene.add(model);treeModels.push(model);
  }
 }
