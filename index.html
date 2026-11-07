@@ -51,6 +51,24 @@
       <div id="desktopHelp">WASD mover · Shift correr · E coletar · Arraste para girar a câmera</div>
     </div>
   </div>
-  <script type="module" src="./src/main.js?v=inns-travelers-trade-2026-11-07-1"></script>
+  <script type="module">
+  const loading = document.getElementById("loading");
+  const loadingText = document.getElementById("loadingText");
+  let moduleSettled = false;
+  function showBootError(error) {
+    const detail = error && (error.message || error.reason?.message) ? (error.message || error.reason.message) : String(error || "erro desconhecido");
+    if (loadingText) loadingText.textContent = "Não foi possível iniciar o jogo: " + detail + ". Toque aqui para tentar novamente. Seu salvamento local foi preservado.";
+    if (loading) { loading.style.pointerEvents = "auto"; loading.onclick = () => location.reload(); }
+    console.error("Falha ao carregar Crônicas da Floresta:", error);
+  }
+  window.addEventListener("error", event => { if (!moduleSettled) showBootError(event.error || event.message); });
+  window.addEventListener("unhandledrejection", event => { if (!moduleSettled) showBootError(event.reason); });
+  setTimeout(() => {
+    if (!moduleSettled && loadingText && loadingText.textContent === "Preparando o mundo medieval...") {
+      loadingText.textContent = "A conexão com os módulos do jogo está demorando. Verificando a inicialização...";
+    }
+  }, 18000);
+  import("./src/main.js?v=inns-travelers-trade-2026-11-07-1").then(() => { moduleSettled = true; }).catch(error => { moduleSettled = true; showBootError(error); });
+</script>
 </body>
 </html>
