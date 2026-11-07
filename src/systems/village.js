@@ -130,6 +130,19 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     workSummary.textContent = residents.filter(r => r.enabled && r.profession !== "idle").length + "/3 moradores em atividade · produção guardada no depósito.";
   }
 
+  function getStockpile(resource) {
+    return Math.max(0, Number(stockpile[resource]) || 0);
+  }
+
+  function takeFromStockpile(resource, amount) {
+    const quantity = Math.max(0, Math.floor(Number(amount) || 0));
+    if (!Object.prototype.hasOwnProperty.call(stockpile, resource) || quantity < 1 || stockpile[resource] < quantity) return false;
+    stockpile[resource] -= quantity;
+    saveVillageProgress();
+    refreshStockpileUI();
+    return true;
+  }
+
   collectStockpileButton.addEventListener("click", () => {
     const amounts = { ...stockpile };
     const total = amounts.wood + amounts.stone + amounts.berries;
@@ -425,7 +438,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     if (rosterClock > 1.5) {
       rosterClock = 0;
       const hourText = hour.toFixed(0).padStart(2, "0") + "h";
-      const productionLine = workPanel.querySelector(".production");
+      const productionLine = workPanel.querySelector("#village-work-summary");
       if (productionLine) {
         const active = residents.filter(r => r.enabled && r.profession !== "idle").length;
         productionLine.textContent = active + "/3 moradores em atividade · ciclos durante o expediente.";
@@ -438,5 +451,5 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     }
   }
 
-  return { update };
+  return { update, getStockpile, takeFromStockpile };
 }

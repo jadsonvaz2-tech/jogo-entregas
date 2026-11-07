@@ -1478,6 +1478,9 @@ function updateHUD(){
   const marketNear=state.nearMarketIndex>=0;
   $("marketActions").hidden=!marketNear;
   $("sellBerries").disabled=!marketNear||state.berries<5;
+  $("sellVillageBerries").disabled=!marketNear||!villageResidents||villageResidents.getStockpile("berries")<5;
+  $("sellVillageWood").disabled=!marketNear||!villageResidents||villageResidents.getStockpile("wood")<5;
+  $("sellVillageStone").disabled=!marketNear||!villageResidents||villageResidents.getStockpile("stone")<3;
   $("sellMeat").disabled=!marketNear||state.meat<1;
   $("sellHide").disabled=!marketNear||state.hide<1;
   $("sellEgg").disabled=!marketNear||state.eggs<1;
@@ -1725,6 +1728,9 @@ $("craftStorageChest").addEventListener("click",craftStorageChest);
  $("collectHoney").addEventListener("click",collectHoney);
  $("eatHoney").addEventListener("click",eatHoney);
  $("sellBerries").addEventListener("click",()=>sellMarketGoods("berries"));
+ $("sellVillageBerries").addEventListener("click",()=>sellVillageStockpile("berries"));
+ $("sellVillageWood").addEventListener("click",()=>sellVillageStockpile("wood"));
+ $("sellVillageStone").addEventListener("click",()=>sellVillageStockpile("stone"));
  $("sellMeat").addEventListener("click",()=>sellMarketGoods("meat"));
  $("sellHide").addEventListener("click",()=>sellMarketGoods("hide"));
  $("sellEgg").addEventListener("click",()=>sellMarketGoods("egg"));
@@ -2249,6 +2255,20 @@ function findFenceConnection(targetX,targetZ,extension){
   else{toast("Você não tem quantidade suficiente para esta venda.");return;}
   state.coins+=price;
   updateHUD();saveGame();toast("Venda concluída: "+label+" por "+price+" moedas.");
+ }
+ function sellVillageStockpile(type){
+  if(state.nearMarketIndex<0){toast("Aproxime-se de uma banca de feira para negociar.");return;}
+  if(!villageResidents){toast("O depósito comunitário ainda não está disponível.");return;}
+  const offers={
+   berries:{amount:5,price:10,label:"5 frutas do depósito"},
+   wood:{amount:5,price:15,label:"5 madeiras do depósito"},
+   stone:{amount:3,price:12,label:"3 pedras do depósito"}
+  };
+  const offer=offers[type];
+  if(!offer||!villageResidents.takeFromStockpile(type,offer.amount)){toast("O depósito não possui a quantidade necessária.");return;}
+  state.coins+=offer.price;
+  updateHUD();saveGame();
+  toast("Venda comunitária concluída: "+offer.label+" por "+offer.price+" moedas.");
  }
  function craftWatchtower(){
   if(state.watchtowers.length>=6){toast("Limite de 6 torres de vigia atingido.");return;}
