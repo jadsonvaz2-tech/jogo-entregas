@@ -3111,6 +3111,9 @@ function craftCampfire(){
  createCampfire(x,z);
  updateHUD();saveGame();toast("Fogueira construída! Descanse perto dela para recuperar energia.");
 }
+let campfireFlameMesh=null,campfireCoreMesh=null,campfireLightSource=null;
+const campfireEmbers=[];
+let campfireAnimationTime=0;
 function createCampfire(x,z){
  if(state.campfireObject)scene.remove(state.campfireObject);
  const group=new THREE.Group();
@@ -3129,8 +3132,36 @@ function createCampfire(x,z){
  const flame=new THREE.Mesh(new THREE.ConeGeometry(.22,.8,7),flameMat);flame.position.y=.68;group.add(flame);
  const core=new THREE.Mesh(new THREE.SphereGeometry(.15,8,8),new THREE.MeshBasicMaterial({color:0xffd36a}));core.position.y=.43;group.add(core);
  const light=new THREE.PointLight(0xff9a42,1.8,10);light.position.y=1.1;group.add(light);
+ const emberGeometry=new THREE.SphereGeometry(.035,6,5);
+ campfireEmbers.length=0;
+ for(let i=0;i<7;i++){
+  const emberMaterial=new THREE.MeshBasicMaterial({color:i%2?0xff9b3d:0xffd16b,transparent:true,opacity:0,depthWrite:false});
+  const ember=new THREE.Mesh(emberGeometry,emberMaterial);
+  const phase=i/7;
+  ember.position.set(Math.sin(i*2.4)*.22,.6+phase*1.4,Math.cos(i*2.4)*.22);
+  group.add(ember);
+  campfireEmbers.push({object:ember,phase,speed:.42+(i%3)*.09});
+ }
  group.position.set(x,terrainHeight(x,z),z);scene.add(group);
  state.campfireObject=group;state.campfire=true;state.campfireX=x;state.campfireZ=z;
+ campfireFlameMesh=flame;campfireCoreMesh=core;campfireLightSource=light;campfireAnimationTime=0;
+}
+function updateCampfireVisuals(dt){
+ if(!state.campfireObject||!campfireFlameMesh)return;
+ campfireAnimationTime+=dt;
+ const t=campfireAnimationTime;
+ const flicker=Math.sin(t*13)+Math.sin(t*21+1.7)*.45;
+ campfireFlameMesh.scale.set(1,.86+flicker*.09,1);
+ campfireFlameMesh.rotation.z=Math.sin(t*8)*.075;
+ campfireCoreMesh.scale.setScalar(.94+Math.sin(t*17)*.07);
+ campfireLightSource.intensity=1.65+flicker*.28;
+ for(const ember of campfireEmbers){
+  const rise=(t*ember.speed+ember.phase)%1;
+  ember.object.position.y=.58+rise*1.45;
+  ember.object.position.x=Math.sin(t*2.2+ember.phase*8)*(.12+rise*.2);
+  ember.object.position.z=Math.cos(t*1.8+ember.phase*7)*(.12+rise*.2);
+  ember.object.material.opacity=(1-rise)*.78;
+ }
 }
 function craftCloak(){
  if(state.coldCloak){toast("Você já está usando o manto térmico.");return;}
@@ -3807,6 +3838,7 @@ function update(dt){
  for(const r of resources){if(r.type==="fiber"&&!r.active&&r.respawnAt&&nowMs>=r.respawnAt){r.active=true;r.respawnAt=0;r.object.visible=true;toast("Uma planta fibrosa cresceu novamente.");}}
  updateWorldLighting(dt);
  updateForestFireflies(dt);
+ updateCampfireVisuals(dt);
  updateSteelSpearThrust(dt);
   if(state.steelShieldGuarding){state.energy=Math.max(0,state.energy-dt*.65);if(state.energy<=0){state.steelShieldGuarding=false;if(state.steelShieldObject)applySteelShieldPose(state.steelShieldObject);$("guardShieldBtn").textContent="🛡️ ERGUER ESCUDO";toast("Você ficou sem energia e baixou o escudo.");}}
  updateWildlife(dt);
