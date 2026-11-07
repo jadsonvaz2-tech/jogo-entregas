@@ -1260,7 +1260,7 @@ async function buildForest(){
   }
  }
 
-const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,cloth:0,paddedGambeson:false,gambesonObject:null,expeditionTents:[],nearExpeditionTentIndex:-1,fieldKits:0,ironOre:0,coal:0,ironIngots:0,steelIngots:0,steelSword:false,steelHelmet:false,steelChestplate:false,steelAxe:false,steelPickaxe:false,steelShield:false,steelShieldGuarding:false,steelSpear:false,steelSpearObject:null,steelShieldObject:null,steelFurnace:null,steelFurnaceObject:null,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,herbs:0,herbBeds:[],herbObjects:[],nearHerbBedIndex:-1,meat:0,cookedMeat:0,smokedMeat:0,healingSalve:0,hide:0,leather:0,leatherArmor:false,armorObject:null,reinforcedAxe:false,reinforcedPickaxe:false,ironAxe:false,ironPickaxe:false,ironSword:false,swordObject:null,swordHand:null,ironHelmet:false,helmetObject:null,helmetHead:null,ironChestplate:false,ironChestObject:null,smithy:null,smithyObject:null,nearSmithy:false,tannery:null,nearTannery:false,huntedAnimals:[],huntedWolves:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,cloth:0,ironOre:0,coal:0,ironIngots:0,steelIngots:0,fiber:0,berries:0,herbs:0,meat:0,cookedMeat:0,smokedMeat:0,healingSalve:0,hide:0,leather:0,bandages:0,honey:0,wool:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],pathTiles:[],lanternPosts:[],wells:[],gardenPlots:[],gardenObjects:[],nearGardenIndex:-1,marketStalls:[],nearMarketIndex:-1,coins:0,chickenCoops:[],nearCoopIndex:-1,eggs:0,apiaries:[],nearApiaryIndex:-1,honey:0,sheepPens:[],nearSheepPenIndex:-1,wool:0,loom:null,nearLoom:false,woolGarment:false,smokehouse:null,nearSmokehouse:false,herbalistHut:null,nearHerbalist:false,watchtowers:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
+const state={health:100,hunger:100,thirst:100,temperature:100,energy:100,wood:0,stone:0,cloth:0,paddedGambeson:false,gambesonObject:null,expeditionTents:[],nearExpeditionTentIndex:-1,fieldKits:0,reinforcedFieldKits:0,ironOre:0,coal:0,ironIngots:0,steelIngots:0,steelSword:false,steelHelmet:false,steelChestplate:false,steelAxe:false,steelPickaxe:false,steelShield:false,steelShieldGuarding:false,steelSpear:false,steelSpearObject:null,steelShieldObject:null,steelFurnace:null,steelFurnaceObject:null,axe:false,pickaxe:false,running:false,moveX:0,moveY:0,yaw:0,cameraYaw:0,cameraPitch:.22,day:1,timeOfDay:8,near:null,campfire:false,campfireX:null,campfireZ:null,shelter:false,shelterX:null,shelterZ:null,coldCloak:false,leatherBoots:false,fiber:0,collectedResources:[],berries:0,herbs:0,herbBeds:[],herbObjects:[],nearHerbBedIndex:-1,meat:0,cookedMeat:0,smokedMeat:0,healingSalve:0,hide:0,leather:0,leatherArmor:false,armorObject:null,reinforcedAxe:false,reinforcedPickaxe:false,ironAxe:false,ironPickaxe:false,ironSword:false,swordObject:null,swordHand:null,ironHelmet:false,helmetObject:null,helmetHead:null,ironChestplate:false,ironChestObject:null,smithy:null,smithyObject:null,nearSmithy:false,tannery:null,nearTannery:false,huntedAnimals:[],huntedWolves:[],starterKitGranted:false,bed:false,bedX:null,bedZ:null,bandages:0,storageChest:false,storageChestX:null,storageChestZ:null,storage:{wood:0,stone:0,cloth:0,ironOre:0,coal:0,ironIngots:0,steelIngots:0,fiber:0,berries:0,herbs:0,meat:0,cookedMeat:0,smokedMeat:0,healingSalve:0,hide:0,leather:0,bandages:0,honey:0,wool:0},waterSkin:false,waterCharges:0,bow:false,arrows:0,fenceSections:[],gates:[],floorTiles:[],wallPanels:[],windowPanels:[],roofTiles:[],gablePanels:[],ridgeCaps:[],chimneys:[],pathTiles:[],lanternPosts:[],wells:[],gardenPlots:[],gardenObjects:[],nearGardenIndex:-1,marketStalls:[],nearMarketIndex:-1,coins:0,chickenCoops:[],nearCoopIndex:-1,eggs:0,apiaries:[],nearApiaryIndex:-1,honey:0,sheepPens:[],nearSheepPenIndex:-1,wool:0,loom:null,nearLoom:false,woolGarment:false,smokehouse:null,nearSmokehouse:false,herbalistHut:null,nearHerbalist:false,watchtowers:[],doorPanels:[],doorObjects:[],nearDoorIndex:-1,windowShutters:[],shutterObjects:[],nearShutterIndex:-1,gateObjects:[],nearGateIndex:-1};
 const slopeWorldUp=new THREE.Vector3(0,1,0);
 const slopeWorldNormal=new THREE.Vector3();
 const slopeLocalNormal=new THREE.Vector3();
@@ -1284,7 +1284,7 @@ function loadGame(){
   rawSave=localStorage.getItem(saveKey);
   const saved=JSON.parse(rawSave||"null");
   if(!saved)return;
-  for(const key of ["health","hunger","thirst","temperature","energy","wood","stone","cloth","ironOre","coal","ironIngots","steelIngots","day","timeOfDay","berries","fiber","herbs","meat","cookedMeat","smokedMeat","healingSalve","fieldKits","hide","leather","bandages","waterCharges","arrows","coins","eggs","honey","wool"])if(Number.isFinite(saved[key]))state[key]=saved[key];
+  for(const key of ["health","hunger","thirst","temperature","energy","wood","stone","cloth","ironOre","coal","ironIngots","steelIngots","day","timeOfDay","berries","fiber","herbs","meat","cookedMeat","smokedMeat","healingSalve","fieldKits","reinforcedFieldKits","hide","leather","bandages","waterCharges","arrows","coins","eggs","honey","wool"])if(Number.isFinite(saved[key]))state[key]=saved[key];
   state.axe=saved.axe===true;state.pickaxe=saved.pickaxe===true;
   state.starterKitGranted=saved.starterKitGranted===true;
   state.campfire=saved.campfire===true;
@@ -1356,7 +1356,7 @@ function saveGame(){
   if(previous){
    try{JSON.parse(previous);localStorage.setItem(key+"-backup",previous);}catch(backupError){localStorage.setItem(key+"-recovery-raw",previous);}
   }
-  localStorage.setItem(key,JSON.stringify({x:savedPosition.x,z:savedPosition.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,cloth:state.cloth,ironOre:state.ironOre,coal:state.coal,ironIngots:state.ironIngots,steelIngots:state.steelIngots,steelSword:state.steelSword,steelHelmet:state.steelHelmet,steelChestplate:state.steelChestplate,steelAxe:state.steelAxe,steelPickaxe:state.steelPickaxe,steelShield:state.steelShield,steelShieldGuarding:state.steelShieldGuarding,steelSpear:state.steelSpear,steelFurnace:state.steelFurnace,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,herbs:state.herbs,herbBeds:state.herbBeds,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,leatherArmor:state.leatherArmor,paddedGambeson:state.paddedGambeson,expeditionTents:state.expeditionTents,reinforcedAxe:state.reinforcedAxe,reinforcedPickaxe:state.reinforcedPickaxe,ironAxe:state.ironAxe,ironPickaxe:state.ironPickaxe,ironSword:state.ironSword,ironHelmet:state.ironHelmet,ironChestplate:state.ironChestplate,smithy:state.smithy,meat:state.meat,cookedMeat:state.cookedMeat,smokedMeat:state.smokedMeat,smokehouse:state.smokehouse,healingSalve:state.healingSalve,fieldKits:state.fieldKits,herbalistHut:state.herbalistHut,leather:state.leather,tannery:state.tannery,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,huntedWolves:state.huntedWolves,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,wells:state.wells,gardenPlots:state.gardenPlots,watchtowers:state.watchtowers,marketStalls:state.marketStalls,coins:state.coins,chickenCoops:state.chickenCoops,apiaries:state.apiaries,honey:state.honey,sheepPens:state.sheepPens,wool:state.wool,loom:state.loom,woolGarment:state.woolGarment,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
+  localStorage.setItem(key,JSON.stringify({x:savedPosition.x,z:savedPosition.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,cloth:state.cloth,ironOre:state.ironOre,coal:state.coal,ironIngots:state.ironIngots,steelIngots:state.steelIngots,steelSword:state.steelSword,steelHelmet:state.steelHelmet,steelChestplate:state.steelChestplate,steelAxe:state.steelAxe,steelPickaxe:state.steelPickaxe,steelShield:state.steelShield,steelShieldGuarding:state.steelShieldGuarding,steelSpear:state.steelSpear,steelFurnace:state.steelFurnace,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,herbs:state.herbs,herbBeds:state.herbBeds,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,leatherArmor:state.leatherArmor,paddedGambeson:state.paddedGambeson,expeditionTents:state.expeditionTents,reinforcedAxe:state.reinforcedAxe,reinforcedPickaxe:state.reinforcedPickaxe,ironAxe:state.ironAxe,ironPickaxe:state.ironPickaxe,ironSword:state.ironSword,ironHelmet:state.ironHelmet,ironChestplate:state.ironChestplate,smithy:state.smithy,meat:state.meat,cookedMeat:state.cookedMeat,smokedMeat:state.smokedMeat,smokehouse:state.smokehouse,healingSalve:state.healingSalve,fieldKits:state.fieldKits,reinforcedFieldKits:state.reinforcedFieldKits,herbalistHut:state.herbalistHut,leather:state.leather,tannery:state.tannery,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,huntedWolves:state.huntedWolves,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,wells:state.wells,gardenPlots:state.gardenPlots,watchtowers:state.watchtowers,marketStalls:state.marketStalls,coins:state.coins,chickenCoops:state.chickenCoops,apiaries:state.apiaries,honey:state.honey,sheepPens:state.sheepPens,wool:state.wool,loom:state.loom,woolGarment:state.woolGarment,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
@@ -1472,20 +1472,23 @@ function updateHUD(){
   $("gardenStatus").textContent="Hortas comunitárias: "+state.gardenPlots.length+"/8";
   $("watchtowerStatus").textContent="Torres de vigia: "+state.watchtowers.length+"/6";
    $("expeditionTentStatus").textContent="Tendas de expedição: "+state.expeditionTents.length+"/4";
-  $("fieldKitStatus").textContent="Kits de campo: "+state.fieldKits+" · "+(state.paddedGambeson?"gibão reforça a recuperação":"recuperação padrão");
+  $("fieldKitStatus").textContent="Kits comuns: "+state.fieldKits+" · Reforçados na mochila: "+state.reinforcedFieldKits+" · "+(state.paddedGambeson?"gibão reforça a recuperação":"recuperação padrão");
   const communalCloth=villageResidents?.getStockpile?.("cloth")||0,communalLeather=villageResidents?.getStockpile?.("leather")||0,communalHerbs=villageResidents?.getStockpile?.("herbs")||0;
   const communalKits=villageResidents?.getStockpile?.("fieldKits")||0;
   const communalGambesons=villageResidents?.getStockpile?.("paddedGambesons")||0;
-  $("communalExpeditionStatus").textContent="Depósito comunitário · Tecidos: "+communalCloth+" · Couro curtido: "+communalLeather+" · Ervas: "+communalHerbs+" · Kits prontos: "+communalKits+" · Gibões: "+communalGambesons;
+  const communalReinforcedKits=villageResidents?.getStockpile?.("reinforcedFieldKits")||0;
+  $("communalExpeditionStatus").textContent="Depósito comunitário · Tecidos: "+communalCloth+" · Couro curtido: "+communalLeather+" · Ervas: "+communalHerbs+" · Kits: "+communalKits+" · Reforçados: "+communalReinforcedKits+" · Gibões: "+communalGambesons;
   $("withdrawCommunalFieldKit").hidden=state.nearExpeditionTentIndex<0;
   $("withdrawCommunalFieldKit").disabled=state.nearExpeditionTentIndex<0||communalKits<1;
+  $("withdrawCommunalReinforcedKit").hidden=state.nearExpeditionTentIndex<0;
+  $("withdrawCommunalReinforcedKit").disabled=state.nearExpeditionTentIndex<0||communalReinforcedKits<1;
   $("withdrawCommunalGambeson").hidden=state.nearExpeditionTentIndex<0;
   $("withdrawCommunalGambeson").disabled=state.nearExpeditionTentIndex<0||communalGambesons<1||state.paddedGambeson;
   $("craftCommunalFieldKit").hidden=state.nearExpeditionTentIndex<0;
   $("craftCommunalFieldKit").disabled=state.nearExpeditionTentIndex<0||communalCloth<2||communalLeather<1||communalHerbs<2;
   $("craftFieldKit").hidden=state.nearExpeditionTentIndex<0;
   $("craftFieldKit").disabled=state.nearExpeditionTentIndex<0||state.cloth<2||state.leather<1||state.herbs<2;
-  $("useFieldKit").disabled=state.fieldKits<1||(state.health>=100&&state.energy>=100);
+  $("useFieldKit").disabled=(state.fieldKits<1&&state.reinforcedFieldKits<1)||(state.health>=100&&state.energy>=100&&state.hunger>=100&&state.thirst>=100);
   $("marketStatus").textContent="Feiras construídas: "+state.marketStalls.length+"/4 · Moedas: "+state.coins;
   $("coopStatus").textContent="Galinheiros: "+state.chickenCoops.length+"/4 · Ovos: "+state.eggs;
   $("apiaryStatus").textContent="Colmeias: "+state.apiaries.length+"/4 · Mel: "+state.honey;
@@ -1881,6 +1884,7 @@ $("craftStorageChest").addEventListener("click",craftStorageChest);
   $("craftFieldKit").addEventListener("click",craftFieldKit);
   $("craftCommunalFieldKit").addEventListener("click",craftCommunalFieldKit);
   $("withdrawCommunalFieldKit").addEventListener("click",withdrawCommunalFieldKit);
+  $("withdrawCommunalReinforcedKit").addEventListener("click",withdrawCommunalReinforcedKit);
   $("withdrawCommunalGambeson").addEventListener("click",withdrawCommunalGambeson);
   $("useFieldKit").addEventListener("click",useFieldKit);
  $("craftSmithy").addEventListener("click",craftSmithy);
@@ -2480,9 +2484,23 @@ function findFenceConnection(targetX,targetZ,extension){
   if(!villageResidents.takeFromStockpile("fieldKits",1)){toast("Não foi possível retirar o kit comunitário.");return;}
   state.fieldKits++;updateHUD();saveGame();toast("Kit de campo retirado do depósito da aldeia e guardado na mochila.");
  }
+ function withdrawCommunalReinforcedKit(){
+  if(state.nearExpeditionTentIndex<0){toast("Aproxime-se de uma tenda de expedição.");return;}
+  if(!villageResidents?.getStockpile||!villageResidents?.takeFromStockpile||villageResidents.getStockpile("reinforcedFieldKits")<1){toast("Não há suprimento reforçado no depósito comunitário.");return;}
+  if(!villageResidents.takeFromStockpile("reinforcedFieldKits",1)){toast("Não foi possível retirar o suprimento reforçado.");return;}
+  state.reinforcedFieldKits++;updateHUD();saveGame();toast("Suprimento reforçado retirado e guardado na mochila.");
+ }
  function useFieldKit(){
-  if(state.fieldKits<1){toast("Você não possui kit de campo.");return;}
-  if(state.health>=100&&state.energy>=100){toast("Você já está em boas condições.");return;}
+  if(state.fieldKits<1&&state.reinforcedFieldKits<1){toast("Você não possui kit de campo.");return;}
+  if(state.health>=100&&state.energy>=100&&state.hunger>=100&&state.thirst>=100){toast("Você já está em boas condições.");return;}
+  if(state.reinforcedFieldKits>0){
+   state.reinforcedFieldKits--;
+   const healing=state.paddedGambeson?65:55,energy=40;
+   state.health=Math.min(100,state.health+healing);state.energy=Math.min(100,state.energy+energy);
+   state.hunger=Math.min(100,state.hunger+10);state.thirst=Math.min(100,state.thirst+10);
+   updateHUD();saveGame();toast("Suprimento reforçado utilizado: +"+healing+" de vida, +40 de energia, +10 de fome e sede.");
+   return;
+  }
   state.fieldKits--;const healing=state.paddedGambeson?45:35,energy=state.paddedGambeson?25:15;
   state.health=Math.min(100,state.health+healing);state.energy=Math.min(100,state.energy+energy);
   updateHUD();saveGame();toast("Kit de campo utilizado: +"+healing+" de vida e +"+energy+" de energia.");
@@ -4629,7 +4647,7 @@ async function start(){
  const loaded=await loadCharacter();
  if(!loaded)toast("Modelo do viajante indisponível: usando personagem provisório.");
  storyEncounter=startOptional("a missão e o personagem Edrik",()=>createStoryEncounter({THREE,scene,player,terrainHeight,state,onSave:saveGame,onToast:toast}));
- villageResidents=startOptional("os moradores da aldeia central",()=>createVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,onSave:saveGame,onFarmAction:villageFarmAction,onClaimTool:(type)=>{state[type]=true;if(type==="ironHelmet")createIronHelmetVisual();if(type==="ironChestplate")createIronChestplateVisual();updateHUD();saveGame();return true;},managementRoot:$("playerVillageManagementSlot")}));
+ villageResidents=startOptional("os moradores da aldeia central",()=>createVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,onSave:saveGame,onFarmAction:villageFarmAction,onClaimTool:(type)=>{if(type==="reinforcedFieldKit"){state.reinforcedFieldKits++;}else{state[type]=true;if(type==="ironHelmet"||type==="steelHelmet")createIronHelmetVisual();if(type==="ironChestplate"||type==="steelChestplate")createIronChestplateVisual();if(type==="ironAxe"||type==="ironPickaxe"||type==="steelAxe"||type==="steelPickaxe")createToolVisual(type.toLowerCase().includes("axe")?"axe":"pickaxe");if(type==="steelSword")createIronSwordVisual();if(type==="steelShield")createSteelShieldVisual();if(type==="steelSpear")createSteelSpearVisual();}updateHUD();saveGame();return true;},managementRoot:$("playerVillageManagementSlot")}));
  settlementEconomy=startOptional("a economia das aldeias",()=>createSettlementEconomy({THREE,player,state,onToast:toast,onChange:()=>{updateHUD();saveGame();}}));
  distantVillageResidents=startOptional("os moradores das outras aldeias",()=>createDistantVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,economy:settlementEconomy}));
  startupStage="finalizando a entrada no mundo";
