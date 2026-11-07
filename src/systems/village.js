@@ -113,6 +113,11 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   dialog.querySelector(".close").addEventListener("click", closeDialog);
   dialog.querySelector("#village-dialog-done").addEventListener("click", closeDialog);
 
+  const skills = Object.fromEntries(residents.map(resident => {
+    const savedSkill = saved.skills && typeof saved.skills === "object" ? saved.skills[resident.id] || {} : {};
+    return [resident.id, { xp: Math.max(0, Math.floor(Number(savedSkill.xp) || 0)), level: Math.min(10, Math.max(1, Math.floor(Number(savedSkill.level) || 1))) }];
+  }));
+
   const professions = {
     farmer: { label: "Agricultora", resource: "berries", resourceLabel: "frutas", amount: 2, detail: "Cuida das hortas: planta 3 frutas e colhe 6 quando amadurecem." },
     lumberjack: { label: "Lenhador", resource: "wood", resourceLabel: "madeiras", amount: 1 },
@@ -125,7 +130,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     try {
       const jobs = {};
       for (const resident of residents) jobs[resident.id] = { profession: resident.profession, enabled: resident.enabled };
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, lastUpkeepDay }));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, lastUpkeepDay, skills }));
     } catch (error) {
       console.warn("Não foi possível salvar o progresso dos moradores.", error);
     }
@@ -190,6 +195,19 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     onToast("Você recolheu a produção comunitária: " + amounts.wood + " madeiras, " + amounts.stone + " pedras e " + amounts.berries + " frutas.");
   });
 
+  function experienceNeeded(level) { return level * 5; }
+
+  function productionBonus(resident) { return Math.floor((skills[resident.id].level - 1) / 2); }
+
+  function awardWorkExperience(resident) {
+    const skill = skills[resident.id];
+    if (skill.level >= 10) return false;
+    skill.xp++;
+    if (skill.xp >= experienceNeeded(skill.level)) { skill.level++; saveVillageProgress(); return true; }
+    saveVillageProgress();
+    return false;
+  }
+
   function renderWorkPanel() {
     workList.innerHTML = "";
     for (const resident of residents) {
@@ -236,9 +254,10 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       const production = document.createElement("div");
       production.className = "production";
       const job = professions[resident.profession];
-      production.textContent = job.resource
-        ? (job.detail || ("Produz " + job.amount + " " + job.resourceLabel + " por ciclo de trabalho."))
-        : "Sem produção atribuída.";
+      const skill = skills[resident.id];
+      const bonus = productionBonus(resident);
+      const skillLine = skill.level >= 10 ? "NÍVEL 10 · MESTRE" : "NÍVEL " + skill.level + " · XP " + skill.xp + "/" + experienceNeeded(skill.level) + (bonus ? " · +" + bonus + " por ciclo" : "");
+      production.textContent = job.resource ? (job.detail || ("Produz " + job.amount + " " + job.resourceLabel + " por ciclo de trabalho.")) + " " + skillLine : "Sem produção atribuída. " + skillLine;
       row.append(head, select, toggle, production);
       workList.appendChild(row);
     }
@@ -469,21 +488,27 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
         const workCycle = morale >= 75 ? 40 : morale < 25 ? 55 : 45;
         if (workElapsed[resident.id] >= workCycle) {
           workElapsed[resident.id] -= workCycle;
-          const farmResult = resident.profession === "farmer" && typeof onFarmAction === "function"
-            ? onFarmAction()
-            : null;
+          const leveledUp = awardWorkExperience(resident);
+          const bonus = productionBonus(resident);
+          if (leveledUp) {
+            renderWorkPanel();
+            onToast(resident.name + " evoluiu na profissão! Agora está no nível " + skills[resident.id].level + ".");
+          }
+          const farmResult = resident.profession === "farmer" && typeof onFarmAction === "function" ? onFarmAction() : null;
           if (farmResult && typeof farmResult === "object" && farmResult.resource && Number(farmResult.amount) > 0) {
-            stockpile[farmResult.resource] = (stockpile[farmResult.resource] || 0) + Number(farmResult.amount);
+            const produced = Number(farmResult.amount) + bonus;
+            stockpile[farmResult.resource] = (stockpile[farmResult.resource] || 0) + produced;
             saveVillageProgress();
             refreshStockpileUI();
-            onToast(farmResult.message || "Lina armazenou a colheita no depósito comunitário.");
+            onToast((farmResult.message || "Lina armazenou a colheita no depósito comunitário.") + (bonus ? " Bônus de experiência: +" + bonus + " unidade(s)." : ""));
           } else if (farmResult) {
             onToast(farmResult);
           } else {
-            stockpile[job.resource] = (stockpile[job.resource] || 0) + job.amount;
+            const produced = job.amount + bonus;
+            stockpile[job.resource] = (stockpile[job.resource] || 0) + produced;
             saveVillageProgress();
             refreshStockpileUI();
-            onToast(resident.name + " armazenou " + job.amount + " " + job.resourceLabel + " no depósito comunitário.");
+            onToast(resident.name + " armazenou " + produced + " " + job.resourceLabel + " no depósito comunitário.");
           }
         }
       }
