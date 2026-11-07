@@ -72,7 +72,8 @@
         }catch(e){return "inválido";}
       }
       open.addEventListener("click",function(){
-        values.textContent="Atual: "+read("cronicas-floresta-village-v1")+" | Cópia: "+read("cronicas-floresta-village-v1-backup")+" | Recuperação: "+(localStorage.getItem("cronicas-floresta-village-v1-recovery-used")?"registrada":"não registrada");
+        function readWorld(key){try{var raw=localStorage.getItem(key);if(!raw)return "não encontrado";var d=JSON.parse(raw);if(!d||typeof d!=="object")return "inválido";var groups=["fenceSections","gates","floorTiles","wallPanels","windowPanels","roofTiles","gablePanels","ridgeCaps","chimneys","pathTiles","lanternPosts","wells","gardenPlots","herbBeds","watchtowers","marketStalls","chickenCoops","apiaries","sheepPens","doorPanels","windowShutters"];var count=groups.reduce(function(n,k){return n+(Array.isArray(d[k])?d[k].length:0)},0);var day=Number.isFinite(d.day)?d.day:"?";return "encontrado · dia "+day+" · "+count+" módulos/estruturas salvos";}catch(e){return "inválido";}}
+        values.textContent="ALDEIA — Atual: "+read("cronicas-floresta-village-v1")+" | Cópia: "+read("cronicas-floresta-village-v1-backup")+" | Recuperação: "+(localStorage.getItem("cronicas-floresta-village-v1-recovery-used")?"registrada":"não registrada")+"\\nMUNDO — Atual: "+readWorld("cronicas-floresta-save")+" | Cópia: "+readWorld("cronicas-floresta-save-backup");
         panel.hidden=false;
       });
       document.getElementById("save-check-close").addEventListener("click",function(){panel.hidden=true;});
