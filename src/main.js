@@ -272,7 +272,7 @@ function loadCharacter(){
   const timer=setTimeout(()=>{if(!finished){finished=true;resolve(false);}},18000);
   loader.load(raw+"Viking_Male.gltf",g=>{
    if(finished)return;
-   finished=true;clearTimeout(timer);
+   try{
    const model=g.scene;
    const box=new THREE.Box3().setFromObject(model);
    const size=box.getSize(new THREE.Vector3());
@@ -305,7 +305,15 @@ function loadCharacter(){
      if(event.action===lockedAnimation){lockedAnimation=null;}
     });
    }
-   characterReady=true; resolve(true);
+   characterReady=true;
+   finished=true;clearTimeout(timer);resolve(true);
+   }catch(error){
+    console.error("Falha ao preparar o modelo do viajante; mantendo personagem provisório:",error);
+    finished=true;clearTimeout(timer);
+    player.remove(fallback);
+    if(!fallback.parent)player.add(fallback);
+    resolve(false);
+   }
   },undefined,()=>{
    if(finished)return;
    finished=true;clearTimeout(timer);resolve(false);
