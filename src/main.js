@@ -1294,9 +1294,16 @@ let last=performance.now(),toastTimer=0,lastSave=0;
 const flyingArrows=[];
 function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>$("toast").classList.remove("show"),1900);}
 const CARRY_CAPACITY=50;
+const CARRY_WEIGHTS={wood:.8,stone:1.1,ironOre:1.4,coal:.6,ironIngots:1.3,steelIngots:1.5,fiber:.12,berries:.15,herbs:.12,meat:.8,cookedMeat:.65,smokedMeat:.65,healingSalve:.25,hide:.8,leather:.6,bandages:.15,honey:.35,wool:.6,eggs:.2,arrows:.08};
+let carryWeightCache=0,carryWeightRefresh=0;
 function getCarryWeight(){
- const weight={wood:.8,stone:1.1,ironOre:1.4,coal:.6,ironIngots:1.3,steelIngots:1.5,fiber:.12,berries:.15,herbs:.12,meat:.8,cookedMeat:.65,smokedMeat:.65,healingSalve:.25,hide:.8,leather:.6,bandages:.15,honey:.35,wool:.6,eggs:.2,arrows:.08};
- return Object.entries(weight).reduce((total,[resource,unit])=>total+Math.max(0,Number(state[resource])||0)*unit,0);
+ if(carryWeightRefresh<=0){
+  let total=0;
+  for(const resource in CARRY_WEIGHTS)total+=Math.max(0,Number(state[resource])||0)*CARRY_WEIGHTS[resource];
+  carryWeightCache=total;
+  carryWeightRefresh=.35;
+ }
+ return carryWeightCache;
 }
 function updateHUD(){
   const milestones=[
@@ -4193,6 +4200,7 @@ function updateSteelSpearThrust(dt){
  }else{spear.position.z=.22;spear.rotation.x=.08;}
 }
 function update(dt){
+ carryWeightRefresh-=dt;
  const nowMs=Date.now();
  for(const r of resources){if(r.type==="fiber"&&!r.active&&r.respawnAt&&nowMs>=r.respawnAt){r.active=true;r.respawnAt=0;r.object.visible=true;toast("Uma planta fibrosa cresceu novamente.");}}
  updateWorldLighting(dt);
