@@ -394,9 +394,21 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const assigned = residents.filter(r => r.homeSlot && housingSlots().some(slot => slot.id === r.homeSlot)).length;
     const woodAvailable = availableConstructionResource("wood");
     const stoneAvailable = availableConstructionResource("stone");
-    housingStatus.textContent = "MORADORES · " + residents.length + "/" + capacity + " vagas · MORADIAS ATRIBUÍDAS · " + assigned + "/" + residents.length + " · CASAS · " + housesBuilt + "/6 · MATERIAIS PARA CASA · " + woodAvailable + "/16 madeiras · " + stoneAvailable + "/8 pedras";
-    buildHouseButton.disabled = housesBuilt >= HOUSE_SLOTS.length || woodAvailable < 16 || stoneAvailable < 8;
-    buildHouseButton.textContent = housesBuilt >= HOUSE_SLOTS.length ? "LIMITE DE CASAS ATINGIDO" : "🏠 CONSTRUIR CASA · 16 MADEIRAS + 8 PEDRAS";
+    const woodBackpack = Math.max(0, Math.floor(Number(state.wood) || 0));
+    const stoneBackpack = Math.max(0, Math.floor(Number(state.stone) || 0));
+    const woodCommunal = Math.max(0, Math.floor(Number(stockpile.wood) || 0));
+    const stoneCommunal = Math.max(0, Math.floor(Number(stockpile.stone) || 0));
+    const woodChest = Math.max(0, Math.floor(Number(state.storage?.wood) || 0));
+    const stoneChest = Math.max(0, Math.floor(Number(state.storage?.stone) || 0));
+    const missingWood = Math.max(0, 16 - woodAvailable);
+    const missingStone = Math.max(0, 8 - stoneAvailable);
+    housingStatus.textContent = "MORADORES · " + residents.length + "/" + capacity + " vagas · CAMAS · " + assigned + "/" + residents.length + " · CASAS · " + housesBuilt + "/6 · CASA: MADEIRA " + woodAvailable + "/16 (mochila " + woodBackpack + " + depósito " + woodCommunal + " + baú " + woodChest + ") · PEDRA " + stoneAvailable + "/8 (mochila " + stoneBackpack + " + depósito " + stoneCommunal + " + baú " + stoneChest + ").";
+    buildHouseButton.disabled = housesBuilt >= HOUSE_SLOTS.length || missingWood > 0 || missingStone > 0;
+    buildHouseButton.textContent = housesBuilt >= HOUSE_SLOTS.length
+      ? "LIMITE DE CASAS ATINGIDO"
+      : missingWood || missingStone
+        ? "FALTAM " + missingWood + " MADEIRAS · " + missingStone + " PEDRAS"
+        : "🏠 CONSTRUIR CASA · 16 MADEIRAS + 8 PEDRAS";
     recruitButton.disabled = residents.length >= capacity || (Number(state.coins)||0) < 25;
     recruitButton.textContent = residents.length >= capacity ? "CONSTRUA UMA CASA PARA MAIS VAGAS" : "👥 RECRUTAR · 25 MOEDAS";
   }
@@ -718,6 +730,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     refreshProductionReport();
     refreshFoodReport();
     refreshMaterialTargetsUI();
+    refreshHousingUI();
     refreshVillageAlerts(total, reserveDays);
   }
 
@@ -1363,6 +1376,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
         const active = residents.filter(r => r.enabled && r.profession !== "idle").length;
         productionLine.textContent = active + "/" + residents.length + " moradores em atividade · ciclos durante o expediente.";
       }
+      refreshHousingUI();
       refreshSecurityUI();
       roster.querySelector("div:last-child").textContent = hour >= 20 || hour < 5.5
         ? "Todos descansam · " + hourText
