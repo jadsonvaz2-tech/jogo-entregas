@@ -43,6 +43,47 @@ export function createCommunityExpeditions({villageResidents,state,onToast,root=
   return gear;
  };
  const formatTime=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return Math.floor(s/60)+"m "+String(s%60).padStart(2,"0")+"s";};
+ const EVENT_DEFS={
+  creature:{title:"ENCONTRO NA TRILHA",text:"Uma criatura selvagem surge entre as árvores e bloqueia a passagem. O grupo precisa decidir como agir.",choices:[{id:"stand",label:"Enfrentar a criatura",result:"O grupo manteve a posição e afastou a criatura.",rewards:[["hide",1,2],["meat",1,2]]},{id:"sneak",label:"Desviar silenciosamente",result:"Os moradores contornaram a ameaça sem se ferir, mas perderam tempo.",delay:18000,rewards:[["herbs",1,2]]},{id:"camp",label:"Montar um acampamento defensivo",result:"Uma pequena barricada protegeu o grupo durante a noite.",rewards:[["fiber",2,4],["meat",1,1]]}]},
+  ruins:{title:"DESCOBERTA DE RUÍNAS",text:"O grupo encontrou uma construção antiga escondida pela vegetação. Há sinais de ferramentas e objetos esquecidos.",choices:[{id:"search",label:"Explorar as ruínas",result:"Os moradores vasculharam as salas e encontraram materiais raros.",rewards:[["cutStone",2,4],["ironIngots",1,1]]},{id:"careful",label:"Investigar com cautela",result:"O grupo mapeou a entrada e recolheu ervas e pedras úteis.",rewards:[["herbs",2,4],["cutStone",1,2]]},{id:"leave",label:"Registrar e seguir viagem",result:"A descoberta foi registrada para uma expedição futura.",rewards:[["honey",1,2]]}]},
+  camp:{title:"ACAMPAMENTO TEMPORÁRIO",text:"A trilha se abre em uma clareira protegida. O grupo pode descansar e organizar os suprimentos antes de continuar.",choices:[{id:"rest",label:"Descansar e preparar alimentos",result:"O descanso renovou o ânimo dos moradores e melhorou a organização da carga.",rewards:[["berries",2,4],["herbs",1,2]]},{id:"scout",label:"Enviar batedores ao redor",result:"Os batedores encontraram recursos escondidos perto da clareira.",rewards:[["fiber",2,4],["hide",1,1]]},{id:"move",label:"Levantar acampamento e seguir",result:"O grupo aproveitou a pausa curta e manteve o ritmo da viagem.",rewards:[["berries",1,2]]}]}
+ };
+ const rollRewards=entries=>entries.map(([key,min,max])=>({key,amount:min+Math.floor(Math.random()*(max-min+1))}));
+ const showEvent=()=>{
+  if(!active||active.event||active.eventResolved)return;
+  const types=active.destination==="ruins"?["ruins","creature","camp"]:active.destination==="marsh"?["creature","camp","ruins"]:["creature","ruins","camp"];
+  const type=types[Math.floor(Math.random()*types.length)];
+  const def=EVENT_DEFS[type];
+  active.event={type,title:def.title,text:def.text,choices:def.choices.map(({id,label})=>({id,label}))};
+  persist();renderEvent();
+ };
+ const renderEvent=()=>{
+  const panel=el("expeditionEvent");
+  if(!panel)return;
+  panel.innerHTML="";
+  if(!active?.event){panel.hidden=true;return;}
+  panel.hidden=false;
+  const heading=document.createElement("strong");heading.textContent=active.event.title;panel.append(heading);
+  const description=document.createElement("p");description.textContent=active.event.text;panel.append(description);
+  if(active.eventResolved){const outcome=document.createElement("p");outcome.className="expedition-event-result";outcome.textContent=active.eventResult||"O grupo concluiu o acontecimento.";panel.append(outcome);return;}
+  const choices=EVENT_DEFS[active.event.type]?.choices||[];
+  for(const choice of choices){const button=document.createElement("button");button.type="button";button.className="expedition-event-choice";button.textContent=choice.label;button.addEventListener("click",()=>resolveEvent(choice.id));panel.append(button);}
+ };
+ const resolveEvent=id=>{
+  if(!active?.event||active.eventResolved)return;
+  const choice=(EVENT_DEFS[active.event.type]?.choices||[]).find(item=>item.id===id);
+  if(!choice)return;
+  if(choice.delay)active.returnAt+=choice.delay;
+  active.bonusRewards=rollRewards(choice.rewards||[]);
+  active.eventResolved=true;
+  active.eventResult=choice.result;
+  // Uma chance pequena de encontrar um item raro durante a exploração.
+  if(active.event.type==="ruins"&&id==="search"&&Math.random()<.22)active.bonusRewards.push({key:"honey",amount:2});
+  if(active.event.type==="camp"&&id==="scout"&&Math.random()<.18)active.bonusRewards.push({key:"leather",amount:1});
+  persist();renderEvent();refresh();
+  onToast(choice.result);
+ };
+
  const refresh=()=>{
   const people=roster(),gear=requirements();
   if(!active){el("expeditionActive").textContent="Nenhum grupo está fora da aldeia.";el("expeditionProgress").style.width="0%";el("expeditionStart").disabled=false;}
@@ -57,6 +98,7 @@ export function createCommunityExpeditions({villageResidents,state,onToast,root=
   el("expeditionKitStatus").textContent="Depósito: "+stock("fieldKits")+" kits comuns · "+stock("reinforcedFieldKits")+" reforçados · "+stock("berries")+" frutas · "+stock("meat")+" carnes";
   el("expeditionCompleted").textContent="Expedições concluídas: "+saved.completed;
   el("expeditionHistory").textContent=saved.history.length?saved.history.slice(0,3).map(item=>item.destination+" · "+item.members+" moradores · "+item.result).join(" | "):"As primeiras descobertas ainda aguardam.";
+  renderEvent();
   root.querySelectorAll("input[name=expedition-member]").forEach(input=>{input.disabled=!!active;});
   el("expeditionDestination").disabled=!!active;el("expeditionLoad").disabled=!!active;
  };
@@ -84,7 +126,7 @@ export function createCommunityExpeditions({villageResidents,state,onToast,root=
   const deducted=[];
   for(const [key,amount] of costs){if(!villageResidents.takeFromStockpile(key,amount)){for(const [refundKey,refundAmount] of deducted)villageResidents.depositToStockpile(refundKey,refundAmount);onToast("Não foi possível preparar a carga. Nada foi enviado.");return;}deducted.push([key,amount]);}
   const now=Date.now();
-  active={destination,members:selected,memberNames:selected.map(id=>roster().find(person=>person.id===id)?.name||"Morador"),departedAt:now,returnAt:now+d.duration,gearItems,load};
+  active={destination,members:selected,memberNames:selected.map(id=>roster().find(person=>person.id===id)?.name||"Morador"),departedAt:now,returnAt:now+d.duration,eventAt:now+Math.max(18000,Math.floor(d.duration*.32)),event:null,eventResolved:false,bonusRewards:[],gearItems,load};
   villageResidents.setExpeditionAway?.(selected,true);
   persist();refresh();onToast("A expedição partiu para "+d.label+" com "+selected.length+" moradores.");
  };
@@ -95,6 +137,8 @@ export function createCommunityExpeditions({villageResidents,state,onToast,root=
   // Devolve primeiro o equipamento emprestado para garantir que não seja bloqueado por recompensas que encham o depósito.
   for(const key of mission.gearItems||[])villageResidents.depositToStockpile(key,1);
   for(const [key,min,max] of d.rewards){const amount=min+Math.floor(Math.random()*(max-min+1));const stored=villageResidents.depositToStockpile(key,amount);if(stored)rewards.push(stored+" "+key);}
+  for(const item of mission.bonusRewards||[]){const stored=villageResidents.depositToStockpile(item.key,item.amount);if(stored)rewards.push(stored+" "+item.key+" (evento)");}
+  if(mission.event&&!mission.eventResolved)mission.eventResult="O grupo preferiu não se arriscar e seguiu viagem."; 
   villageResidents.setExpeditionAway?.(mission.members,false);
   saved.completed++;
   const record={destination:d.label,members:mission.members.length,result:rewards.join(", ")||"retorno sem carga adicional",at:Date.now()};
@@ -102,6 +146,7 @@ export function createCommunityExpeditions({villageResidents,state,onToast,root=
   onToast("Expedição concluída! "+record.result+". Os moradores voltaram à aldeia.");
  };
  const update=()=>{
+  if(active&&!active.event&&Date.now()>=active.eventAt)showEvent();
   if(active&&Date.now()>=active.returnAt)finish();
   if(Date.now()-lastRender>900){refresh();lastRender=Date.now();}
  };
@@ -111,7 +156,7 @@ export function createCommunityExpeditions({villageResidents,state,onToast,root=
   if(away.length){active.members=away;villageResidents.setExpeditionAway?.(away,true);}
   else{active=null;persist();}
  }
- root.innerHTML='<div class="expedition-panel-heading">🧭 EXPEDIÇÕES COMUNITÁRIAS</div><p class="expedition-intro">Monte um grupo, prepare armas, armaduras e mantimentos. Os moradores ficam fora das rotinas da aldeia até retornarem.</p><div class="expedition-label">ESCOLHA O GRUPO · 2 A 4 MORADORES</div><div id="expeditionParty" class="expedition-party"></div><label class="expedition-label" for="expeditionDestination">DESTINO</label><select id="expeditionDestination"><option value="mines">Serra das Minas · 1m30</option><option value="ruins">Ruínas do Norte · 2m</option><option value="marsh">Pântano Antigo · 2m30</option></select><label class="expedition-label" for="expeditionLoad">CARGA E MANTIMENTOS</label><select id="expeditionLoad"><option value="standard">Carga padrão · 2 kits + 5 frutas</option><option value="reinforced">Carga reforçada · 1 kit reforçado + 2 carnes + 4 frutas</option></select><div id="expeditionGearStatus" class="expedition-info"></div><div id="expeditionKitStatus" class="expedition-info"></div><button id="expeditionStart" type="button">⚑ PREPARAR E PARTIR</button><div id="expeditionActive" class="expedition-active"></div><div class="expedition-progress"><i id="expeditionProgress"></i></div><div id="expeditionCompleted" class="expedition-info"></div><div class="expedition-history" id="expeditionHistory"></div>';
+ root.innerHTML='<div class="expedition-panel-heading">🧭 EXPEDIÇÕES COMUNITÁRIAS</div><p class="expedition-intro">Monte um grupo, prepare armas, armaduras e mantimentos. Os moradores ficam fora das rotinas da aldeia até retornarem.</p><div class="expedition-label">ESCOLHA O GRUPO · 2 A 4 MORADORES</div><div id="expeditionParty" class="expedition-party"></div><label class="expedition-label" for="expeditionDestination">DESTINO</label><select id="expeditionDestination"><option value="mines">Serra das Minas · 1m30</option><option value="ruins">Ruínas do Norte · 2m</option><option value="marsh">Pântano Antigo · 2m30</option></select><label class="expedition-label" for="expeditionLoad">CARGA E MANTIMENTOS</label><select id="expeditionLoad"><option value="standard">Carga padrão · 2 kits + 5 frutas</option><option value="reinforced">Carga reforçada · 1 kit reforçado + 2 carnes + 4 frutas</option></select><div id="expeditionGearStatus" class="expedition-info"></div><div id="expeditionKitStatus" class="expedition-info"></div><button id="expeditionStart" type="button">⚑ PREPARAR E PARTIR</button><div id="expeditionActive" class="expedition-active"></div><div id="expeditionEvent" class="expedition-event" hidden></div><div class="expedition-progress"><i id="expeditionProgress"></i></div><div id="expeditionCompleted" class="expedition-info"></div><div class="expedition-history" id="expeditionHistory"></div>';
  el("expeditionStart").addEventListener("click",start);
  makeRoster();refresh();
  return {update,getStatus:()=>({active:!!active,completed:saved.completed})};

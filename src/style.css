@@ -137,3 +137,12 @@
 .expedition-progress{height:8px;border-radius:9px;background:#111b14;overflow:hidden}
 .expedition-progress i{display:block;width:0;height:100%;background:#c7a35f;transition:width .3s}
 .expedition-history{font-size:10px;color:#b8c3ae}
+
+/* Acontecimentos e decisões das expedições comunitárias */
+.expedition-event{margin:10px 0;padding:10px;border:1px solid rgba(210,174,105,.72);border-radius:8px;background:rgba(70,57,35,.72);color:#f4e8cf}
+.expedition-event[hidden]{display:none}
+.expedition-event strong{display:block;color:#f0cc83;letter-spacing:.05em}
+.expedition-event p{margin:7px 0;color:#e5dfcf}
+.expedition-event-choice{display:block;width:100%;margin:6px 0;padding:9px;border:1px solid #8f805e;border-radius:6px;background:#354638;color:#fff;text-align:left;font-weight:650}
+.expedition-event-choice:active{background:#566b4c}
+.expedition-event-result{font-weight:700;color:#cce0b6!important}
