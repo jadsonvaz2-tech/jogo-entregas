@@ -259,7 +259,30 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const rankingTitle = document.createElement("div");
     rankingTitle.textContent = "RANKING DE CONTRIBUIÇÃO";
     rankingTitle.style.cssText = "font-size:9px;color:#cbb77e;margin-bottom:5px";
-    summary.append(heading, breakdown, rankingTitle);
+    const milestones = [
+      { amount: 100, title: "POVOADO PROMISSOR" },
+      { amount: 300, title: "COMUNIDADE PRODUTIVA" },
+      { amount: 750, title: "VILA PRÓSPERA" },
+      { amount: 1500, title: "LENDA DA FLORESTA" }
+    ];
+    const achieved = milestones.filter(item => grandTotal >= item.amount).pop();
+    const next = milestones.find(item => grandTotal < item.amount);
+    const collective = document.createElement("div");
+    collective.style.cssText = "padding:8px;margin:0 0 9px;border-radius:6px;background:#ffffff0c;border:1px solid #d6c58f44";
+    const collectiveTitle = document.createElement("div");
+    collectiveTitle.textContent = "MARCO COLETIVO · " + (achieved ? achieved.title : "PRIMEIROS PASSOS");
+    collectiveTitle.style.cssText = "font-size:10px;font-weight:800;color:#e6d5a5";
+    const collectiveText = document.createElement("div");
+    collectiveText.textContent = next ? grandTotal + " / " + next.amount + " itens · próximo: " + next.title : "Todos os marcos coletivos foram alcançados!";
+    collectiveText.style.cssText = "font-size:9px;color:#d4d0b8;margin:4px 0 6px";
+    const collectiveTrack = document.createElement("div");
+    collectiveTrack.style.cssText = "height:6px;border-radius:6px;background:#ffffff20;overflow:hidden";
+    const collectiveFill = document.createElement("div");
+    const collectiveProgress = next ? Math.min(100, Math.floor(grandTotal / next.amount * 100)) : 100;
+    collectiveFill.style.cssText = "height:100%;width:" + collectiveProgress + "%;background:linear-gradient(90deg,#788e5a,#d9c27f);transition:width .25s ease";
+    collectiveTrack.appendChild(collectiveFill);
+    collective.append(collectiveTitle, collectiveText, collectiveTrack);
+    summary.append(heading, breakdown, collective, rankingTitle);
     const maximum = totals.length ? totals[0].total : 0;
     totals.forEach((item, index) => {
       const line = document.createElement("div");
