@@ -1,0 +1,74 @@
+name: Validate medieval game
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: "validate"
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Validate JavaScript syntax
+        run: |
+          node --input-type=module --check < src/main.js
+          node --input-type=module --check < src/systems/community-expeditions.js
+          node --input-type=module --check < src/systems/distant-exploration.js
+          node --input-type=module --check < src/systems/settlements.js
+          node --input-type=module --check < src/systems/village.js
+      - name: Validate required 3D model dependencies
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync, existsSync } from "node:fs";
+          import { dirname, resolve } from "node:path";
+          const models = [
+            "assets/3d/Viking_Male.gltf",
+            "assets/3d/CommonTree_1.gltf",
+            "assets/3d/Pine_1.gltf",
+            "assets/3d/TwistedTree_1.gltf",
+            "assets/3d/Rock_Medium_1.gltf",
+            "assets/3d/Bush_Common_Flowers.gltf",
+            "assets/3d/Fern_1.gltf",
+            "assets/3d/Clover_1.gltf",
+            "assets/3d/Flower_3_Group.gltf",
+            "assets/3d/Mushroom_Common.gltf",
+            "assets/3d/Mushroom_Laetiporus.gltf",
+            "assets/3d/RockPath_Round_Small_1.gltf",
+            "assets/3d/RockPath_Round_Small_2.gltf",
+            "assets/3d/RockPath_Round_Small_3.gltf",
+            "assets/3d/RockPath_Round_Thin.gltf",
+            "assets/3d/RockPath_Round_Wide.gltf",
+            "assets/3d/Pebble_Round_1.gltf",
+            "assets/3d/Pebble_Round_2.gltf",
+            "assets/3d/Pebble_Round_3.gltf",
+            "assets/3d/Pebble_Round_4.gltf",
+            "assets/3d/Pebble_Round_5.gltf",
+            "assets/3d/animals/Alpaca.gltf",
+            "assets/3d/animals/Bull.gltf",
+            "assets/3d/animals/Deer.gltf",
+            "assets/3d/animals/Donkey.gltf",
+            "assets/3d/animals/Fox.gltf",
+            "assets/3d/animals/Horse.gltf",
+            "assets/3d/animals/Horse_White.gltf",
+            "assets/3d/animals/Husky.gltf",
+            "assets/3d/animals/ShibaInu.gltf",
+            "assets/3d/animals/Stag.gltf",
+            "assets/3d/animals/Wolf.gltf",
+          ];
+          for (const file of models) {
+            const gltf = JSON.parse(readFileSync(file, "utf8"));
+            const refs = [...(gltf.buffers || []), ...(gltf.images || [])]
+              .map(item => item.uri)
+              .filter(uri => uri && !uri.startsWith("data:"));
+            for (const uri of refs) {
+              const target = resolve(dirname(file), decodeURIComponent(uri));
+              if (!existsSync(target)) throw new Error(`Missing asset: ${file} -> ${uri}`);
+            }
+            console.log(`OK ${file}: ${refs.length} external dependencies`);
+          }
+          NODE
