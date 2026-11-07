@@ -467,11 +467,13 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     upgradeStorageButton.textContent = "AMPLIAR DEPÓSITO · NÍVEL " + (storageLevel + 1) + " · " + cost.wood + " MADEIRAS + " + cost.stone + " PEDRAS";
   }
 
-  function transferStockpileResource(resource, direction) {
+  function transferStockpileResource(resource, direction, requestedAmount = null) {
     if (!Object.prototype.hasOwnProperty.call(stockpile, resource)) return;
     const personal = Math.max(0, Math.floor(Number(state[resource]) || 0));
+    const requested = requestedAmount === null ? Infinity : Math.floor(Number(requestedAmount));
+    if (!(requested > 0)) { onToast("Informe uma quantidade válida, maior que zero."); return; }
     if (direction === "deposit") {
-      const amount = Math.min(personal, Math.max(0, storageCapacity() - stockpileTotal()));
+      const amount = Math.min(personal, requested, Math.max(0, storageCapacity() - stockpileTotal()));
       if (amount < 1) {
         onToast(personal < 1 ? "Você não possui esse recurso na mochila." : "O depósito comunitário está cheio. Amplie sua capacidade em GESTÃO.");
         return;
@@ -480,10 +482,10 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       stockpile[resource] += amount;
       onToast("Você guardou " + amount + " unidade(s) no depósito comunitário.");
     } else {
-      const amount = stockpile[resource];
+      const amount = Math.min(stockpile[resource], requested);
       if (amount < 1) { onToast("Não há esse recurso no depósito comunitário."); return; }
       state[resource] = personal + amount;
-      stockpile[resource] = 0;
+      stockpile[resource] -= amount;
       onToast("Você retirou " + amount + " unidade(s) do depósito comunitário.");
     }
     saveVillageProgress();
@@ -527,17 +529,27 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
         return '<div class="stockpile-item" data-resource="' + key + '">' +
           '<div class="stockpile-resource"><span>' + icon + ' ' + label + '</span><b>' + stockpile[key] + '</b></div>' +
           '<span class="personal-count">Na sua mochila: ' + personal + '</span>' +
-          '<div class="stockpile-actions"><button type="button" data-transfer="deposit">GUARDAR</button><button type="button" data-transfer="withdraw">RETIRAR</button></div></div>';
+          '<div class="stockpile-quantity"><label>Quantidade <input type="number" min="1" step="1" inputmode="numeric" data-transfer-amount value="1" aria-label="Quantidade de ' + label + ' para transferir"></label></div>' +
+          '<div class="stockpile-actions"><button type="button" data-transfer="deposit">GUARDAR TUDO</button><button type="button" data-transfer="withdraw">RETIRAR TUDO</button></div>' +
+          '<div class="stockpile-actions"><button type="button" data-transfer="deposit-amount">GUARDAR QTD.</button><button type="button" data-transfer="withdraw-amount">RETIRAR QTD.</button></div></div>';
       }).join("") + '</div><div class="stockpile-capacity">TOTAL ARMAZENADO · ' + total + ' / ' + storageCapacity() + ' unidades</div>';
     for (const card of stockpileDisplay.querySelectorAll(".stockpile-item")) {
       const resource = card.dataset.resource;
       const personal = Math.max(0, Math.floor(Number(state[resource]) || 0));
       const deposit = card.querySelector('[data-transfer="deposit"]');
       const withdraw = card.querySelector('[data-transfer="withdraw"]');
+      const depositAmount = card.querySelector('[data-transfer="deposit-amount"]');
+      const withdrawAmount = card.querySelector('[data-transfer="withdraw-amount"]');
+      const quantityInput = card.querySelector("[data-transfer-amount]");
       deposit.disabled = personal < 1 || total >= storageCapacity();
       withdraw.disabled = stockpile[resource] < 1;
+      depositAmount.disabled = personal < 1 || total >= storageCapacity();
+      withdrawAmount.disabled = stockpile[resource] < 1;
+      quantityInput.max = String(Math.max(personal, stockpile[resource], 1));
       deposit.addEventListener("click", () => transferStockpileResource(resource, "deposit"));
       withdraw.addEventListener("click", () => transferStockpileResource(resource, "withdraw"));
+      depositAmount.addEventListener("click", () => transferStockpileResource(resource, "deposit", quantityInput.value));
+      withdrawAmount.addEventListener("click", () => transferStockpileResource(resource, "withdraw", quantityInput.value));
     }
     collectStockpileButton.disabled = total < 1;
     refreshStorageUpgradeUI();
