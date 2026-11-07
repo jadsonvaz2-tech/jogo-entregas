@@ -4,6 +4,7 @@ import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
 import { createStoryEncounter } from "./systems/story.js";
 import { createVillageResidents } from "./systems/village.js?v=visible-save-diagnostics-1";
 import { createWorldSettlements, WORLD_ROAD_PATHS } from "./systems/settlements.js?v=natural-road-relief-2026-11-07-1";
+import { createExpandedWorld } from "./systems/world-expansion.js?v=expanded-biomes-2026-11-07-1";
 import { createDistantVillageResidents } from "./systems/distant-village-residents.js";
 import { createSettlementEconomy } from "./systems/settlement-economy.js";
 let villageResidents=null;
@@ -18,7 +19,7 @@ let worldRandomState=0x5eed2026;
 function worldRandom(){worldRandomState=(worldRandomState*1664525+1013904223)>>>0;return worldRandomState/4294967296;}
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9bb3a0);
-scene.fog = new THREE.FogExp2(0x9bb3a0, 0.012);
+scene.fog = new THREE.FogExp2(0x9bb3a0, 0.0068);
 const camera = new THREE.PerspectiveCamera(65, innerWidth/innerHeight, 0.1, 450);
 const renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:"high-performance"});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));
@@ -87,9 +88,18 @@ function terrainHeight(x,z){
  const broadHills=Math.sin(x*.018+z*.012)*2.8+Math.cos(z*.021-x*.009)*2.2+Math.sin((x-z)*.015)*1.7;
  const localHills=Math.sin(x*.035)*1.8+Math.cos(z*.041)*1.6+Math.sin((x+z)*.022)*2.4;
  const clearing=Math.exp(-(x*x+z*z)/500)*-.5;
- return localHills+broadHills*edgeBlend+clearing+roadReliefHeight(x,z);
+ // Relevo adicional somente nas novas regiões externas; o entorno da Vila Central permanece inalterado.
+ const mountainPeaks=[[138,-132,17,27],[165,-153,21,31],[184,-116,16,25],[145,-96,13,23]];
+ let mountainRelief=0;
+ for(const [mx,mz,height,radius] of mountainPeaks)mountainRelief+=height*Math.exp(-((x-mx)**2+(z-mz)**2)/(2*radius*radius));
+ const riverCenter=112+14*Math.sin((z+190)*.009);
+ const riverFade=THREE.MathUtils.smoothstep(190-Math.abs(z),0,24);
+ const riverChannel=2.8*Math.exp(-((x-riverCenter)**2)/(2*4.2*4.2))*riverFade;
+ const lakeA=4.2*Math.exp(-((x+118)**2+(z+104)**2)/(2*17*17));
+ const lakeB=3.8*Math.exp(-((x-82)**2+(z-126)**2)/(2*15*15));
+ return localHills+broadHills*edgeBlend+clearing+roadReliefHeight(x,z)+mountainRelief-riverChannel-lakeA-lakeB;
 }
-const groundGeo = new THREE.PlaneGeometry(260,260,160,160);
+const groundGeo = new THREE.PlaneGeometry(416,416,256,256);
 groundGeo.rotateX(-Math.PI/2);
 const pos = groundGeo.attributes.position;
 const groundColors=[];
@@ -4409,6 +4419,7 @@ async function start(){
  await buildForest();
  startupStage="criando as aldeias e estradas";
  const settlements = createWorldSettlements({ THREE, scene, terrainHeight });
+ await createExpandedWorld({ THREE, scene, terrainHeight });
  const distanceToSegment = (px, pz, ax, az, bx, bz) => {
   const dx = bx - ax, dz = bz - az, length2 = dx * dx + dz * dz || 1;
   const t = THREE.MathUtils.clamp(((px - ax) * dx + (pz - az) * dz) / length2, 0, 1);
