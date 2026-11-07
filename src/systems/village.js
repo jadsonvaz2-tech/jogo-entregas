@@ -23,8 +23,10 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   const WORK_SHIFTS = { reduced:{label:"Jornada reduzida · 7h–17h",start:7,end:17,detail:"Menos horas de trabalho e mais tempo de descanso."}, normal:{label:"Jornada normal · 6h–19h30",start:6,end:19.5,detail:"Equilíbrio entre produção e descanso."}, extended:{label:"Jornada estendida · 5h–21h",start:5,end:21,detail:"Mais tempo de produção, com menos descanso."} };
   let workShift = Object.prototype.hasOwnProperty.call(WORK_SHIFTS,saved.workShift) ? saved.workShift : "normal";
   const FOOD_RESERVE_TARGETS = [1,3,5,7];
+  const FOOD_RATION_POLICIES = ["berries-first","meat-first"];
   const WORK_PRIORITIES = ["low","normal","high"];
   let foodReserveTargetDays = FOOD_RESERVE_TARGETS.includes(Number(saved.foodReserveTargetDays)) ? Number(saved.foodReserveTargetDays) : 3;
+  let foodRationPolicy = FOOD_RATION_POLICIES.includes(saved.foodRationPolicy) ? saved.foodRationPolicy : "berries-first";
   const stockpile = Object.fromEntries(["wood","stone","berries","meat","herbs","hide","fiber","wool","honey"].map(key => [key, Math.max(0, Number(saved.stockpile?.[key]) || 0)]));
   const legacyStorageFloor = Object.values(stockpile).reduce((sum, amount) => sum + amount, 0);
   const RESOURCE_LABELS = {wood:"Madeira",stone:"Pedra",berries:"Frutas",meat:"Carne",herbs:"Ervas",hide:"Peles",fiber:"Fibras",wool:"Lã",honey:"Mel"};
@@ -170,7 +172,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   document.head.appendChild(workStyle);
   const workPanel = document.createElement("section");
   workPanel.id = "village-work";
-  workPanel.innerHTML = '<strong>ADMINISTRAÇÃO DA ALDEIA CENTRAL</strong><label class="production" for="village-work-shift">JORNADA DOS MORADORES</label><select id="village-work-shift" aria-label="Jornada de trabalho da aldeia"><option value="reduced">Jornada reduzida · 7h–17h</option><option value="normal">Jornada normal · 6h–19h30</option><option value="extended">Jornada estendida · 5h–21h</option></select><div id="village-shift-detail" class="production"></div><label class="production" for="village-food-reserve-target">META DE RESERVA DE ALIMENTOS</label><select id="village-food-reserve-target" aria-label="Meta de dias de reserva de alimentos"><option value="1">1 dia · economia de espaço</option><option value="3">3 dias · equilibrado</option><option value="5">5 dias · segurança</option><option value="7">7 dias · grande reserva</option></select><div id="village-food-priority" class="production"></div><div id="village-housing-status" class="production"></div><div id="village-alerts" aria-live="polite"><strong>CONDIÇÃO DA ALDEIA</strong></div><div class="village-management-actions"><button id="village-build-house" type="button">🏠 CONSTRUIR CASA · 16 MADEIRAS + 8 PEDRAS</button><button id="village-recruit" type="button">👥 RECRUTAR · 25 MOEDAS</button></div><div class="work-list"></div><div id="village-morale" class="production"></div><div id="village-prosperity" class="production"></div><button id="village-communal-meal" type="button">PREPARAR REFEIÇÃO · 5 FRUTAS</button><div id="village-stockpile" class="production"></div><button id="village-upgrade-storage" type="button">MELHORAR DEPÓSITO</button><button id="village-collect-stockpile" type="button">RECOLHER PRODUÇÃO</button><div id="village-work-summary" class="production"></div><div id="village-production-report" class="production"></div>';
+  workPanel.innerHTML = '<strong>ADMINISTRAÇÃO DA ALDEIA CENTRAL</strong><label class="production" for="village-work-shift">JORNADA DOS MORADORES</label><select id="village-work-shift" aria-label="Jornada de trabalho da aldeia"><option value="reduced">Jornada reduzida · 7h–17h</option><option value="normal">Jornada normal · 6h–19h30</option><option value="extended">Jornada estendida · 5h–21h</option></select><div id="village-shift-detail" class="production"></div><label class="production" for="village-food-reserve-target">META DE RESERVA DE ALIMENTOS</label><select id="village-food-reserve-target" aria-label="Meta de dias de reserva de alimentos"><option value="1">1 dia · economia de espaço</option><option value="3">3 dias · equilibrado</option><option value="5">5 dias · segurança</option><option value="7">7 dias · grande reserva</option></select><div id="village-food-priority" class="production"></div><label class="production" for="village-ration-policy">POLÍTICA DE DISTRIBUIÇÃO DE ALIMENTOS</label><select id="village-ration-policy" aria-label="Política de distribuição de alimentos"><option value="berries-first">Frutas primeiro · preservar carne</option><option value="meat-first">Carne primeiro · preservar frutas</option></select><div id="village-ration-policy-detail" class="production"></div><div id="village-housing-status" class="production"></div><div id="village-alerts" aria-live="polite"><strong>CONDIÇÃO DA ALDEIA</strong></div><div class="village-management-actions"><button id="village-build-house" type="button">🏠 CONSTRUIR CASA · 16 MADEIRAS + 8 PEDRAS</button><button id="village-recruit" type="button">👥 RECRUTAR · 25 MOEDAS</button></div><div class="work-list"></div><div id="village-morale" class="production"></div><div id="village-prosperity" class="production"></div><button id="village-communal-meal" type="button">PREPARAR REFEIÇÃO · 5 FRUTAS</button><div id="village-stockpile" class="production"></div><button id="village-upgrade-storage" type="button">MELHORAR DEPÓSITO</button><button id="village-collect-stockpile" type="button">RECOLHER PRODUÇÃO</button><div id="village-work-summary" class="production"></div><div id="village-production-report" class="production"></div>';
   if (managementRoot) managementRoot.appendChild(workPanel);
   else document.body.appendChild(workPanel);
   const workList = workPanel.querySelector(".work-list");
@@ -178,6 +180,23 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   const workShiftDetail = workPanel.querySelector("#village-shift-detail");
   const foodReserveSelect = workPanel.querySelector("#village-food-reserve-target");
   const foodPriorityDisplay = workPanel.querySelector("#village-food-priority");
+  const rationPolicySelect = workPanel.querySelector("#village-ration-policy");
+  const rationPolicyDetail = workPanel.querySelector("#village-ration-policy-detail");
+  const refreshRationPolicyUI = () => {
+    rationPolicySelect.value = foodRationPolicy;
+    rationPolicyDetail.textContent = foodRationPolicy === "meat-first"
+      ? "O consumo diário usa carne antes das frutas; cada carne vale até duas porções."
+      : "O consumo diário usa frutas antes da carne; cada carne vale até duas porções.";
+  };
+  rationPolicySelect.value = foodRationPolicy;
+  rationPolicySelect.addEventListener("change", () => {
+    if (!FOOD_RATION_POLICIES.includes(rationPolicySelect.value)) { refreshRationPolicyUI(); return; }
+    foodRationPolicy = rationPolicySelect.value;
+    saveVillageProgress();
+    refreshRationPolicyUI();
+    onToast(foodRationPolicy === "meat-first" ? "A aldeia agora prioriza carne nas refeições diárias." : "A aldeia agora prioriza frutas nas refeições diárias.");
+  });
+  refreshRationPolicyUI();
   foodReserveSelect.value = String(foodReserveTargetDays);
   foodReserveSelect.addEventListener("change", () => {
     const target = Number(foodReserveSelect.value);
@@ -357,7 +376,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       for (const resident of residents) jobs[resident.id] = { profession: resident.profession, enabled: resident.enabled, priority: resident.priority || "normal" };
       const recruits = residents.filter(r => r.isRecruit).map(r => ({ id:r.id, name:r.name, role:r.role, profession:r.profession, model:r.model, start:r.start, home:r.home, homeSlot:r.homeSlot, work:r.work, greeting:r.greeting }));
       const homes = Object.fromEntries(residents.map(r => [r.id,{slot:r.homeSlot,position:r.home}]));
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, prosperityXp, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes, storageLevel, workShift, foodReserveTargetDays, productionReport }));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, prosperityXp, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes, storageLevel, workShift, foodReserveTargetDays, foodRationPolicy, productionReport }));
     } catch (error) {
       console.warn("Não foi possível salvar o progresso dos moradores.", error);
     }
@@ -395,12 +414,23 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
 
   function consumeDailyRation() {
     let needed = dailyFoodNeed();
-    const berriesUsed = Math.min(stockpile.berries, needed);
-    stockpile.berries -= berriesUsed;
-    needed -= berriesUsed;
-    const meatUsed = Math.min(stockpile.meat, Math.ceil(needed / 2));
-    stockpile.meat -= meatUsed;
-    needed -= meatUsed * 2;
+    let berriesUsed = 0;
+    let meatUsed = 0;
+    if (foodRationPolicy === "meat-first") {
+      meatUsed = Math.min(stockpile.meat, Math.ceil(needed / 2));
+      stockpile.meat -= meatUsed;
+      needed -= meatUsed * 2;
+      berriesUsed = Math.min(stockpile.berries, Math.max(0, needed));
+      stockpile.berries -= berriesUsed;
+      needed -= berriesUsed;
+    } else {
+      berriesUsed = Math.min(stockpile.berries, needed);
+      stockpile.berries -= berriesUsed;
+      needed -= berriesUsed;
+      meatUsed = Math.min(stockpile.meat, Math.ceil(needed / 2));
+      stockpile.meat -= meatUsed;
+      needed -= meatUsed * 2;
+    }
     return { fed: needed <= 0, berriesUsed, meatUsed };
   }
 
