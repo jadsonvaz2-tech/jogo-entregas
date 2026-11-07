@@ -4343,8 +4343,24 @@ let startupStage="preparando o mundo";
 async function start(){
  const startOptional=(label,create)=>{
   startupStage=label;
-  try{return create();}
-  catch(error){const detail=error?.message||String(error);console.error("Falha ao iniciar "+label+":",error);toast("ERRO "+label+": "+detail);const panel=$("loadingText");if(panel)panel.textContent="Aviso: "+label+" não carregado ("+detail+").";return null;}
+  try{
+   const instance=create();
+   window.__startupDiagnostics=window.__startupDiagnostics||{};
+   window.__startupDiagnostics[label]={status:"carregado",detail:"Sistema iniciado"};
+   if(label==="os moradores da aldeia central"&&instance&&typeof instance.getDiagnostics==="function"){
+    window.__startupDiagnostics[label]=Object.assign({status:"carregado"},instance.getDiagnostics());
+   }
+   return instance;
+  }catch(error){
+   const detail=error?.message||String(error);
+   window.__startupDiagnostics=window.__startupDiagnostics||{};
+   window.__startupDiagnostics[label]={status:"falhou",detail:String(detail)};
+   console.error("Falha ao iniciar "+label+":",error);
+   toast("ERRO "+label+": "+detail);
+   const panel=$("loadingText");
+   if(panel)panel.textContent="Aviso: "+label+" não carregado ("+detail+").";
+   return null;
+  }
  };
  $("loadingText").textContent="Criando o terreno e a floresta...";
  $("loadingBar").style.width="20%";

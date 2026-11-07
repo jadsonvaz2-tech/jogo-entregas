@@ -1796,5 +1796,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     }
   }
 
-  return { update, getStockpile, takeFromStockpile, getMorale: () => morale };
+  return {
+    update, getStockpile, takeFromStockpile, getMorale: () => morale,
+    getDiagnostics: () => ({ residentCount: residents.length, residentNames: residents.map(resident => resident.name), houseCount: housesBuilt, savedRecruitCount: Array.isArray(saved.recruits) ? saved.recruits.length : 0 })
+  };
 }
