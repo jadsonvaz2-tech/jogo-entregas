@@ -219,6 +219,14 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   const residentSearchInput = workPanel.querySelector("#village-resident-search");
   const residentProfessionFilter = workPanel.querySelector("#village-resident-filter");
   const residentFilterCount = workPanel.querySelector("#village-resident-filter-count");
+  const RESIDENT_SORTS = ["name","level","production","profession"];
+  let residentSort = RESIDENT_SORTS.includes(saved.residentSort) ? saved.residentSort : "name";
+  const residentSortSelect = document.createElement("select");
+  residentSortSelect.id = "village-resident-sort";
+  residentSortSelect.setAttribute("aria-label", "Ordenar moradores");
+  residentSortSelect.innerHTML = '<option value="name">Nome · A a Z</option><option value="level">Experiência · maior nível</option><option value="production">Produção · maior contribuição</option><option value="profession">Profissão · A a Z</option>';
+  residentSortSelect.value = residentSort;
+  residentSearchInput.parentNode.insertBefore(residentSortSelect, residentSearchInput);
   const workShiftSelect = workPanel.querySelector("#village-work-shift");
   const workShiftDetail = workPanel.querySelector("#village-shift-detail");
   const foodReserveSelect = workPanel.querySelector("#village-food-reserve-target");
@@ -604,7 +612,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       for (const resident of residents) jobs[resident.id] = { profession: resident.profession, enabled: resident.enabled, priority: resident.priority || "normal", ...(resident.patrolRoute ? { patrolRoute: resident.patrolRoute } : {}) };
       const recruits = residents.filter(r => r.isRecruit).map(r => ({ id:r.id, name:r.name, role:r.role, profession:r.profession, model:r.model, start:r.start, home:r.home, homeSlot:r.homeSlot, work:r.work, greeting:r.greeting }));
       const homes = Object.fromEntries(residents.map(r => [r.id,{slot:r.homeSlot,position:r.home}]));
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, prosperityXp, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes, storageLevel, workShift, foodReserveTargetDays, foodRationPolicy, communalMealPolicy, protectFoodReserve, productionReport, foodReport, resourceTargets, nextRecruitProfession }));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, prosperityXp, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes, storageLevel, workShift, foodReserveTargetDays, foodRationPolicy, communalMealPolicy, protectFoodReserve, productionReport, foodReport, resourceTargets, nextRecruitProfession, residentSort }));
     } catch (error) {
       console.warn("Não foi possível salvar o progresso dos moradores.", error);
     }
@@ -1030,10 +1038,24 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   }
   residentSearchInput.addEventListener("input",applyResidentFilters);
   residentProfessionFilter.addEventListener("change",applyResidentFilters);
+  residentSortSelect.addEventListener("change",()=>{
+    if(!RESIDENT_SORTS.includes(residentSortSelect.value)){residentSortSelect.value=residentSort;return;}
+    residentSort=residentSortSelect.value;
+    saveVillageProgress();
+    renderWorkPanel();
+    onToast("Lista de moradores ordenada: "+residentSortSelect.options[residentSortSelect.selectedIndex].text+".");
+  });
 
   function renderWorkPanel() {
     workList.innerHTML = "";
-    for (const resident of residents) {
+    const sortedResidents = [...residents].sort((a,b)=>{
+      if(residentSort==="level") return (skills[b.id]?.level||1)-(skills[a.id]?.level||1) || (skills[b.id]?.xp||0)-(skills[a.id]?.xp||0) || a.name.localeCompare(b.name,"pt-BR");
+      if(residentSort==="production") return (productionReport.byResident[b.id]?.amount||0)-(productionReport.byResident[a.id]?.amount||0) || a.name.localeCompare(b.name,"pt-BR");
+      if(residentSort==="profession") return (professions[a.profession]?.label||"").localeCompare(professions[b.profession]?.label||"","pt-BR") || a.name.localeCompare(b.name,"pt-BR");
+      return a.name.localeCompare(b.name,"pt-BR");
+    });
+    residentSortSelect.value=residentSort;
+    for (const resident of sortedResidents) {
       const row = document.createElement("div");
       row.className = "work-row";
       row.dataset.residentId = resident.id;
