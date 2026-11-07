@@ -275,7 +275,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     }
     refreshStockpileUI();
   }
-  function makeNameTag(name, role) {
+  function makeNameTag(name, role, level) {
     const canvas = document.createElement("canvas");
     canvas.width = 512;
     canvas.height = 128;
@@ -294,7 +294,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     context.fillText(name.toUpperCase(), 256, 49);
     context.fillStyle = "#c4cfaa";
     context.font = "bold 21px Arial";
-    context.fillText(role.toUpperCase(), 256, 88);
+    context.fillText((role + " · NÍVEL " + level).toUpperCase(), 256, 88);
     const texture = new THREE.CanvasTexture(canvas);
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false }));
     sprite.position.y = 2.65;
@@ -380,7 +380,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     scene.add(resident.group);
     const color = resident.id === "lina" ? 0x6b8050 : resident.id === "odo" ? 0x79563a : 0x777d82;
     resident.fallback = makeFallback(resident.group, color);
-    resident.nameTag = makeNameTag(resident.name, resident.role);
+    resident.nameTag = makeNameTag(resident.name, resident.role, skills[resident.id].level);
     resident.group.add(resident.nameTag);
     resident.actions = {};
     resident.mixer = null;
@@ -425,7 +425,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       resident.nameTag.material.map?.dispose();
       resident.nameTag.material.dispose();
     }
-    resident.nameTag = makeNameTag(resident.name, resident.role);
+    resident.nameTag = makeNameTag(resident.name, resident.role, skills[resident.id].level);
     resident.group.add(resident.nameTag);
   }
 
@@ -522,6 +522,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
           const leveledUp = awardWorkExperience(resident);
           const bonus = productionBonus(resident);
           if (leveledUp) {
+            updateResidentNameTag(resident);
             renderWorkPanel();
             onToast(resident.name + " evoluiu na profissão! Agora está no nível " + skills[resident.id].level + ".");
           }
