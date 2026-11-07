@@ -107,6 +107,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     byResource: Object.fromEntries(Object.keys(RESOURCE_LABELS).map(key => [key, Math.max(0, Math.floor(Number(savedProduction.byResource?.[key]) || 0))])),
     byResident: savedProduction.byResident && typeof savedProduction.byResident === "object" ? Object.fromEntries(Object.entries(savedProduction.byResident).map(([id,entry]) => [id,{name:String(entry?.name || "Morador"),amount:Math.max(0,Math.floor(Number(entry?.amount)||0)),stored:Math.max(0,Math.floor(Number(entry?.stored)||0))}])) : {}
   };
+  const expeditionAwayIds = new Set(Array.isArray(saved.expeditionAwayIds) ? saved.expeditionAwayIds.filter(id => typeof id === "string") : []);
   const residents = [
     {
       id: "lina", name: "Lina", role: "Agricultora", profession: "farmer", model: "Worker_Female.gltf",
@@ -764,6 +765,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       start:home, home, homeSlot, work:professionWorkPoints[profession], greeting:"Sou " + name + ". Vim construir uma vida nesta aldeia e ajudar a comunidade."
     };
     resident.group = new THREE.Group();
+    resident.group.visible = !expeditionAwayIds.has(resident.id);
     resident.group.position.set(home[0],terrainHeight(home[0],home[1]),home[1]);
     scene.add(resident.group);
     resident.fallback = makeFallback(resident.group,0x80694d);
@@ -877,7 +879,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
         try { JSON.parse(previous); localStorage.setItem(SAVE_KEY + "-backup", previous); }
         catch (backupError) { localStorage.setItem(SAVE_KEY + "-recovery-raw", previous); }
       }
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, prosperityXp, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes, storageLevel, workShift, foodReserveTargetDays, foodRationPolicy, communalMealPolicy, protectFoodReserve, productionReport, foodReport, resourceTargets, nextRecruitProfession, residentSort, residentStatusFilter, residentHousingFilter, workshops, workshopWear }));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, prosperityXp, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes, storageLevel, workShift, foodReserveTargetDays, foodRationPolicy, communalMealPolicy, protectFoodReserve, productionReport, foodReport, resourceTargets, nextRecruitProfession, residentSort, residentStatusFilter, residentHousingFilter, workshops, workshopWear, expeditionAwayIds:[...expeditionAwayIds] }));
       renderSaveDiagnostics();
     } catch (error) {
       console.warn("Não foi possível salvar o progresso dos moradores.", error);
@@ -1221,6 +1223,35 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     stockpile[resource] -= quantity;
     saveVillageProgress();
     refreshStockpileUI();
+    return true;
+  }
+
+  function depositToStockpile(resource, amount) {
+    if (!Object.prototype.hasOwnProperty.call(stockpile, resource)) return 0;
+    const stored = storeResource(resource, amount);
+    if (stored > 0) { saveVillageProgress(); refreshStockpileUI(); }
+    return stored;
+  }
+
+  function getExpeditionRoster() {
+    return residents.filter(resident => !expeditionAwayIds.has(resident.id)).map(resident => ({id:resident.id,name:resident.name,role:resident.role,profession:resident.profession}));
+  }
+
+  function setExpeditionAway(ids, away) {
+    const selected = new Set(Array.isArray(ids) ? ids : []);
+    for (const resident of residents) {
+      if (!selected.has(resident.id)) continue;
+      if (away) expeditionAwayIds.add(resident.id); else expeditionAwayIds.delete(resident.id);
+      if (resident.group) {
+        resident.group.visible = !away;
+        if (!away) {
+          const home = Array.isArray(resident.home) ? resident.home : resident.start;
+          resident.group.position.set(home[0], terrainHeight(home[0],home[1]), home[1]);
+          resident.target = null; resident.routeKey = ""; resident.routeIndex = 0;
+        }
+      }
+    }
+    saveVillageProgress();
     return true;
   }
 
@@ -1777,7 +1808,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     resident.role = professions[resident.profession].label;
     resident.met = Array.isArray(saved.met) && saved.met.includes(resident.id);
     resident.group = new THREE.Group();
-    resident.group.visible = true;
+    resident.group.visible = !expeditionAwayIds.has(resident.id);
     resident.group.position.set(resident.start[0], terrainHeight(resident.start[0], resident.start[1]), resident.start[1]);
     scene.add(resident.group);
     const color = resident.id === "lina" ? 0x6b8050 : resident.id === "odo" ? 0x79563a : 0x777d82;
@@ -1889,6 +1920,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     }
     const hour = Number(state.timeOfDay) || 8;
     for (const resident of residents) {
+      if (expeditionAwayIds.has(resident.id)) { if (resident.group) resident.group.visible = false; continue; }
       const schedule = scheduleFor(resident, hour);
       if (schedule.key !== resident.routeKey) {
         resident.routeKey = schedule.key;
@@ -2129,7 +2161,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   }
 
   return {
-    update, getStockpile, takeFromStockpile, getMorale: () => morale,
+    update, getStockpile, takeFromStockpile, depositToStockpile, getExpeditionRoster, setExpeditionAway, getMorale: () => morale,
     getDiagnostics: () => ({ residentCount: residents.length, residentNames: residents.map(resident => resident.name), houseCount: housesBuilt, savedRecruitCount: Array.isArray(saved.recruits) ? saved.recruits.length : 0 })
   };
 }

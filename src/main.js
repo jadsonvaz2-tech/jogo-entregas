@@ -2,16 +2,18 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
 import { createStoryEncounter } from "./systems/story.js";
-import { createVillageResidents } from "./systems/village.js?v=community-campaign-tailor-2026-11-07-7";
+import { createVillageResidents } from "./systems/village.js?v=community-expeditions-2026-11-07-1";
 import { createWorldSettlements, WORLD_ROAD_PATHS } from "./systems/settlements.js?v=natural-road-relief-2026-11-07-1";
 import { createExpandedWorld } from "./systems/world-expansion.js?v=underground-exploration-2026-11-07-1";
 import { createDistantVillageResidents } from "./systems/distant-village-residents.js";
 import { createSettlementEconomy } from "./systems/settlement-economy.js";
+import { createCommunityExpeditions } from "./systems/community-expeditions.js?v=community-expeditions-2026-11-07-1";
 let villageResidents=null;
 let distantVillageResidents=null;
 let settlementEconomy=null;
 let storyEncounter=null;
 let undergroundWorld=null;
+let communityExpeditions=null;
 
 const $ = (id) => document.getElementById(id);
 const raw = new URL("../assets/3d/", import.meta.url).href;
@@ -4561,7 +4563,7 @@ $("closeMapButton").addEventListener("click",()=>setFullMap(false));
 function animate(now){
  requestAnimationFrame(animate);
  const dt=Math.min((now-last)/1000,.05);last=now;
- update(dt);if(performance.now()-lastMapDraw>180){paintWorldMap(miniMapCanvas,miniMapContext,false);if(fullMapOpen)paintWorldMap(fullMapCanvas,fullMapContext,true);lastMapDraw=performance.now();}if(storyEncounter)storyEncounter.update();if(villageResidents)villageResidents.update(dt);if(distantVillageResidents)distantVillageResidents.update(dt);if(settlementEconomy)settlementEconomy.update(dt);updateWindEnvironment(dt,now*.001);updateForestAudio();if(activeBuildPlacement)updateBuildPreview();if(now-lastSave>5000){saveGame();if(distantVillageResidents)distantVillageResidents.save();lastSave=now;}renderer.render(scene,camera);
+ update(dt);if(performance.now()-lastMapDraw>180){paintWorldMap(miniMapCanvas,miniMapContext,false);if(fullMapOpen)paintWorldMap(fullMapCanvas,fullMapContext,true);lastMapDraw=performance.now();}if(storyEncounter)storyEncounter.update();if(villageResidents)villageResidents.update(dt);if(communityExpeditions)communityExpeditions.update(dt);if(distantVillageResidents)distantVillageResidents.update(dt);if(settlementEconomy)settlementEconomy.update(dt);updateWindEnvironment(dt,now*.001);updateForestAudio();if(activeBuildPlacement)updateBuildPreview();if(now-lastSave>5000){saveGame();if(distantVillageResidents)distantVillageResidents.save();lastSave=now;}renderer.render(scene,camera);
 }
 addEventListener("keydown",e=>{if(e.key==="Escape"&&activeBuildPlacement)cancelBuildPlacement();});
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));});
@@ -4648,6 +4650,7 @@ async function start(){
  if(!loaded)toast("Modelo do viajante indisponível: usando personagem provisório.");
  storyEncounter=startOptional("a missão e o personagem Edrik",()=>createStoryEncounter({THREE,scene,player,terrainHeight,state,onSave:saveGame,onToast:toast}));
  villageResidents=startOptional("os moradores da aldeia central",()=>createVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,onSave:saveGame,onFarmAction:villageFarmAction,onClaimTool:(type)=>{if(type==="reinforcedFieldKit"){state.reinforcedFieldKits++;}else{state[type]=true;if(type==="ironHelmet"||type==="steelHelmet")createIronHelmetVisual();if(type==="ironChestplate"||type==="steelChestplate")createIronChestplateVisual();if(type==="ironAxe"||type==="ironPickaxe"||type==="steelAxe"||type==="steelPickaxe")createToolVisual(type.toLowerCase().includes("axe")?"axe":"pickaxe");if(type==="steelSword")createIronSwordVisual();if(type==="steelShield")createSteelShieldVisual();if(type==="steelSpear")createSteelSpearVisual();}updateHUD();saveGame();return true;},managementRoot:$("playerVillageManagementSlot")}));
+ communityExpeditions=startOptional("as expedições comunitárias",()=>createCommunityExpeditions({villageResidents,onToast:toast}));
  settlementEconomy=startOptional("a economia das aldeias",()=>createSettlementEconomy({THREE,player,state,onToast:toast,onChange:()=>{updateHUD();saveGame();}}));
  distantVillageResidents=startOptional("os moradores das outras aldeias",()=>createDistantVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,economy:settlementEconomy}));
  startupStage="finalizando a entrada no mundo";

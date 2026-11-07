@@ -122,3 +122,18 @@
 .map-legend{display:flex;justify-content:center;flex-wrap:wrap;gap:14px;color:#e8e0c9;font:10px Arial,sans-serif}
 @media(max-width:520px){#mapWidget{right:10px;top:calc(205px + env(safe-area-inset-top,0px))}#miniMapButton{width:100px;height:100px}}
 @media(min-width:800px){#mapWidget{right:24px;top:260px}#miniMapButton{width:150px;height:150px}#fullMapPanel{inset:24px 8vw}}
+
+#communityExpeditionsPanel{margin:12px 0;padding:11px;border:1px solid rgba(194,167,106,.62);border-radius:10px;background:rgba(19,31,23,.92);color:#eee5cf;font:12px/1.4 system-ui}
+.expedition-panel-heading{font-weight:800;letter-spacing:.06em;color:#e6c98c;font-size:13px}
+.expedition-intro,.expedition-info,.expedition-history{display:block;margin:7px 0;color:#d0d5c8}
+.expedition-label{display:block;margin:9px 0 5px;color:#d9c18e;font-size:10px;font-weight:800;letter-spacing:.06em}
+.expedition-party{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.expedition-person{display:flex;align-items:center;gap:6px;padding:7px;border-radius:6px;background:#354338;color:#f3eddd}
+.expedition-person input{width:17px;height:17px;accent-color:#d1a85c}
+#communityExpeditionsPanel select{width:100%;padding:9px;border-radius:6px;background:#26372b;color:#fff;border:1px solid #71806a}
+#expeditionStart{width:100%;margin:10px 0;padding:11px;border:1px solid #c8a76d;border-radius:7px;background:#8a6837;color:white;font-weight:800}
+#expeditionStart:disabled{opacity:.55}
+.expedition-active{margin:8px 0;color:#f4e2b7;font-weight:700}
+.expedition-progress{height:8px;border-radius:9px;background:#111b14;overflow:hidden}
+.expedition-progress i{display:block;width:0;height:100%;background:#c7a35f;transition:width .3s}
+.expedition-history{font-size:10px;color:#b8c3ae}
