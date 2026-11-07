@@ -34,7 +34,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     stored: Math.max(0, Math.floor(Number(savedProduction.stored) || 0)),
     lost: Math.max(0, Math.floor(Number(savedProduction.lost) || 0)),
     byResource: Object.fromEntries(Object.keys(RESOURCE_LABELS).map(key => [key, Math.max(0, Math.floor(Number(savedProduction.byResource?.[key]) || 0))])),
-    byResident: savedProduction.byResident && typeof savedProduction.byResident === "object" ? Object.fromEntries(Object.entries(savedProduction.byResident).filter(([id]) => residents.some(person => person.id === id)).map(([id,entry]) => [id,{name:String(entry?.name || residents.find(person => person.id === id)?.name || "Morador"),amount:Math.max(0,Math.floor(Number(entry?.amount)||0)),stored:Math.max(0,Math.floor(Number(entry?.stored)||0))}])) : {}
+    byResident: savedProduction.byResident && typeof savedProduction.byResident === "object" ? Object.fromEntries(Object.entries(savedProduction.byResident).map(([id,entry]) => [id,{name:String(entry?.name || "Morador"),amount:Math.max(0,Math.floor(Number(entry?.amount)||0)),stored:Math.max(0,Math.floor(Number(entry?.stored)||0))}])) : {}
   };
   const residents = [
     {
