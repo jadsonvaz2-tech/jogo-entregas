@@ -3896,12 +3896,24 @@ function update(dt){
   else if(uphillEffort>.18)state.energy=Math.max(0,state.energy-dt*uphillEffort*.32);
   else state.energy=Math.min(100,state.energy+dt*(1.2+downhillRelief));
  }else{state.energy=Math.min(100,state.energy+dt*4);}
- const nearFire=state.campfire&&Math.hypot(player.position.x-state.campfireX,player.position.z-state.campfireZ)<6;
+ const fireDistance=state.campfire?Math.hypot(player.position.x-state.campfireX,player.position.z-state.campfireZ):Infinity;
+ const fireWarmth=THREE.MathUtils.clamp(1-(fireDistance-2)/8,0,1);
+ const nearFire=fireWarmth>.5;
  const nearShelter=state.shelter&&Math.hypot(player.position.x-state.shelterX,player.position.z-state.shelterZ)<5;
- // Descansar dentro do abrigo recupera energia mais rápido, sem alterar o salvamento.
- if(nearShelter&&!moving)state.energy=Math.min(100,state.energy+dt*5);
- if(nearFire){state.energy=Math.min(100,state.energy+dt*5);state.temperature=Math.min(100,state.temperature+dt*9);}
- else{const daylight=THREE.MathUtils.clamp(Math.sin((state.timeOfDay-6)/12*Math.PI),0,1);let coldRate=state.timeOfDay<6||state.timeOfDay>=19?.42:.10;if(nearShelter)coldRate*=.2;if(state.coldCloak)coldRate*=.45;if(state.leatherBoots)coldRate*=.7;if(state.woolGarment)coldRate*=.72;state.temperature=THREE.MathUtils.clamp(state.temperature+dt*(daylight*.32-coldRate),0,100);}
+ // O calor da fogueira diminui gradualmente com a distância, em vez de desligar de uma vez.
+ if(!moving)state.energy=Math.min(100,state.energy+dt*4);
+ if(fireWarmth>0){
+  state.energy=Math.min(100,state.energy+dt*(1.5+3.5*fireWarmth));
+  state.temperature=Math.min(100,state.temperature+dt*(1.5+7.5*fireWarmth));
+ }else{
+  const daylight=THREE.MathUtils.clamp(Math.sin((state.timeOfDay-6)/12*Math.PI),0,1);
+  let coldRate=state.timeOfDay<6||state.timeOfDay>=19?.42:.10;
+  if(nearShelter)coldRate*=.2;
+  if(state.coldCloak)coldRate*=.45;
+  if(state.leatherBoots)coldRate*=.7;
+  if(state.woolGarment)coldRate*=.72;
+  state.temperature=THREE.MathUtils.clamp(state.temperature+dt*(daylight*.32-coldRate),0,100);
+ }
  const floorY=terrainHeight(player.position.x,player.position.z);
  if(isJumping){
   verticalVelocity-=12*dt;
