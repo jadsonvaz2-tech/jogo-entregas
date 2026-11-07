@@ -3111,7 +3111,7 @@ function craftCampfire(){
  createCampfire(x,z);
  updateHUD();saveGame();toast("Fogueira construída! Descanse perto dela para recuperar energia.");
 }
-let campfireFlameMesh=null,campfireCoreMesh=null,campfireLightSource=null;
+let campfireFlameMesh=null,campfireCoreMesh=null,campfireLightSource=null,campfireGlowMesh=null;
 const campfireEmbers=[];
 const campfireSmoke=[];
 let campfireAnimationTime=0;
@@ -3129,6 +3129,9 @@ function createCampfire(x,z){
   const log=new THREE.Mesh(new THREE.CylinderGeometry(.09,.11,1.15,7),woodMat);
   log.rotation.z=Math.PI/2;log.rotation.y=i*Math.PI/3;log.position.y=.22+i*.025;log.castShadow=true;group.add(log);
  }
+ const glowMat=new THREE.MeshBasicMaterial({color:0xff8738,transparent:true,opacity:.1,depthWrite:false,side:THREE.DoubleSide});
+ const glow=new THREE.Mesh(new THREE.RingGeometry(.76,1.92,48),glowMat);
+ glow.rotation.x=-Math.PI/2;glow.position.y=.035;glow.renderOrder=1;group.add(glow);
  const flameMat=new THREE.MeshStandardMaterial({color:0xff8a24,emissive:0xff4b08,emissiveIntensity:1.7,roughness:.4});
  const flame=new THREE.Mesh(new THREE.ConeGeometry(.22,.8,7),flameMat);flame.position.y=.68;group.add(flame);
  const core=new THREE.Mesh(new THREE.SphereGeometry(.15,8,8),new THREE.MeshBasicMaterial({color:0xffd36a}));core.position.y=.43;group.add(core);
@@ -3156,7 +3159,7 @@ function createCampfire(x,z){
  }
  group.position.set(x,terrainHeight(x,z),z);scene.add(group);
  state.campfireObject=group;state.campfire=true;state.campfireX=x;state.campfireZ=z;
- campfireFlameMesh=flame;campfireCoreMesh=core;campfireLightSource=light;campfireAnimationTime=0;
+ campfireFlameMesh=flame;campfireCoreMesh=core;campfireLightSource=light;campfireGlowMesh=glow;campfireAnimationTime=0;
 }
 function updateCampfireVisuals(dt){
  if(!state.campfireObject||!campfireFlameMesh)return;
@@ -3167,6 +3170,8 @@ function updateCampfireVisuals(dt){
  campfireFlameMesh.rotation.z=Math.sin(t*8)*.075;
  campfireCoreMesh.scale.setScalar(.94+Math.sin(t*17)*.07);
  campfireLightSource.intensity=1.65+flicker*.28;
+ campfireGlowMesh.material.opacity=.095+Math.sin(t*2.4)*.022;
+ campfireGlowMesh.scale.setScalar(1+Math.sin(t*1.7)*.018);
  for(const ember of campfireEmbers){
   const rise=(t*ember.speed+ember.phase)%1;
   ember.object.position.y=.58+rise*1.45;
