@@ -35,6 +35,8 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
   }
   const savedMet = saved.met && typeof saved.met === "object" ? saved.met : {};
   const savedResidents = saved.residents && typeof saved.residents === "object" ? saved.residents : {};
+  const savedRecruits = Array.isArray(saved.recruits) ? saved.recruits : [];
+  for (const recruit of savedRecruits) { const town = towns.find(item => item.id === recruit.townId); if (town && recruit.id && !town.residents.some(item => item.id === recruit.id)) town.residents.push({ ...recruit, model: recruit.model || "Worker_Male.gltf", greeting: recruit.greeting || "Sou um novo morador desta comunidade.", isRecruit: true }); }
   const residents = [];
   const townMaterials = {
     wood: new THREE.MeshStandardMaterial({ color: 0x62452e, roughness: 1 }),
@@ -50,9 +52,10 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
       const residentData = {};
       for (const resident of residents) {
         met[resident.id] = !!resident.met;
-        residentData[resident.id] = { needs: resident.needs, mood: resident.mood, trust: resident.trust, lastSimHour: resident.lastSimHour, lastSocialDay: resident.lastSocialDay, workHours: resident.workHours };
+        residentData[resident.id] = { needs: resident.needs, mood: resident.mood, trust: resident.trust, lastSimHour: resident.lastSimHour, lastSocialDay: resident.lastSocialDay, workHours: resident.workHours, role: resident.role, work: resident.work };
       }
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ version: 2, met, residents: residentData }));
+      const recruits = residents.filter(resident => resident.isRecruit).map(resident => ({ id: resident.id, name: resident.name, role: resident.role, model: resident.model, color: resident.color, home: resident.home, work: resident.work, greeting: resident.greeting, townId: resident.town.id }));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ version: 3, met, residents: residentData, recruits }));
     } catch (error) {
       console.warn("Não foi possível salvar o encontro com os moradores.", error);
     }
@@ -170,32 +173,36 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
     });
   }
 
+  function createResident(town, data) {
+    const previous = savedResidents[data.id] && typeof savedResidents[data.id] === "object" ? savedResidents[data.id] : {};
+    const resident = {
+      ...data, town, met: savedMet[data.id] === true,
+      role: previous.role || data.role,
+      work: Array.isArray(previous.work) ? previous.work : data.work,
+      needs: { food: 82, water: 86, warmth: 90, rest: 92, ...(previous.needs || {}) },
+      mood: Number.isFinite(previous.mood) ? previous.mood : 68,
+      trust: Number.isFinite(previous.trust) ? previous.trust : 0,
+      lastSimHour: Number.isFinite(previous.lastSimHour) ? previous.lastSimHour : ((Number(state.day) || 1) * 24 + (Number(state.timeOfDay) || 8)),
+      lastSocialDay: Number.isFinite(previous.lastSocialDay) ? previous.lastSocialDay : 0,
+      workHours: Number.isFinite(previous.workHours) ? previous.workHours : 0,
+      mixer: null, idleAction: null, walkAction: null, moving: false, routeKey: "",
+      routeIndex: 0, target: null, workPhase: 0, group: new THREE.Group()
+    };
+    const home = [town.x + data.home[0], town.z + data.home[1]];
+    resident.homePoint = home;
+    resident.group.position.set(home[0], terrainHeight(home[0], home[1]), home[1]);
+    scene.add(resident.group);
+    resident.fallback = makeFallback(resident.group, data.color);
+    resident.tag = makeTag(resident, town.name);
+    resident.group.add(resident.tag);
+    residents.push(resident);
+    loadModel(resident);
+    return resident;
+  }
+
   for (const town of towns) {
     addWorkArea(town);
-    for (const data of town.residents) {
-      const previous = savedResidents[data.id] && typeof savedResidents[data.id] === "object" ? savedResidents[data.id] : {};
-      const resident = {
-        ...data, town, met: savedMet[data.id] === true,
-        needs: { food: 82, water: 86, warmth: 90, rest: 92, ...(previous.needs || {}) },
-        mood: Number.isFinite(previous.mood) ? previous.mood : 68,
-        trust: Number.isFinite(previous.trust) ? previous.trust : 0,
-        lastSimHour: Number.isFinite(previous.lastSimHour) ? previous.lastSimHour : ((Number(state.day) || 1) * 24 + (Number(state.timeOfDay) || 8)),
-        lastSocialDay: Number.isFinite(previous.lastSocialDay) ? previous.lastSocialDay : 0,
-        workHours: Number.isFinite(previous.workHours) ? previous.workHours : 0,
-        mixer: null,
-        idleAction: null, walkAction: null, moving: false, routeKey: "",
-        routeIndex: 0, target: null, workPhase: 0, group: new THREE.Group()
-      };
-      const home = [town.x + data.home[0], town.z + data.home[1]];
-      resident.homePoint = home;
-      resident.group.position.set(home[0], terrainHeight(home[0], home[1]), home[1]);
-      scene.add(resident.group);
-      resident.fallback = makeFallback(resident.group, data.color);
-      resident.tag = makeTag(resident, town.name);
-      resident.group.add(resident.tag);
-      residents.push(resident);
-      loadModel(resident);
-    }
+    for (const data of town.residents) createResident(town, data);
   }
 
   const talkButton = document.createElement("button");
@@ -361,5 +368,22 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
     if (nearest && !dialog.hidden) refreshDialogue(nearest);
   }
 
-  return { update, residents, save };
+  function recruit(townId, data) {
+    const town = towns.find(item => item.id === townId);
+    if (!town || !data || !data.id || residents.some(item => item.id === data.id)) return null;
+    const resident = createResident(town, { ...data, isRecruit: true, model: data.model || "Worker_Male.gltf", greeting: data.greeting || "Obrigado por me receber nesta povoação." });
+    save(); onToast(resident.name + " agora vive em " + town.name + ".");
+    return resident;
+  }
+  function assignProfession(residentId, role) {
+    const resident = residents.find(item => item.id === residentId);
+    const jobs = { "Agricultor":[[-13,11],[-10,13]], "Lenhador":[[19,-9],[22,-13]], "Caçador":[[-19,-11],[-23,-15]], "Pastor":[[-17,1],[-18,5]], "Artesão":[[-4,13],[0,15]], "Construtor":[[12,14],[15,17]], "Comerciante":[[0,3],[3,4]] };
+    if (!resident || !jobs[role]) return false;
+    resident.role=role; resident.work=jobs[role]; resident.routeKey=""; resident.target=null;
+    if(resident.tag)resident.group.remove(resident.tag);
+    resident.tag=makeTag(resident,resident.town.name);resident.group.add(resident.tag);
+    save(); return true;
+  }
+  function residentsForTown(townId) { return residents.filter(resident => resident.town.id===townId); }
+  return { update, residents, save, recruit, assignProfession, residentsForTown };
 }

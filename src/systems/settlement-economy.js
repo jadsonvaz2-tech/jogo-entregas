@@ -23,7 +23,7 @@ export function createSettlementEconomy({ player, state, onToast, onChange }) {
   }
 
   const towns = TOWNS.map(town => ({
-    ...town,
+    ...town, baseProduction: { ...town.production },
     stock: { wood: 18, berries: 24, meat: 8, hide: 5, wool: 8, ...(saved.towns?.[town.id]?.stock || {}) }
   }));
   let lastDay = Number.isFinite(saved.lastDay) ? saved.lastDay : (Number(state.day) || 1);
