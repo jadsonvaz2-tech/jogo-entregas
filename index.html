@@ -109,11 +109,41 @@
             }
             return matches.length?matches.slice(0,12).join(" | "):"nenhuma outra chave relacionada encontrada";
           })();
+        values.textContent += "\\nREGISTROS DE ALDEIA DENTRO DE OUTROS SALVAMENTOS — "+(function(){
+          var ignored=["cronicas-floresta-village-v1","cronicas-floresta-village-v1-backup","cronicas-floresta-distant-villages-v1","cronicas-floresta-settlement-management-v1","cronicas-floresta-settlement-economy-v1"];
+          var found=[];
+          function scan(value,path,depth){
+            if(!value||typeof value!=="object"||depth>4)return;
+            var recruits=Array.isArray(value.recruits)?value.recruits.filter(function(p){return p&&p.id}):[];
+            var homes=value.homes&&typeof value.homes==="object"?Object.keys(value.homes).length:0;
+            var residents=value.residents&&typeof value.residents==="object"?Object.keys(value.residents).length:0;
+            var houses=Number.isFinite(value.houses)?Math.max(0,Number(value.houses)):0;
+            if(recruits.length||homes||houses||residents){
+              var details=[];
+              if(recruits.length)details.push(recruits.length+" recrutados ("+recruits.map(function(p){return p.name||p.id}).slice(0,8).join(", ")+")");
+              if(houses)details.push(houses+" casas");
+              if(homes)details.push(homes+" vínculos de moradia");
+              if(residents)details.push(residents+" registros de moradores");
+              found.push(path+": "+details.join(" · "));
+            }
+            if(depth===4)return;
+            Object.keys(value).slice(0,80).forEach(function(k){
+              var child=value[k];
+              if(child&&typeof child==="object")scan(child,path+"."+k,depth+1);
+            });
+          }
+          for(var i=0;i<localStorage.length;i++){
+            var key=localStorage.key(i);
+            if(!key||ignored.indexOf(key)>=0)continue;
+            try{scan(JSON.parse(localStorage.getItem(key)),key,0);}catch(e){}
+          }
+          return found.length?found.slice(0,15).join(" | "):"nenhum registro adicional encontrado";
+        })();
         panel.hidden=false;
       });
       document.getElementById("save-check-close").addEventListener("click",function(){panel.hidden=true;});
     })();
   </script>
-  <script type="module" src="./src/main.js?v=bulk-select-init-1"></script>
+  <script type="module" src="./src/main.js?v=deep-village-scan-1"></script>
 </body>
 </html>
