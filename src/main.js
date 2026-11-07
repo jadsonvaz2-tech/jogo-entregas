@@ -26,11 +26,13 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9bb3a0);
 scene.fog = new THREE.FogExp2(0x9bb3a0, 0.0068);
 const camera = new THREE.PerspectiveCamera(65, innerWidth/innerHeight, 0.1, 450);
-const renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:"high-performance"});
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));
+const mobilePerformanceMode = window.matchMedia("(max-width: 900px), (pointer: coarse)").matches;
+const renderPixelRatio = mobilePerformanceMode ? 1.1 : 1.45;
+const renderer = new THREE.WebGLRenderer({antialias:!mobilePerformanceMode, powerPreference:"high-performance"});
+renderer.setPixelRatio(Math.min(devicePixelRatio,renderPixelRatio));
 renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = mobilePerformanceMode ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
@@ -40,7 +42,7 @@ const ambient = new THREE.HemisphereLight(0xdce9df,0x46513a,2.0);
 scene.add(ambient);
 const sun = new THREE.DirectionalLight(0xffe2b3,2.1);
 sun.position.set(-35,65,25); sun.castShadow=true;
-sun.shadow.mapSize.set(1024,1024);
+sun.shadow.mapSize.set(mobilePerformanceMode?512:768,mobilePerformanceMode?512:768);
 sun.shadow.camera.left=-55; sun.shadow.camera.right=55; sun.shadow.camera.top=55; sun.shadow.camera.bottom=-55;
 scene.add(sun);
 
@@ -104,7 +106,8 @@ function terrainHeight(x,z){
  const lakeB=3.8*Math.exp(-((x-82)**2+(z-126)**2)/(2*15*15));
  return localHills+broadHills*edgeBlend+clearing+roadReliefHeight(x,z)+mountainRelief-riverChannel-lakeA-lakeB;
 }
-const groundGeo = new THREE.PlaneGeometry(416,416,256,256);
+const terrainSegments = mobilePerformanceMode ? 192 : 224;
+const groundGeo = new THREE.PlaneGeometry(416,416,terrainSegments,terrainSegments);
 groundGeo.rotateX(-Math.PI/2);
 const pos = groundGeo.attributes.position;
 const groundColors=[];
@@ -403,11 +406,11 @@ function scatterModel(model,x,z,scale=1){
  const m=model.clone(true);
  m.position.set(x,terrainHeight(x,z),z); m.rotation.y=worldRandom()*Math.PI*2;
  const s=scale*(.78+worldRandom()*.5); m.scale.multiplyScalar(s);
- m.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}}); scene.add(m); treeModels.push(m);
+ m.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false;}}); scene.add(m); treeModels.push(m);
  m.userData.windBaseRotationY=m.rotation.y;m.userData.windPhase=(x*12.9898+z*78.233)*.17;m.userData.windAmplitude=.018+Math.abs(Math.sin(x*4.17+z*2.31))*.018;windTrees.push(m);return m;
 }
 // Vento, folhas e áudio ambiente: elementos puramente visuais/sonoros, fora do salvamento.
-const windLeafCount=44;
+const windLeafCount=mobilePerformanceMode?20:44;
 let windLeaves=null,windLeafData=[];
 const windLeafDummy=new THREE.Object3D();
 function createWindLeaves(){
@@ -422,9 +425,14 @@ function createWindLeaves(){
  }
  scene.add(windLeaves);
 }
+let lastWindUpdate=0;
 function updateWindEnvironment(dt,time){
+ if(time-lastWindUpdate<.055)return;
+ lastWindUpdate=time;
  const breeze=Math.sin(time*.42)*.55+Math.sin(time*.19+1.4)*.45;
  for(const tree of windTrees){
+  const dx=tree.position.x-player.position.x,dz=tree.position.z-player.position.z;
+  if(dx*dx+dz*dz>68*68)continue;
   const phase=time*.72+(tree.userData.windPhase||0);
   const amount=tree.userData.windAmplitude||.02;
   tree.rotation.x=Math.sin(phase)*amount;
@@ -1087,7 +1095,7 @@ async function buildForest(){
   object.position.set(x,terrainHeight(x,z),z);
   object.rotation.y=rotation;
   object.scale.multiplyScalar(scale);
-  object.traverse(o=>{if(o.isMesh){o.castShadow=castShadow;o.receiveShadow=true;}});
+  object.traverse(o=>{if(o.isMesh){o.castShadow=castShadow;o.receiveShadow=false;}});
   scene.add(object);treeModels.push(object);
   placedGroundDetails.push({x,z});
   return object;
@@ -1377,7 +1385,7 @@ if(state.coldCloak)createCloakVisual();
 if(state.leatherBoots)createBootsVisual();
 if(state.woolGarment)createWoolGarmentVisual();
 const cameraTarget=new THREE.Vector3();
-let last=performance.now(),toastTimer=0,lastSave=0;
+let last=performance.now(),lastRender=last,toastTimer=0,lastSave=0;
 const flyingArrows=[];
 function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>$("toast").classList.remove("show"),1900);}
 function updateHUD(){
@@ -4601,11 +4609,12 @@ fullMapCanvas.addEventListener("click",event=>{
 
 function animate(now){
  requestAnimationFrame(animate);
- const dt=Math.min((now-last)/1000,.05);last=now;
+ if(mobilePerformanceMode&&now-lastRender<1000/30)return;
+ const dt=Math.min((now-last)/1000,.05);last=now;lastRender=now;
  update(dt);if(performance.now()-lastMapDraw>180){paintWorldMap(miniMapCanvas,miniMapContext,false);if(fullMapOpen)paintWorldMap(fullMapCanvas,fullMapContext,true);lastMapDraw=performance.now();}if(storyEncounter)storyEncounter.update();if(villageResidents)villageResidents.update(dt);if(communityExpeditions)communityExpeditions.update(dt);if(distantExploration)distantExploration.update(dt);if(distantVillageResidents)distantVillageResidents.update(dt);if(settlementEconomy)settlementEconomy.update(dt);updateWindEnvironment(dt,now*.001);updateForestAudio();if(activeBuildPlacement)updateBuildPreview();if(now-lastSave>5000){saveGame();if(distantVillageResidents)distantVillageResidents.save();lastSave=now;}renderer.render(scene,camera);
 }
 addEventListener("keydown",e=>{if(e.key==="Escape"&&activeBuildPlacement)cancelBuildPlacement();});
-addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));});
+addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,renderPixelRatio));});
 let startupStage="preparando o mundo";
 async function start(){
  const startOptional=(label,create)=>{
