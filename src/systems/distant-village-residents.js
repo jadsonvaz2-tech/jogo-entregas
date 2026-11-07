@@ -5,11 +5,11 @@ const SAVE_KEY = "cronicas-floresta-distant-villages-v1";
 
 // Moradores independentes das três pessoas do acampamento inicial.
 // Seus dados são aditivos e ficam em uma chave separada para proteger os salvamentos antigos.
-export function createDistantVillageResidents({ THREE, scene, player, terrainHeight, state, onToast }) {
+export function createDistantVillageResidents({ THREE, scene, player, terrainHeight, state, onToast, economy }) {
   const loader = new GLTFLoader();
   const towns = [
     {
-      name: "Aldeia do Vale", x: 57, z: 31,
+      id: "vale", name: "Aldeia do Vale", x: 57, z: 31,
       residents: [
         { id: "vale-ana", name: "Ana", role: "Agricultora", model: "Worker_Female.gltf", color: 0x788d55, home: [-8, -7], work: [[-13, 11], [-10, 13]], greeting: "Cuido das hortas da Aldeia do Vale. Pela manhã preparo os canteiros e acompanho as plantações; depois descanso perto de casa." },
         { id: "vale-bento", name: "Bento", role: "Lenhador", model: "Worker_Male.gltf", color: 0x79583b, home: [8, -7], work: [[19, -9], [22, -13]], greeting: "Sou lenhador. Trabalho na mata além das últimas casas e separo troncos para as construções da aldeia." },
@@ -17,7 +17,7 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
       ]
     },
     {
-      name: "Povoado da Colina", x: -59, z: -39,
+      id: "colina", name: "Povoado da Colina", x: -59, z: -39,
       residents: [
         { id: "colina-joana", name: "Joana", role: "Pastora", model: "Worker_Female.gltf", color: 0x9a8051, home: [-7, -7], work: [[-17, 1], [-18, 5]], greeting: "Sou pastora. Levo os animais para pastar durante o dia e volto ao povoado antes do anoitecer." },
         { id: "colina-gil", name: "Gil", role: "Caçador", model: "Cowboy_Male.gltf", color: 0x7a5940, home: [7, -7], work: [[-19, -11], [-23, -15]], greeting: "Conheço as trilhas e os rastros da floresta. Passo o dia procurando caça e observando os arredores." },
@@ -34,6 +34,7 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
     console.warn("Salvamento dos moradores das povoações indisponível.", error);
   }
   const savedMet = saved.met && typeof saved.met === "object" ? saved.met : {};
+  const savedResidents = saved.residents && typeof saved.residents === "object" ? saved.residents : {};
   const residents = [];
   const townMaterials = {
     wood: new THREE.MeshStandardMaterial({ color: 0x62452e, roughness: 1 }),
@@ -46,8 +47,12 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
   function save() {
     try {
       const met = {};
-      for (const resident of residents) met[resident.id] = !!resident.met;
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ version: 1, met }));
+      const residentData = {};
+      for (const resident of residents) {
+        met[resident.id] = !!resident.met;
+        residentData[resident.id] = { needs: resident.needs, mood: resident.mood, trust: resident.trust, lastSimHour: resident.lastSimHour, lastSocialDay: resident.lastSocialDay, workHours: resident.workHours };
+      }
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ version: 2, met, residents: residentData }));
     } catch (error) {
       console.warn("Não foi possível salvar o encontro com os moradores.", error);
     }
@@ -168,8 +173,16 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
   for (const town of towns) {
     addWorkArea(town);
     for (const data of town.residents) {
+      const previous = savedResidents[data.id] && typeof savedResidents[data.id] === "object" ? savedResidents[data.id] : {};
       const resident = {
-        ...data, town, met: savedMet[data.id] === true, mixer: null,
+        ...data, town, met: savedMet[data.id] === true,
+        needs: { food: 82, water: 86, warmth: 90, rest: 92, ...(previous.needs || {}) },
+        mood: Number.isFinite(previous.mood) ? previous.mood : 68,
+        trust: Number.isFinite(previous.trust) ? previous.trust : 0,
+        lastSimHour: Number.isFinite(previous.lastSimHour) ? previous.lastSimHour : ((Number(state.day) || 1) * 24 + (Number(state.timeOfDay) || 8)),
+        lastSocialDay: Number.isFinite(previous.lastSocialDay) ? previous.lastSocialDay : 0,
+        workHours: Number.isFinite(previous.workHours) ? previous.workHours : 0,
+        mixer: null,
         idleAction: null, walkAction: null, moving: false, routeKey: "",
         routeIndex: 0, target: null, workPhase: 0, group: new THREE.Group()
       };
@@ -195,23 +208,62 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
   dialog.hidden = true;
   dialog.id = "distant-village-dialog";
   dialog.style.cssText = "position:fixed;z-index:75;left:50%;top:50%;transform:translate(-50%,-50%);width:min(390px,calc(100vw - 32px));padding:18px;border:1px solid #d6b45d;border-radius:14px;background:linear-gradient(145deg,#293a2a,#17231b);color:#f3e8c9;box-shadow:0 18px 55px #000b;font:14px/1.55 Georgia,serif";
-  dialog.innerHTML = '<button type="button" style="float:right;padding:7px 10px;background:transparent;color:#fff1cc;border:1px solid #b99b5c;border-radius:7px">FECHAR ✕</button><h2 style="margin:0 0 5px;color:#e6c979" id="distant-village-name"></h2><div id="distant-village-role" style="font:700 10px system-ui;color:#bfc99d;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px"></div><p id="distant-village-text"></p>';
+  dialog.innerHTML = '<button type="button" style="float:right;padding:7px 10px;background:transparent;color:#fff1cc;border:1px solid #b99b5c;border-radius:7px">FECHAR ✕</button><h2 style="margin:0 0 5px;color:#e6c979" id="distant-village-name"></h2><div id="distant-village-role" style="font:700 10px system-ui;color:#bfc99d;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px"></div><p id="distant-village-text"></p><div id="distant-village-status" style="padding:10px;margin:10px 0;background:#111d16;border:1px solid #65714d;border-radius:9px;font:12px/1.7 system-ui;color:#e7dfc6"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button id="distant-village-feed" type="button" style="padding:10px;border:1px solid #b99b5c;border-radius:8px;background:#42583a;color:#fff1cc;font:700 10px system-ui">OFERECER COMIDA</button><button id="distant-village-kind" type="button" style="padding:10px;border:1px solid #b99b5c;border-radius:8px;background:#594735;color:#fff1cc;font:700 10px system-ui">CONVERSAR</button></div>';
   document.body.appendChild(dialog);
   const dialogName = dialog.querySelector("#distant-village-name");
   const dialogRole = dialog.querySelector("#distant-village-role");
   const dialogText = dialog.querySelector("#distant-village-text");
+  const dialogStatus = dialog.querySelector("#distant-village-status");
+  const feedButton = dialog.querySelector("#distant-village-feed");
+  const kindButton = dialog.querySelector("#distant-village-kind");
   dialog.querySelector("button").addEventListener("click", () => { dialog.hidden = true; });
 
   let nearest = null;
+  function relationshipLabel(value) {
+    return value >= 70 ? "Amizade" : value >= 30 ? "Conhecido" : "Recém-conhecido";
+  }
+  function refreshDialogue(resident) {
+    const needs = resident.needs;
+    dialogStatus.innerHTML = "<b>Ânimo: " + Math.round(resident.mood) + "/100 · " + relationshipLabel(resident.trust) + ": " + Math.round(resident.trust) + "/100</b><br>🍞 Alimentação " + Math.round(needs.food) + "% · 💧 Água " + Math.round(needs.water) + "%<br>🔥 Calor " + Math.round(needs.warmth) + "% · 🛏 Descanso " + Math.round(needs.rest) + "%<br><span style='color:#b9c99b'>Atividade: " + (resident.activity || "rotina da aldeia") + "</span>";
+    const canFeed = (Number(state.berries) || 0) > 0 || (Number(state.cookedMeat) || 0) > 0 || (Number(state.meat) || 0) > 0;
+    feedButton.disabled = !canFeed;
+    feedButton.textContent = canFeed ? "OFERECER COMIDA" : "SEM COMIDA NA MOCHILA";
+    kindButton.disabled = resident.lastSocialDay === (Number(state.day) || 1);
+    kindButton.textContent = kindButton.disabled ? "JÁ CONVERSARAM HOJE" : "CONVERSAR";
+  }
   function openDialogue(resident) {
-    resident.met = true; save();
+    resident.met = true;
     dialogName.textContent = resident.name;
     dialogRole.textContent = resident.role + " · " + resident.town.name;
     dialogText.textContent = resident.greeting + " " + (resident.moving ? "Agora estou a caminho da minha atividade." : "Neste momento estou no meu ponto da rotina diária.");
+    refreshDialogue(resident);
     dialog.hidden = false;
     talkButton.hidden = true;
-    onToast("Você conheceu " + resident.name + ", de " + resident.town.name + ".");
+    save();
+    onToast("Você conversou com " + resident.name + ", de " + resident.town.name + ".");
   }
+  feedButton.addEventListener("click", () => {
+    if (!nearest || dialog.hidden) return;
+    let food = "berries";
+    if ((Number(state.cookedMeat) || 0) > 0) food = "cookedMeat";
+    else if ((Number(state.berries) || 0) > 0) food = "berries";
+    else if ((Number(state.meat) || 0) > 0) food = "meat";
+    if ((Number(state[food]) || 0) <= 0) return;
+    state[food]--;
+    nearest.needs.food = Math.min(100, nearest.needs.food + (food === "cookedMeat" ? 48 : food === "meat" ? 34 : 24));
+    nearest.mood = Math.min(100, nearest.mood + 8);
+    nearest.trust = Math.min(100, nearest.trust + 6);
+    refreshDialogue(nearest); save();
+    onToast("Você dividiu comida com " + nearest.name + ". A confiança aumentou.");
+  });
+  kindButton.addEventListener("click", () => {
+    if (!nearest || dialog.hidden || nearest.lastSocialDay === (Number(state.day) || 1)) return;
+    nearest.lastSocialDay = Number(state.day) || 1;
+    nearest.trust = Math.min(100, nearest.trust + 3);
+    nearest.mood = Math.min(100, nearest.mood + 2);
+    refreshDialogue(nearest); save();
+    onToast(nearest.name + " gostou da conversa. Vocês se conhecem melhor.");
+  });
   talkButton.addEventListener("click", () => { if (nearest && dialog.hidden) openDialogue(nearest); });
 
   function schedule(resident, hour) {
@@ -232,10 +284,46 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
     if (!moving && resident.idleAction) resident.idleAction.reset().fadeIn(.18).play();
   }
 
-  function update(dt) {
-    const hour = Number(state.timeOfDay) || 8;
-    for (const resident of residents) {
+  function updateNeeds(resident, absoluteHour) {
+    const elapsed = Math.min(absoluteHour - resident.lastSimHour, 48);
+    if (elapsed <= 0) return;
+    const supply = economy?.towns?.find(town => town.id === resident.town.id);
+    for (let tick = 0; tick < Math.floor(elapsed); tick++) {
+      const hour = (resident.lastSimHour + tick + 1) % 24;
       const plan = schedule(resident, hour);
+      const resting = plan.key === "sleep";
+      const eating = plan.key === "meal";
+      resident.needs.food = Math.max(0, resident.needs.food - .42);
+      resident.needs.water = Math.max(0, resident.needs.water - .55);
+      resident.needs.warmth = Math.max(0, resident.needs.warmth - .18);
+      resident.needs.rest = resting ? Math.min(100, resident.needs.rest + 5.5) : Math.max(0, resident.needs.rest - (plan.key.startsWith("work") ? .9 : .35));
+      if (eating && supply) {
+        if (supply.stock.berries > 0) { supply.stock.berries--; resident.needs.food = Math.min(100, resident.needs.food + 32); }
+        else if (supply.stock.meat > 0) { supply.stock.meat--; resident.needs.food = Math.min(100, resident.needs.food + 42); }
+      }
+      if (hour % 6 === 0 && supply && supply.stock.berries > 0) {
+        supply.stock.berries--;
+        resident.needs.water = Math.min(100, resident.needs.water + 28);
+      }
+      if (hour % 12 === 0 && supply && supply.stock.wood > 0) {
+        supply.stock.wood--;
+        resident.needs.warmth = Math.min(100, resident.needs.warmth + 24);
+      }
+      if (plan.key.startsWith("work")) resident.workHours += 1;
+      const needsAverage = (resident.needs.food + resident.needs.water + resident.needs.warmth + resident.needs.rest) / 4;
+      resident.mood = THREE.MathUtils.clamp(resident.mood + (needsAverage >= 55 ? .12 : -.28), 0, 100);
+    }
+    resident.lastSimHour = absoluteHour;
+    if (supply && economy.save) economy.save();
+  }
+
+  function update(dt) {
+    const hour = Number(state.timeOfDay) || 0;
+    const absoluteHour = (Number(state.day) || 1) * 24 + hour;
+    for (const resident of residents) {
+      updateNeeds(resident, absoluteHour);
+      const plan = schedule(resident, hour);
+      resident.activity = plan.key === "sleep" ? "Dormindo em casa" : plan.key === "meal" ? "Refeição e descanso" : plan.key.startsWith("work") ? resident.role + " · trabalhando" : "Voltando para casa";
       if (plan.key !== resident.routeKey) {
         resident.routeKey = plan.key; resident.routeIndex = 0; resident.target = plan.points[0];
       }
@@ -270,7 +358,8 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
     }
     talkButton.hidden = !nearest || !dialog.hidden;
     if (nearest && dialog.hidden) talkButton.textContent = "CONVERSAR COM " + nearest.name.toUpperCase();
+    if (nearest && !dialog.hidden) refreshDialogue(nearest);
   }
 
-  return { update, residents };
+  return { update, residents, save };
 }

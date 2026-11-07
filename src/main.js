@@ -4306,7 +4306,7 @@ function update(dt){
 function animate(now){
  requestAnimationFrame(animate);
  const dt=Math.min((now-last)/1000,.05);last=now;
- update(dt);if(storyEncounter)storyEncounter.update();if(villageResidents)villageResidents.update(dt);if(distantVillageResidents)distantVillageResidents.update(dt);if(settlementEconomy)settlementEconomy.update(dt);updateWindEnvironment(dt,now*.001);updateForestAudio();if(activeBuildPlacement)updateBuildPreview();if(now-lastSave>5000){saveGame();lastSave=now;}renderer.render(scene,camera);
+ update(dt);if(storyEncounter)storyEncounter.update();if(villageResidents)villageResidents.update(dt);if(distantVillageResidents)distantVillageResidents.update(dt);if(settlementEconomy)settlementEconomy.update(dt);updateWindEnvironment(dt,now*.001);updateForestAudio();if(activeBuildPlacement)updateBuildPreview();if(now-lastSave>5000){saveGame();if(distantVillageResidents)distantVillageResidents.save();lastSave=now;}renderer.render(scene,camera);
 }
 addEventListener("keydown",e=>{if(e.key==="Escape"&&activeBuildPlacement)cancelBuildPlacement();});
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));});
@@ -4366,13 +4366,13 @@ async function start(){
  if(!loaded)toast("Modelo do viajante indisponível: usando personagem provisório.");
  storyEncounter=createStoryEncounter({THREE,scene,player,terrainHeight,state,onSave:saveGame,onToast:toast});
  villageResidents=createVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,onSave:saveGame,onFarmAction:villageFarmAction});
- distantVillageResidents=createDistantVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast});
  settlementEconomy=createSettlementEconomy({THREE,player,state,onToast:toast,onChange:()=>{updateHUD();saveGame();}});
+ distantVillageResidents=createDistantVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,economy:settlementEconomy});
  $("loadingBar").style.width="100%";
  updateHUD();
  setTimeout(()=>{$("loading").style.opacity="0";setTimeout(()=>$("loading").remove(),700);},350);
  toast("Você despertou em uma floresta desconhecida.");
  animate(performance.now());
 }
-addEventListener("beforeunload",saveGame);
+addEventListener("beforeunload",()=>{saveGame();if(distantVillageResidents)distantVillageResidents.save();});
 start().catch(err=>{console.error(err);$("loadingText").textContent="Não foi possível carregar o cenário. Atualize a página.";toast("Falha ao iniciar o mundo.");});

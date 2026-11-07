@@ -141,5 +141,5 @@ export function createSettlementEconomy({ player, state, onToast, onChange }) {
   }
 
   save();
-  return { update, towns };
+  return { update, towns, save };
 }
