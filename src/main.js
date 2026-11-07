@@ -1708,6 +1708,7 @@ const craftSections=[
  {title:"RECURSOS E SOBREVIVÊNCIA",match:/^(berryStatus|eatBerry|meatStatus|cookMeat|eatMeat|eatCookedMeat|campfireStatus|craftCampfire|shelterStatus|craftShelter|bedStatus|craftBed|drinkWell|wellStatus|craftWell|waterSkinStatus|craftWaterSkin|fillWaterSkin|drinkWaterSkin)$/},
  {title:"FERRAMENTAS E CAÇA",match:/^(axeStatus|craftAxe|pickaxeStatus|craftPickaxe|bowStatus|huntTargetStatus|craftBow|craftArrows|bandageStatus|craftBandage|useBandage)$/},
  {title:"CONSTRUÇÕES E MORADIAS",match:/^(fenceStatus|craftFence|floorTileStatus|craftFloorTile|pathTileStatus|craftPathTile|lanternPostStatus|craftLanternPost|gardenStatus|craftGarden|gardenAction|watchtowerStatus|craftWatchtower|expeditionTentStatus|craftExpeditionTent|wallPanelStatus|craftWallPanel|windowPanelStatus|craftWindowPanel|roofTileStatus|craftRoofTile|gableStatus|craftGable|ridgeCapStatus|craftRidgeCap|chimneyStatus|craftChimney|doorPanelStatus|craftDoorPanel|shutterStatus|craftShutters|gateStatus|craftGate)$/},
+ {title:"EXPLORAÇÃO COMUNITÁRIA",match:/^(communityExpeditionsPanel)$/},
  {title:"AGRICULTURA E ANIMAIS",match:/^(coopStatus|craftCoop|collectEggs|eatEgg|apiaryStatus|craftApiary|collectHoney|eatHoney|sheepPenStatus|craftSheepPen|collectWool)$/},
  {title:"OFICINAS E PRODUÇÃO",match:/^(loomStatus|smokehouseStatus|craftSmokehouse|smokeMeat|eatSmokedMeat|craftLoom|craftWoolGarment|tanneryStatus|craftTannery|startTanning|collectLeather|smithyStatus|metalStatus|withdrawVillageMetals|smeltIron|steelStatus|buildSteelFurnace|startSteelSmelt|collectSteel|craftSmithy|upgradeAxe|upgradePickaxe|herbalistStatus|herbGardenStatus|craftHerbBed|herbGardenAction|craftHerbalistHut|craftSalve)$/},
  {title:"ECONOMIA E COMÉRCIO",match:/^(marketStatus|craftMarket|marketActions)$/},
@@ -1726,7 +1727,7 @@ for(const bucket of craftBuckets){
  if(!bucket.nodes.length)continue;
  const details=document.createElement("details");
  details.className="craft-category";
- details.open=bucket.section.title==="SOBREVIVÊNCIA";
+ details.open=bucket.section.title==="SOBREVIVÊNCIA"||bucket.section.title==="EXPLORAÇÃO COMUNITÁRIA";
  const summary=document.createElement("summary");
  summary.textContent=bucket.section.title+" · "+bucket.nodes.filter(n=>n.tagName==="BUTTON").length+" opções";
  details.append(summary,...bucket.nodes);
