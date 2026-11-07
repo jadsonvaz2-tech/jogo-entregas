@@ -267,7 +267,15 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   applyBulkProfessionButton.type = "button";
   applyBulkProfessionButton.textContent = "ATRIBUIR PROFISSÃO";
   applyBulkProfessionButton.setAttribute("aria-label","Atribuir profissão aos moradores exibidos");
-  residentBulkActions.append(activateVisibleButton,pauseVisibleButton,bulkPrioritySelect,applyBulkPriorityButton,bulkProfessionSelect,applyBulkProfessionButton);
+  const bulkPatrolSelect = document.createElement("select");
+  bulkPatrolSelect.id = "village-resident-bulk-patrol";
+  bulkPatrolSelect.setAttribute("aria-label","Rota de patrulha para guardas exibidos");
+  bulkPatrolSelect.innerHTML = '<option value="">Rota para guardas exibidos...</option><option value="outer">Perímetro externo</option><option value="inner">Caminho interno</option><option value="central">Faixa central</option>';
+  const applyBulkPatrolButton = document.createElement("button");
+  applyBulkPatrolButton.type = "button";
+  applyBulkPatrolButton.textContent = "APLICAR ROTA AOS GUARDAS";
+  applyBulkPatrolButton.setAttribute("aria-label","Aplicar rota de patrulha aos guardas exibidos");
+  residentBulkActions.append(activateVisibleButton,pauseVisibleButton,bulkPrioritySelect,applyBulkPriorityButton,bulkProfessionSelect,applyBulkProfessionButton,bulkPatrolSelect,applyBulkPatrolButton);
   residentFilterCount.parentNode.insertBefore(residentBulkActions,residentFilterCount);
   const RESIDENT_SORTS = ["name","level","production","profession"];
   let residentSort = RESIDENT_SORTS.includes(saved.residentSort) ? saved.residentSort : "name";
@@ -1149,6 +1157,27 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     onToast(professions[professionKey].label+" atribuída a "+changed+" morador(es) exibido(s).");
   }
   applyBulkProfessionButton.addEventListener("click",()=>setVisibleResidentsProfession(bulkProfessionSelect.value));
+  function setVisibleResidentsPatrolRoute(routeKey) {
+    if(!["outer","inner","central"].includes(routeKey)){onToast("Escolha uma rota de patrulha válida.");return;}
+    let changed=0;
+    for(const row of workList.children){
+      if(row.hidden) continue;
+      const resident=residents.find(item=>item.id===row.dataset.residentId);
+      if(!resident || resident.profession!=="guard" || resident.patrolRoute===routeKey) continue;
+      resident.patrolRoute=routeKey;
+      resident.routeKey="";
+      resident.target=null;
+      resident.routeIndex=0;
+      changed++;
+    }
+    if(!changed){onToast("Nenhum guarda exibido precisa dessa rota.");return;}
+    saveVillageProgress();
+    refreshSecurityUI();
+    renderWorkPanel();
+    const label=bulkPatrolSelect.options[bulkPatrolSelect.selectedIndex].text;
+    onToast("Rota "+label.toLowerCase()+" aplicada a "+changed+" guarda(s) exibido(s).");
+  }
+  applyBulkPatrolButton.addEventListener("click",()=>setVisibleResidentsPatrolRoute(bulkPatrolSelect.value));
   activateVisibleButton.addEventListener("click",()=>setVisibleResidentsWorkState(true));
   pauseVisibleButton.addEventListener("click",()=>setVisibleResidentsWorkState(false));
   residentSearchInput.addEventListener("input",applyResidentFilters);
