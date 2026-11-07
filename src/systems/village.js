@@ -18,7 +18,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   const savedJobs = saved.jobs && typeof saved.jobs === "object" ? saved.jobs : {};
   let morale = Math.min(100, Math.max(0, Number(saved.morale ?? 50) || 0));
   let lastUpkeepDay = Number.isFinite(Number(saved.lastUpkeepDay)) ? Math.max(1, Number(saved.lastUpkeepDay)) : Math.max(1, Number(state.day) || 1);
-  const stockpile = { wood: Math.max(0, Number(saved.stockpile?.wood) || 0), stone: Math.max(0, Number(saved.stockpile?.stone) || 0), berries: Math.max(0, Number(saved.stockpile?.berries) || 0) };
+  const stockpile = Object.fromEntries(["wood","stone","berries","meat","herbs","hide","fiber","wool","honey"].map(key => [key, Math.max(0, Number(saved.stockpile?.[key]) || 0)]));
   const residents = [
     {
       id: "lina", name: "Lina", role: "Agricultora", profession: "farmer", model: "Worker_Female.gltf",
@@ -47,11 +47,31 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       id: recruit.id, name: recruit.name || "Novo morador", role: recruit.role || "Sem tarefa",
       profession: recruit.profession || "idle", model: recruit.model || "Worker_Male.gltf",
       start: [...home], home: [...home], work: Array.isArray(recruit.work) ? recruit.work : [],
-      greeting: recruit.greeting || "Obrigado por me receber nesta aldeia.", isRecruit: true
+      greeting: recruit.greeting || "Obrigado por me receber nesta aldeia.", isRecruit: true, homeSlot: recruit.homeSlot || null
     });
   }
   let housesBuilt = Math.max(0, Math.min(6, Math.floor(Number(saved.houses) || 0)));
   const HOUSE_SLOTS = [[-15,14],[15,14],[-15,-14],[15,-14],[-23,0],[23,0]];
+  const ORIGINAL_HOMES = { lina: [-5.5,1.5], odo: [6.2,1.2], toma: [0.8,7.2] };
+  function homePosition(slotId) {
+    if (slotId && slotId.startsWith("original-")) return ORIGINAL_HOMES[slotId.slice(9)] || [0,0];
+    const match = /^house-(\\d+)-(\\d+)$/.exec(slotId || "");
+    if (!match) return [0,0];
+    const center = HOUSE_SLOTS[Number(match[1])];
+    if (!center) return [0,0];
+    return [center[0] + (Number(match[2]) === 0 ? -1.25 : 1.25), center[1] + 1.25];
+  }
+  function housingSlots() {
+    const slots = Object.entries(ORIGINAL_HOMES).map(([id]) => ({id:"original-"+id,label:"Moradia original · "+({lina:"Lina",odo:"Odo",toma:"Tomé"}[id])}));
+    for (let house=0;house<housesBuilt;house++) for (let bed=0;bed<2;bed++) slots.push({id:"house-"+house+"-"+bed,label:"Casa "+(house+1)+" · Cama "+(bed+1)});
+    return slots;
+  }
+  for (let i=0;i<residents.length;i++) {
+    const resident=residents[i], savedHome=saved.homes && saved.homes[resident.id];
+    if (savedHome && Array.isArray(savedHome.position)) { resident.home=[...savedHome.position]; resident.homeSlot=savedHome.slot || resident.homeSlot; }
+    if (!resident.homeSlot) resident.homeSlot=i<3 ? "original-"+resident.id : "house-"+Math.floor((i-3)/2)+"-"+((i-3)%2);
+    if (i>=3 && !savedHome) resident.home=homePosition(resident.homeSlot);
+  }
   const recruitNames = ["Afonso","Beatriz","Cecília","Dário","Elisa","Frederico","Guilherme","Helena","Inês","Joaquim","Leonor","Martim","Nuno","Olívia","Rafael","Sofia"];
 
   const uiStyle = document.createElement("style");
@@ -147,21 +167,30 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     farmer: { label: "Agricultora", resource: "berries", resourceLabel: "frutas", amount: 2, detail: "Cuida das hortas: planta 3 frutas e colhe 6 quando amadurecem." },
     lumberjack: { label: "Lenhador", resource: "wood", resourceLabel: "madeiras", amount: 1 },
     mason: { label: "Pedreiro", resource: "stone", resourceLabel: "pedras", amount: 1 },
+    hunter: { label: "Caçador", resource: "meat", resourceLabel: "carnes", amount: 1, detail: "Rastreia animais e traz carne para as provisões." },
+    herbalist: { label: "Herborista", resource: "herbs", resourceLabel: "ervas", amount: 2, detail: "Recolhe ervas medicinais para curativos e poções." },
+    gatherer: { label: "Coletor", resource: "fiber", resourceLabel: "fibras", amount: 2, detail: "Reúne fibras vegetais para cordas e construções." },
+    tanner: { label: "Curtidor", resource: "hide", resourceLabel: "peles", amount: 1, detail: "Prepara peles para roupas e equipamentos." },
+    shepherd: { label: "Pastor", resource: "wool", resourceLabel: "lãs", amount: 1, detail: "Cuida dos rebanhos e separa lã para a comunidade." },
+    beekeeper: { label: "Apicultor", resource: "honey", resourceLabel: "méis", amount: 1, detail: "Cuida das colmeias e recolhe mel." },
     idle: { label: "Sem tarefa", resource: null, resourceLabel: "—", amount: 0 }
   };
-  const workElapsed = { lina: 0, odo: 0, toma: 0 };
-  for (const resident of residents) if (!Object.prototype.hasOwnProperty.call(workElapsed,resident.id)) workElapsed[resident.id]=0;
+  const workElapsed = Object.fromEntries(residents.map(resident=>[resident.id,0]));
   const professionWorkPoints = {
     farmer: [[-8.2, 1.5], [-7.1, 4.2]],
     lumberjack: [[9.1, 1.4], [8.4, -2.2]],
-    mason: [[2.5, 9.2], [4.1, 7.4]]
+    mason: [[2.5, 9.2], [4.1, 7.4]],
+    hunter: [[-12.5,-5.5],[-10.2,-8.2]], herbalist: [[-3.5,11.5],[-1.5,13]],
+    gatherer: [[-11,7],[-8.5,9]], tanner: [[12,8],[14,10]],
+    shepherd: [[16,-7],[18,-9]], beekeeper: [[-17,-7],[-19,-9]]
   };
   const housingStatus = workPanel.querySelector("#village-housing-status");
   const buildHouseButton = workPanel.querySelector("#village-build-house");
   const recruitButton = workPanel.querySelector("#village-recruit");
   function refreshHousingUI() {
     const capacity = 3 + housesBuilt * 2;
-    housingStatus.textContent = "MORADORES · " + residents.length + "/" + capacity + " vagas · CASAS CONSTRUÍDAS · " + housesBuilt + "/6";
+    const assigned = residents.filter(r => r.homeSlot && housingSlots().some(slot => slot.id === r.homeSlot)).length;
+    housingStatus.textContent = "MORADORES · " + residents.length + "/" + capacity + " vagas · MORADIAS ATRIBUÍDAS · " + assigned + "/" + residents.length + " · CASAS · " + housesBuilt + "/6";
     buildHouseButton.disabled = housesBuilt >= HOUSE_SLOTS.length || (Number(state.wood)||0) < 16 || (Number(state.stone)||0) < 8;
     buildHouseButton.textContent = housesBuilt >= HOUSE_SLOTS.length ? "LIMITE DE CASAS ATINGIDO" : "🏠 CASA · 16 MADEIRAS + 8 PEDRAS";
     recruitButton.disabled = residents.length >= capacity || (Number(state.coins)||0) < 25;
@@ -175,15 +204,16 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const slot = HOUSE_SLOTS[houseIndex];
     if (!slot) return;
     const side = recruitIndex % 2 === 0 ? -1.25 : 1.25;
-    const home = [slot[0] + side, slot[1] + 1.25];
+    const homeSlot = "house-" + houseIndex + "-" + (recruitIndex % 2);
+    const home = homePosition(homeSlot);
     const usedNames = new Set(residents.map(r => r.name));
     const name = recruitNames.find(candidate => !usedNames.has(candidate)) || ("Morador " + (residents.length + 1));
-    const professionKeys = ["farmer","lumberjack","mason"];
+    const professionKeys = ["farmer","lumberjack","mason","hunter","herbalist","gatherer","tanner","shepherd","beekeeper"];
     const profession = professionKeys[(residents.length - 3) % professionKeys.length];
     const resident = {
       id:"central-recruit-"+Date.now()+"-"+residents.length, name, role:professions[profession].label, profession, isRecruit:true,
       model:residents.length % 2 ? "Worker_Male.gltf" : "Worker_Female.gltf",
-      start:home, home, work:professionWorkPoints[profession], greeting:"Sou " + name + ". Vim construir uma vida nesta aldeia e ajudar a comunidade."
+      start:home, home, homeSlot, work:professionWorkPoints[profession], greeting:"Sou " + name + ". Vim construir uma vida nesta aldeia e ajudar a comunidade."
     };
     resident.group = new THREE.Group();
     resident.group.position.set(home[0],terrainHeight(home[0],home[1]),home[1]);
@@ -224,8 +254,9 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     try {
       const jobs = {};
       for (const resident of residents) jobs[resident.id] = { profession: resident.profession, enabled: resident.enabled };
-      const recruits = residents.filter(r => r.isRecruit).map(r => ({ id:r.id, name:r.name, role:r.role, profession:r.profession, model:r.model, start:r.start, home:r.home, work:r.work, greeting:r.greeting }));
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, lastUpkeepDay, skills, recruits, houses:housesBuilt }));
+      const recruits = residents.filter(r => r.isRecruit).map(r => ({ id:r.id, name:r.name, role:r.role, profession:r.profession, model:r.model, start:r.start, home:r.home, homeSlot:r.homeSlot, work:r.work, greeting:r.greeting }));
+      const homes = Object.fromEntries(residents.map(r => [r.id,{slot:r.homeSlot,position:r.home}]));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes }));
     } catch (error) {
       console.warn("Não foi possível salvar o progresso dos moradores.", error);
     }
@@ -243,8 +274,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   }
 
   function refreshStockpileUI() {
-    stockpileDisplay.textContent = "DEPÓSITO COMUNITÁRIO · " + stockpile.wood + " madeira · " + stockpile.stone + " pedra · " + stockpile.berries + " frutas";
-    const total = stockpile.wood + stockpile.stone + stockpile.berries;
+    stockpileDisplay.textContent = "DEPÓSITO · " + stockpile.wood + " madeira · " + stockpile.stone + " pedra · " + stockpile.berries + " frutas · " + stockpile.meat + " carne · " + stockpile.herbs + " ervas · " + stockpile.hide + " peles · " + stockpile.fiber + " fibras · " + stockpile.wool + " lã · " + stockpile.honey + " mel";
+    const total = Object.values(stockpile).reduce((sum,value)=>sum+value,0);
     collectStockpileButton.disabled = total < 1;
     moraleDisplay.textContent = "ÂNIMO DO POVOADO · " + Math.round(morale) + "/100 · " + moraleDescription();
     communalMealButton.disabled = stockpile.berries < 5 || morale >= 100;
@@ -281,16 +312,14 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
 
   collectStockpileButton.addEventListener("click", () => {
     const amounts = { ...stockpile };
-    const total = amounts.wood + amounts.stone + amounts.berries;
+    const total = Object.values(amounts).reduce((sum,value)=>sum+value,0);
     if (!total) { onToast("O depósito comunitário está vazio."); return; }
-    state.wood = Math.max(0, Number(state.wood) || 0) + amounts.wood;
-    state.stone = Math.max(0, Number(state.stone) || 0) + amounts.stone;
-    state.berries = Math.max(0, Number(state.berries) || 0) + amounts.berries;
-    stockpile.wood = 0; stockpile.stone = 0; stockpile.berries = 0;
+    for (const [resource,amount] of Object.entries(amounts)) if (resource in state) state[resource] = Math.max(0,Number(state[resource])||0)+amount;
+    for (const resource of Object.keys(stockpile)) stockpile[resource]=0;
     saveVillageProgress();
     onSave();
     refreshStockpileUI();
-    onToast("Você recolheu a produção comunitária: " + amounts.wood + " madeiras, " + amounts.stone + " pedras e " + amounts.berries + " frutas.");
+    onToast("Você recolheu a produção comunitária: " + Object.entries(amounts).filter(([,amount])=>amount>0).map(([resource,amount])=>amount+" "+({wood:"madeiras",stone:"pedras",berries:"frutas",meat:"carnes",herbs:"ervas",hide:"peles",fiber:"fibras",wool:"lãs",honey:"méis"}[resource]||resource)).join(", ")+".");
   });
 
   function experienceNeeded(level) { return level * 5; }
@@ -338,6 +367,16 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       status.textContent = resident.enabled && resident.profession !== "idle" ? "TRABALHANDO" : "PAUSADO";
       status.style.color = resident.enabled && resident.profession !== "idle" ? "#b9d48d" : "#d5aa83";
       head.append(name, status);
+      const homeSelect = document.createElement("select");
+      homeSelect.setAttribute("aria-label","Moradia de "+resident.name);
+      for (const slot of housingSlots()) { const option=document.createElement("option"); option.value=slot.id; option.textContent=slot.label; homeSelect.appendChild(option); }
+      homeSelect.value=resident.homeSlot || "";
+      homeSelect.addEventListener("change",()=>{
+        const occupied=residents.find(other=>other!==resident && other.homeSlot===homeSelect.value);
+        if (occupied) { onToast("Esta cama já está atribuída a "+occupied.name+"."); homeSelect.value=resident.homeSlot; return; }
+        resident.homeSlot=homeSelect.value; resident.home=homePosition(resident.homeSlot); resident.routeKey=""; resident.routeIndex=0; resident.target=resident.home;
+        saveVillageProgress(); refreshHousingUI(); onToast(resident.name+" agora mora em "+homeSelect.options[homeSelect.selectedIndex].text+".");
+      });
       const select = document.createElement("select");
       select.setAttribute("aria-label", "Profissão de " + resident.name);
       for (const [value, profession] of Object.entries(professions)) {
@@ -394,7 +433,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       skillCaption.className = "production";
       skillCaption.style.cssText = "font-size:9px;text-align:right;color:#d6c58f";
       skillCaption.textContent = skill.level >= 10 ? "MAESTRIA ALCANÇADA" : "PROGRESSO PARA O PRÓXIMO NÍVEL · " + skillProgress + "%";
-      row.append(head, select, toggle, production, skillTrack, skillCaption);
+      row.append(head, homeSelect, select, toggle, production, skillTrack, skillCaption);
       workList.appendChild(row);
     }
     refreshStockpileUI();
