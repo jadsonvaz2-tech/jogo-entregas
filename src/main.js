@@ -3,7 +3,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
 import { createStoryEncounter } from "./systems/story.js";
 import { createVillageResidents } from "./systems/village.js?v=visible-save-diagnostics-1";
-import { createWorldSettlements, WORLD_ROAD_PATHS } from "./systems/settlements.js?v=roads-clean-2026-11-07-1";
+import { createWorldSettlements, WORLD_ROAD_PATHS } from "./systems/settlements.js?v=natural-road-relief-2026-11-07-1";
 import { createDistantVillageResidents } from "./systems/distant-village-residents.js";
 import { createSettlementEconomy } from "./systems/settlement-economy.js";
 let villageResidents=null;
@@ -71,10 +71,14 @@ function roadReliefHeight(x,z){
  const progress = closest.progress;
  const startFade = THREE.MathUtils.smoothstep(progress, 0, .11);
  const endFade = THREE.MathUtils.smoothstep(1 - progress, 0, .11);
- const crest = 3.4 * Math.exp(-Math.pow((progress - .39) / .22, 2));
- const dip = 1.05 * Math.exp(-Math.pow((progress - .73) / .17, 2));
+ // Duas lombas largas e dois baixios suaves criam aclives e declives graduais,
+ // sem degraus. O relevo se dissipa naturalmente no início, no fim e nas laterais.
+ const firstRise = 2.8 * Math.exp(-Math.pow((progress - .30) / .20, 2));
+ const firstDip = 1.65 * Math.exp(-Math.pow((progress - .53) / .16, 2));
+ const secondRise = 2.35 * Math.exp(-Math.pow((progress - .76) / .17, 2));
+ const secondDip = .75 * Math.exp(-Math.pow((progress - .90) / .10, 2));
  const lateralBlend = Math.exp(-closest.distance2 / (2 * 17 * 17));
- return (crest - dip) * startFade * endFade * lateralBlend;
+ return (firstRise - firstDip + secondRise - secondDip) * startFade * endFade * lateralBlend;
 }
 function terrainHeight(x,z){
  // Colinas existentes preservadas, agora com lombadas e baixios suaves acompanhando as rotas.
