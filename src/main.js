@@ -4280,7 +4280,7 @@ async function start(){
  const loaded=await loadCharacter();
  if(!loaded)toast("Modelo do viajante indisponível: usando personagem provisório.");
  storyEncounter=createStoryEncounter({THREE,scene,player,terrainHeight,state,onSave:saveGame,onToast:toast});
- villageResidents=createVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast});
+ villageResidents=createVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,onSave:saveGame});
  $("loadingBar").style.width="100%";
  updateHUD();
  setTimeout(()=>{$("loading").style.opacity="0";setTimeout(()=>$("loading").remove(),700);},350);

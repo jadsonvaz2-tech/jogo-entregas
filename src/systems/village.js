@@ -3,7 +3,7 @@ import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
 
 const SAVE_KEY = "cronicas-floresta-village-v1";
 
-export function createVillageResidents({ THREE, scene, player, terrainHeight, state, onToast }) {
+export function createVillageResidents({ THREE, scene, player, terrainHeight, state, onToast, onSave }) {
   const loader = new GLTFLoader();
   const saved = (() => {
     try {
@@ -15,21 +15,22 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     }
   })();
 
+  const savedJobs = saved.jobs && typeof saved.jobs === "object" ? saved.jobs : {};
   const residents = [
     {
-      id: "lina", name: "Lina", role: "Agricultora", model: "Worker_Female.gltf",
+      id: "lina", name: "Lina", role: "Agricultora", profession: "farmer", model: "Worker_Female.gltf",
       start: [-5.5, 1.5], home: [-5.5, 1.5],
       work: [[-8.2, 1.5], [-7.1, 4.2]],
       greeting: "Sou Lina. Cuido das sementes e procuro um bom lugar para plantar. Pela manhã trabalho no pequeno terreno; ao entardecer volto para descansar. Um dia teremos campos e celeiros por todo o vale."
     },
     {
-      id: "odo", name: "Odo", role: "Lenhador", model: "Worker_Male.gltf",
+      id: "odo", name: "Odo", role: "Lenhador", profession: "lumberjack", model: "Worker_Male.gltf",
       start: [6.2, 1.2], home: [6.2, 1.2],
       work: [[9.1, 1.4], [8.4, -2.2]],
       greeting: "Odo, lenhador. Passo o dia na orla da mata, escolhendo árvores e preparando madeira. Quando a comunidade crescer, precisaremos de um depósito e de uma oficina."
     },
     {
-      id: "toma", name: "Tomé", role: "Pedreiro", model: "OldClassy_Male.gltf",
+      id: "toma", name: "Tomé", role: "Pedreiro", profession: "mason", model: "OldClassy_Male.gltf",
       start: [0.8, 7.2], home: [0.8, 7.2],
       work: [[2.5, 9.2], [4.1, 7.4]],
       greeting: "Meu nome é Tomé. Conheço pedras boas para fundações e caminhos. Quero ajudar a erguer casas firmes por aqui. Por enquanto, reúno material perto da clareira."
@@ -62,6 +63,25 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     '<div style="padding-top:6px;color:#bfc99d">Rotinas diárias · amanhecer ao anoitecer</div>';
   document.body.appendChild(roster);
 
+  const workStyle = document.createElement("style");
+  workStyle.textContent = `
+    #village-work{position:fixed;z-index:24;right:10px;top:390px;width:min(260px,calc(100vw - 20px));max-height:42vh;overflow:auto;padding:10px;border:1px solid rgba(194,167,106,.68);border-radius:11px;background:rgba(22,32,24,.94);color:#eee5cf;font:11px/1.35 system-ui;box-shadow:0 4px 16px #0007;pointer-events:auto}
+    #village-work strong{display:block;color:#e6c979;font-size:10px;letter-spacing:.08em;margin-bottom:6px}
+    #village-work .work-row{padding:7px 0;border-top:1px solid #ffffff20}
+    #village-work .work-head{display:flex;justify-content:space-between;align-items:center;gap:6px}
+    #village-work select{width:100%;margin-top:5px;padding:7px;border:1px solid #b99b5c;border-radius:6px;background:#263729;color:#fff1cc;font:11px system-ui}
+    #village-work button{margin-top:5px;width:100%;padding:7px;border:1px solid #b99b5c;border-radius:6px;background:#52634a;color:#fff1cc;font:700 10px system-ui}
+    #village-work .production{color:#c4cfaa;font-size:10px;margin-top:3px}
+    @media(max-width:600px){#village-work{top:390px;right:7px;width:174px;max-height:35vh;padding:7px;font-size:10px}#village-work select{padding:6px;font-size:10px}}
+    @media(min-width:800px){#village-work{top:390px;right:20px;width:220px;max-height:48vh}}
+  `;
+  document.head.appendChild(workStyle);
+  const workPanel = document.createElement("section");
+  workPanel.id = "village-work";
+  workPanel.innerHTML = '<strong>GESTÃO DO POVOADO</strong><div class="work-list"></div><div class="production">Produção acumulada durante o horário de trabalho.</div>';
+  document.body.appendChild(workPanel);
+  const workList = workPanel.querySelector(".work-list");
+
   const talkButton = document.createElement("button");
   talkButton.id = "village-talk-button";
   talkButton.type = "button";
@@ -81,14 +101,77 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   dialog.querySelector(".close").addEventListener("click", closeDialog);
   dialog.querySelector("#village-dialog-done").addEventListener("click", closeDialog);
 
+  const professions = {
+    farmer: { label: "Agricultora", resource: "berries", resourceLabel: "frutas", amount: 2 },
+    lumberjack: { label: "Lenhador", resource: "wood", resourceLabel: "madeiras", amount: 1 },
+    mason: { label: "Pedreiro", resource: "stone", resourceLabel: "pedras", amount: 1 },
+    idle: { label: "Sem tarefa", resource: null, resourceLabel: "—", amount: 0 }
+  };
+  const workElapsed = { lina: 0, odo: 0, toma: 0 };
+
   function saveVillageProgress() {
     try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id) }));
+      const jobs = {};
+      for (const resident of residents) jobs[resident.id] = { profession: resident.profession, enabled: resident.enabled };
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs }));
     } catch (error) {
       console.warn("Não foi possível salvar o progresso dos moradores.", error);
     }
   }
 
+  function renderWorkPanel() {
+    workList.innerHTML = "";
+    for (const resident of residents) {
+      const row = document.createElement("div");
+      row.className = "work-row";
+      const head = document.createElement("div");
+      head.className = "work-head";
+      const name = document.createElement("b");
+      name.textContent = resident.name;
+      const status = document.createElement("span");
+      status.textContent = resident.enabled && resident.profession !== "idle" ? "TRABALHANDO" : "PAUSADO";
+      status.style.color = resident.enabled && resident.profession !== "idle" ? "#b9d48d" : "#d5aa83";
+      head.append(name, status);
+      const select = document.createElement("select");
+      select.setAttribute("aria-label", "Profissão de " + resident.name);
+      for (const [value, profession] of Object.entries(professions)) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = profession.label;
+        select.appendChild(option);
+      }
+      select.value = resident.profession;
+      select.addEventListener("change", () => {
+        resident.profession = select.value;
+        resident.role = professions[resident.profession].label;
+        const residentIndex = residents.indexOf(resident);
+        const rosterRole = roster.querySelectorAll(".resident-line span")[residentIndex];
+        if (rosterRole) rosterRole.textContent = resident.role;
+        if (resident.profession === "idle") resident.enabled = false;
+        else resident.enabled = true;
+        saveVillageProgress();
+        renderWorkPanel();
+        onToast(resident.name + " agora exerce a função: " + professions[resident.profession].label + ".");
+      });
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.textContent = resident.enabled ? "PAUSAR TAREFA" : "ATIVAR TAREFA";
+      toggle.disabled = resident.profession === "idle";
+      toggle.addEventListener("click", () => {
+        resident.enabled = !resident.enabled;
+        saveVillageProgress();
+        renderWorkPanel();
+      });
+      const production = document.createElement("div");
+      production.className = "production";
+      const job = professions[resident.profession];
+      production.textContent = job.resource
+        ? "Produz " + job.amount + " " + job.resourceLabel + " por ciclo de trabalho."
+        : "Sem produção atribuída.";
+      row.append(head, select, toggle, production);
+      workList.appendChild(row);
+    }
+  }
   function makeNameTag(name, role) {
     const canvas = document.createElement("canvas");
     canvas.width = 512;
@@ -184,6 +267,10 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   }
 
   for (const resident of residents) {
+    const job = savedJobs[resident.id];
+    if (job && Object.prototype.hasOwnProperty.call(professions, job.profession)) resident.profession = job.profession;
+    resident.enabled = job ? job.enabled !== false : true;
+    resident.role = professions[resident.profession].label;
     resident.met = Array.isArray(saved.met) && saved.met.includes(resident.id);
     resident.group = new THREE.Group();
     resident.group.position.set(resident.start[0], terrainHeight(resident.start[0], resident.start[1]), resident.start[1]);
@@ -209,6 +296,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     };
     loadResidentModel(resident, resident.group, resident.fallback);
   }
+  roster.querySelectorAll(".resident-line span").forEach((el, index) => { el.textContent = residents[index].role; });
+  renderWorkPanel();
 
   function scheduleFor(resident, hour) {
     if (hour < 5.5 || hour >= 20) return { key: "sleep", points: [resident.home] };
@@ -267,6 +356,17 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
         resident.setMoving(false);
       }
       if (resident.mixer) resident.mixer.update(dt);
+      const workingTime = hour >= 6 && hour < 11.5 || hour >= 13.5 && hour < 19.5;
+      const job = professions[resident.profession];
+      if (resident.enabled && job && job.resource && workingTime) {
+        workElapsed[resident.id] += Math.max(0, dt);
+        if (workElapsed[resident.id] >= 45) {
+          workElapsed[resident.id] -= 45;
+          state[job.resource] = Math.max(0, Number(state[job.resource]) || 0) + job.amount;
+          onSave();
+          onToast(resident.name + " produziu " + job.amount + " " + job.resourceLabel + ".");
+        }
+      }
     }
 
     let closest = null;
@@ -286,6 +386,11 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     if (rosterClock > 1.5) {
       rosterClock = 0;
       const hourText = hour.toFixed(0).padStart(2, "0") + "h";
+      const productionLine = workPanel.querySelector(".production");
+      if (productionLine) {
+        const active = residents.filter(r => r.enabled && r.profession !== "idle").length;
+        productionLine.textContent = active + "/3 moradores em atividade · ciclos durante o expediente.";
+      }
       roster.querySelector("div:last-child").textContent = hour >= 20 || hour < 5.5
         ? "Todos descansam · " + hourText
         : hour >= 11.5 && hour < 13.5
