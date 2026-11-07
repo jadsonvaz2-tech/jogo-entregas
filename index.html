@@ -72,8 +72,32 @@
         }catch(e){return "inválido";}
       }
       open.addEventListener("click",function(){
-        function readWorld(key){try{var raw=localStorage.getItem(key);if(!raw)return "não encontrado";var d=JSON.parse(raw);if(!d||typeof d!=="object")return "inválido";var groups=["fenceSections","gates","floorTiles","wallPanels","windowPanels","roofTiles","gablePanels","ridgeCaps","chimneys","pathTiles","lanternPosts","wells","gardenPlots","herbBeds","watchtowers","marketStalls","chickenCoops","apiaries","sheepPens","doorPanels","windowShutters"];var count=groups.reduce(function(n,k){return n+(Array.isArray(d[k])?d[k].length:0)},0);var day=Number.isFinite(d.day)?d.day:"?";return "encontrado · dia "+day+" · "+count+" módulos/estruturas salvos";}catch(e){return "inválido";}}
-        values.textContent="ALDEIA — Atual: "+read("cronicas-floresta-village-v1")+" | Cópia: "+read("cronicas-floresta-village-v1-backup")+" | Recuperação: "+(localStorage.getItem("cronicas-floresta-village-v1-recovery-used")?"registrada":"não registrada")+"\\nMUNDO — Atual: "+readWorld("cronicas-floresta-save")+" | Cópia: "+readWorld("cronicas-floresta-save-backup");
+        function inspect(key){
+          try{
+            var raw=localStorage.getItem(key); if(!raw)return "não encontrado";
+            var d=JSON.parse(raw); if(!d||typeof d!=="object")return "inválido";
+            var bits=["encontrado"];
+            if(Array.isArray(d.recruits))bits.push(d.recruits.length+" recrutados");
+            if(d.residents&&typeof d.residents==="object")bits.push(Object.keys(d.residents).length+" registros de moradores");
+            if(d.towns&&typeof d.towns==="object"){
+              var towns=Object.keys(d.towns), houses=towns.reduce(function(n,id){return n+(Number(d.towns[id]&&d.towns[id].houses)||0)},0);
+              bits.push(towns.length+" povoações"); if(houses)bits.push(houses+" casas");
+            }
+            if(Number.isFinite(d.houses))bits.push(d.houses+" casas");
+            if(Number.isFinite(d.day))bits.push("dia "+d.day);
+            return bits.join(" · ");
+          }catch(e){return "inválido";}
+        }
+        function readWorld(key){
+          try{var raw=localStorage.getItem(key);if(!raw)return "não encontrado";var d=JSON.parse(raw);if(!d||typeof d!=="object")return "inválido";var groups=["fenceSections","gates","floorTiles","wallPanels","windowPanels","roofTiles","gablePanels","ridgeCaps","chimneys","pathTiles","lanternPosts","wells","gardenPlots","herbBeds","watchtowers","marketStalls","chickenCoops","apiaries","sheepPens","doorPanels","windowShutters"];var count=groups.reduce(function(n,k){return n+(Array.isArray(d[k])?d[k].length:0)},0);var day=Number.isFinite(d.day)?d.day:"?";return "encontrado · dia "+day+" · "+count+" módulos/estruturas";}catch(e){return "inválido";}
+        }
+        values.textContent=
+          "ALDEIA CENTRAL — Atual: "+inspect("cronicas-floresta-village-v1")+" | Cópia: "+inspect("cronicas-floresta-village-v1-backup")+
+          "\\nMORADORES DAS OUTRAS POVOAÇÕES — "+inspect("cronicas-floresta-distant-villages-v1")+
+          "\\nCASAS E GESTÃO DAS POVOAÇÕES — "+inspect("cronicas-floresta-settlement-management-v1")+
+          "\\nESTOQUES DAS POVOAÇÕES — "+inspect("cronicas-floresta-settlement-economy-v1")+
+          "\\nMUNDO — Atual: "+readWorld("cronicas-floresta-save")+" | Cópia: "+readWorld("cronicas-floresta-save-backup")+
+          "\\nRecuperação automática da aldeia central: "+(localStorage.getItem("cronicas-floresta-village-v1-recovery-used")?"registrada":"não registrada");
         panel.hidden=false;
       });
       document.getElementById("save-check-close").addEventListener("click",function(){panel.hidden=true;});
