@@ -125,6 +125,11 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     idle: { label: "Sem tarefa", resource: null, resourceLabel: "—", amount: 0 }
   };
   const workElapsed = { lina: 0, odo: 0, toma: 0 };
+  const professionWorkPoints = {
+    farmer: [[-8.2, 1.5], [-7.1, 4.2]],
+    lumberjack: [[9.1, 1.4], [8.4, -2.2]],
+    mason: [[2.5, 9.2], [4.1, 7.4]]
+  };
 
   function saveVillageProgress() {
     try {
@@ -238,6 +243,10 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
         if (rosterRole) rosterRole.textContent = resident.role;
         if (resident.profession === "idle") resident.enabled = false;
         else resident.enabled = true;
+        resident.routeKey = "";
+        resident.target = null;
+        resident.routeIndex = 0;
+        updateResidentNameTag(resident);
         saveVillageProgress();
         renderWorkPanel();
         onToast(resident.name + " agora exerce a função: " + professions[resident.profession].label + ".");
@@ -248,6 +257,9 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       toggle.disabled = resident.profession === "idle";
       toggle.addEventListener("click", () => {
         resident.enabled = !resident.enabled;
+        resident.routeKey = "";
+        resident.target = null;
+        resident.routeIndex = 0;
         saveVillageProgress();
         renderWorkPanel();
       });
@@ -368,7 +380,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     scene.add(resident.group);
     const color = resident.id === "lina" ? 0x6b8050 : resident.id === "odo" ? 0x79563a : 0x777d82;
     resident.fallback = makeFallback(resident.group, color);
-    resident.group.add(makeNameTag(resident.name, resident.role));
+    resident.nameTag = makeNameTag(resident.name, resident.role);
+    resident.group.add(resident.nameTag);
     resident.actions = {};
     resident.mixer = null;
     resident.moving = false;
@@ -393,9 +406,27 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   function scheduleFor(resident, hour) {
     if (hour < 5.5 || hour >= 20) return { key: "sleep", points: [resident.home] };
     if (hour >= 11.5 && hour < 13.5) return { key: "meal", points: [resident.home] };
-    if (hour >= 6 && hour < 11.5) return { key: "morning-work", points: resident.work };
-    if (hour >= 13.5 && hour < 19.5) return { key: "afternoon-work", points: [...resident.work].reverse() };
+    const workingHours = hour >= 6 && hour < 11.5 || hour >= 13.5 && hour < 19.5;
+    if (workingHours && (!resident.enabled || resident.profession === "idle")) {
+      return { key: "resting-" + resident.id, points: [resident.home] };
+    }
+    const workPoints = professionWorkPoints[resident.profession];
+    if (workingHours && workPoints) {
+      return hour < 11.5
+        ? { key: "morning-work-" + resident.profession, points: workPoints }
+        : { key: "afternoon-work-" + resident.profession, points: [...workPoints].reverse() };
+    }
     return { key: "home", points: [resident.home] };
+  }
+
+  function updateResidentNameTag(resident) {
+    if (resident.nameTag) {
+      resident.group.remove(resident.nameTag);
+      resident.nameTag.material.map?.dispose();
+      resident.nameTag.material.dispose();
+    }
+    resident.nameTag = makeNameTag(resident.name, resident.role);
+    resident.group.add(resident.nameTag);
   }
 
   function openResidentDialogue(resident) {
