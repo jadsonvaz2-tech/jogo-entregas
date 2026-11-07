@@ -263,7 +263,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     tanner: { label: "Curtidor", resource: "hide", resourceLabel: "peles", amount: 1, detail: "Prepara peles para roupas e equipamentos." },
     shepherd: { label: "Pastor", resource: "wool", resourceLabel: "lãs", amount: 1, detail: "Cuida dos rebanhos e separa lã para a comunidade." },
     beekeeper: { label: "Apicultor", resource: "honey", resourceLabel: "méis", amount: 1, detail: "Cuida das colmeias e recolhe mel." },
-    guard: { label: "Vigia", resource: null, resourceLabel: "—", amount: 0, detail: "Faz rondas pelos limites da aldeia e mantém a vigilância durante o expediente." },
+    guard: { label: "Vigia", resource: null, resourceLabel: "—", amount: 0, detail: "Faz rondas pelos limites da aldeia, ganha experiência patrulhando e melhora a cobertura de vigilância." },
     idle: { label: "Sem tarefa", resource: null, resourceLabel: "—", amount: 0 }
   };
   const workElapsed = Object.fromEntries(residents.map(resident=>[resident.id,0]));
@@ -637,16 +637,20 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   });
 
   function refreshSecurityUI() {
-    const guards = residents.filter(resident => resident.profession === "guard" && resident.enabled).length;
+    const activeGuards = residents.filter(resident => resident.profession === "guard" && resident.enabled);
+    const guards = activeGuards.length;
+    const averageLevel = guards ? activeGuards.reduce((sum, resident) => sum + (skills[resident.id]?.level || 1), 0) / guards : 0;
     const level = guards === 0 ? "SEM PATRULHA" : guards === 1 ? "VIGILÂNCIA BÁSICA" : guards <= 3 ? "VIGILÂNCIA REGULAR" : "VIGILÂNCIA REFORÇADA";
+    const experience = guards ? " · EXPERIÊNCIA MÉDIA Nv. " + averageLevel.toFixed(1) + "/10" : "";
+    const patrolTeam = guards ? " · " + activeGuards.map(resident => resident.name + " Nv." + (skills[resident.id]?.level || 1)).join(", ") : "";
     const detail = guards === 0
       ? "Nenhum morador está fazendo rondas. Atribua a profissão Vigia para iniciar a patrulha."
       : guards === 1
-        ? "1 vigia percorre os pontos de ronda durante a jornada de trabalho."
+        ? "1 vigia percorre os pontos de ronda durante a jornada de trabalho. Cada ciclo completo de patrulha concede experiência."
         : guards <= 3
-          ? guards + " vigias percorrem as rotas da aldeia durante a jornada."
-          : guards + " vigias mantêm rondas distribuídas pelo povoado.";
-    securityDisplay.textContent = "VIGILÂNCIA · " + level + " · " + guards + " VIGIA(S). " + detail;
+          ? guards + " vigias percorrem as rotas da aldeia durante a jornada. Cada ciclo completo concede experiência."
+          : guards + " vigias mantêm rondas distribuídas pelo povoado e evoluem com a experiência de patrulha.";
+    securityDisplay.textContent = "VIGILÂNCIA · " + level + " · " + guards + " VIGIA(S)" + experience + patrolTeam + ". " + detail;
   }
 
   function experienceNeeded(level) { return level * 5; }
@@ -1069,7 +1073,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       const shift = WORK_SHIFTS[workShift];
       const workingTime = hour >= shift.start && hour < 11.5 || hour >= 13.5 && hour < shift.end;
       const job = professions[resident.profession];
-      if (resident.enabled && job && job.resource && workingTime) {
+      if (resident.enabled && job && (job.resource || resident.profession === "guard") && workingTime) {
         workElapsed[resident.id] += Math.max(0, dt);
         const workCycle = workCycleFor(resident);
         if (workElapsed[resident.id] >= workCycle) {
@@ -1082,6 +1086,10 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
             onToast(resident.name + " evoluiu na profissão! Agora está no nível " + skills[resident.id].level + ".");
           } else {
             updateSkillProgressUI(resident);
+          }
+          if (resident.profession === "guard") {
+            refreshSecurityUI();
+            continue;
           }
           const farmResult = resident.profession === "farmer" && typeof onFarmAction === "function" && stockpileTotal() < storageCapacity() ? onFarmAction() : null;
           if (farmResult && typeof farmResult === "object" && farmResult.resource && Number(farmResult.amount) > 0) {
