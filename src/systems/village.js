@@ -59,6 +59,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   })();
 
   const savedJobs = saved.jobs && typeof saved.jobs === "object" ? saved.jobs : {};
+  const socialBonds = saved.socialBonds && typeof saved.socialBonds === "object" ? { ...saved.socialBonds } : {};
+  let socialDay = Math.max(0, Math.floor(Number(saved.socialDay) || 0));
   let morale = Math.min(100, Math.max(0, Number(saved.morale ?? 50) || 0));
   let prosperityXp = Math.max(0, Math.floor(Number(saved.prosperityXp) || 0));
   let storageLevel = Math.max(0, Math.min(3, Math.floor(Number(saved.storageLevel) || 0)));
@@ -773,6 +775,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     workElapsed[resident.id] = 0;
     resident.nameTag = makeNameTag(resident.name);
     resident.group.add(resident.nameTag);
+    resident.socialMarker = makeSocialMarker();
+    resident.group.add(resident.socialMarker);
     resident.actions = {}; resident.mixer = null; resident.moving = false; resident.target = null;
     resident.routeKey = ""; resident.routeIndex = 0; resident.pauseRemaining = 0; resident.idleAction = null; resident.walkAction = null;
     resident.setMoving = moving => {
@@ -879,7 +883,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
         try { JSON.parse(previous); localStorage.setItem(SAVE_KEY + "-backup", previous); }
         catch (backupError) { localStorage.setItem(SAVE_KEY + "-recovery-raw", previous); }
       }
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, prosperityXp, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes, storageLevel, workShift, foodReserveTargetDays, foodRationPolicy, communalMealPolicy, protectFoodReserve, productionReport, foodReport, resourceTargets, nextRecruitProfession, residentSort, residentStatusFilter, residentHousingFilter, workshops, workshopWear, expeditionAwayIds:[...expeditionAwayIds] }));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, prosperityXp, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes, storageLevel, workShift, foodReserveTargetDays, foodRationPolicy, communalMealPolicy, protectFoodReserve, productionReport, foodReport, resourceTargets, nextRecruitProfession, residentSort, residentStatusFilter, residentHousingFilter, workshops, workshopWear, expeditionAwayIds:[...expeditionAwayIds], socialBonds, socialDay }));
       renderSaveDiagnostics();
     } catch (error) {
       console.warn("Não foi possível salvar o progresso dos moradores.", error);
@@ -1729,6 +1733,27 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     }
   }
 
+  function makeSocialMarker() {
+    const canvas = document.createElement("canvas"); canvas.width = 128; canvas.height = 80;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.fillStyle = "rgba(28,48,34,.94)"; ctx.strokeStyle = "#e6c979"; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.roundRect(12, 7, 104, 54, 18); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(43, 58); ctx.lineTo(35, 73); ctx.lineTo(62, 59); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#fff0c9"; ctx.font = "bold 37px Georgia"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("•••", 64, 34);
+    }
+    const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
+    const marker = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false }));
+    marker.position.y = 2.78; marker.scale.set(.72, .45, 1); marker.visible = false; return marker;
+  }
+  function updateSocialPose(resident, dt, socializing) {
+    const amount = THREE.MathUtils.damp(resident.socialPose || 0, socializing ? 1 : 0, 3.5, Math.max(0, dt));
+    resident.socialPose = amount; resident.socialPhase = ((resident.socialPhase || 0) + Math.max(0, dt) * 2.4) % (Math.PI * 2);
+    const nod = Math.sin(resident.socialPhase) * .045 * amount;
+    if (resident.modelRoot) { resident.modelRoot.rotation.x = nod; resident.modelRoot.rotation.z = Math.cos(resident.socialPhase * .5) * .018 * amount; }
+    else if (resident.fallback?.head) { resident.fallback.head.rotation.x = nod; resident.fallback.head.rotation.z = Math.cos(resident.socialPhase * .5) * .025 * amount; }
+    if (resident.socialMarker) resident.socialMarker.visible = socializing && !resident.moving;
+  }
   function loadResidentModel(resident, group, fallback) {
     const url = new URL("../../assets/3d/" + resident.model, import.meta.url).href;
     let finished = false;
@@ -1827,6 +1852,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     resident.fallback = makeFallback(resident.group, color);
     resident.nameTag = makeNameTag(resident.name);
     resident.group.add(resident.nameTag);
+    resident.socialMarker = makeSocialMarker();
+    resident.group.add(resident.socialMarker);
     resident.actions = {};
     resident.mixer = null;
     resident.moving = false;
@@ -1894,7 +1921,10 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       : reserveDays === 1
         ? "Nosso estoque só cobre mais um dia de refeições."
         : "Estamos sem frutas para as refeições diárias.";
-    dialogText.textContent = resident.greeting + " Hoje estou " + (resident.moving ? "indo para meu local de trabalho. " : "no meu ponto da rotina diária. ") + villageCondition + " " + foodCondition;
+    const bonds = Object.entries(socialBonds).filter(([key]) => key.split("|").includes(resident.id)).map(([, bond]) => Number(bond?.score) || 0);
+    const friendship = bonds.length ? Math.round(bonds.reduce((sum, score) => sum + score, 0) / bonds.length) : 0;
+    const friendshipText = friendship >= 70 ? "Tenho amizades fortes na aldeia." : friendship >= 25 ? "Já estou criando laços com outros moradores." : "Ainda estou conhecendo meus vizinhos.";
+    dialogText.textContent = resident.greeting + " Hoje estou " + (resident.moving ? "indo para meu local de trabalho. " : "no meu ponto da rotina diária. ") + villageCondition + " " + foodCondition + " " + friendshipText;
     dialog.hidden = false;
     onToast("Você conversou com " + resident.name + ".");
   }
@@ -1932,9 +1962,29 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       else onToast("Faltaram frutas para alimentar o povoado. O ânimo dos moradores diminuiu.");
     }
     const hour = Number(state.timeOfDay) || 8;
+    const socializingNow = hour >= 11.5 && hour < 13.5;
+    const socialTargets = new Map();
+    if (socializingNow) {
+      const available = residents.filter(resident => !expeditionAwayIds.has(resident.id));
+      if (available.length > 1) {
+        const centerX = available.reduce((sum, resident) => sum + resident.home[0], 0) / available.length;
+        const centerZ = available.reduce((sum, resident) => sum + resident.home[1], 0) / available.length;
+        const radius = Math.min(4.2, 1.15 + available.length * .13);
+        available.forEach((resident, index) => { const angle = index / available.length * Math.PI * 2; socialTargets.set(resident.id, [centerX + Math.cos(angle) * radius, centerZ + Math.sin(angle) * radius]); });
+      }
+      if (hour >= 12 && socialDay !== currentDay && available.length > 1) {
+        for (let i = 0; i < available.length; i++) for (let j = i + 1; j < available.length; j++) {
+          const key = [available[i].id, available[j].id].sort().join("|");
+          const bond = socialBonds[key] && typeof socialBonds[key] === "object" ? socialBonds[key] : { score: 0, lastDay: 0 };
+          bond.score = Math.min(100, (Number(bond.score) || 0) + 1.5); bond.lastDay = currentDay; socialBonds[key] = bond;
+        }
+        socialDay = currentDay; saveVillageProgress();
+      }
+    }
     for (const resident of residents) {
       if (expeditionAwayIds.has(resident.id)) { if (resident.group) resident.group.visible = false; continue; }
-      const schedule = scheduleFor(resident, hour);
+      let schedule = scheduleFor(resident, hour);
+      if (socialTargets.has(resident.id)) schedule = { key: "social-break", points: [socialTargets.get(resident.id)] };
       if (schedule.key !== resident.routeKey) {
         resident.routeKey = schedule.key;
         resident.routeIndex = 0;
@@ -1970,6 +2020,12 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       }
       if (resident.mixer) resident.mixer.update(dt);
       updateWorkPose(resident, dt, schedule.key.includes("work") && resident.enabled && resident.profession !== "idle");
+      updateSocialPose(resident, dt, schedule.key === "social-break" && !resident.moving);
+      if (schedule.key === "social-break" && !resident.moving && socialTargets.size > 1) {
+        const centerX = [...socialTargets.values()].reduce((sum, point) => sum + point[0], 0) / socialTargets.size;
+        const centerZ = [...socialTargets.values()].reduce((sum, point) => sum + point[1], 0) / socialTargets.size;
+        resident.group.rotation.y = Math.atan2(centerX - resident.group.position.x, centerZ - resident.group.position.z);
+      }
       const shift = WORK_SHIFTS[workShift];
       const workingTime = hour >= shift.start && hour < 11.5 || hour >= 13.5 && hour < shift.end;
       const job = professions[resident.profession];

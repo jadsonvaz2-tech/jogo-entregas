@@ -68,7 +68,7 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
       const residentData = {};
       for (const resident of residents) {
         met[resident.id] = !!resident.met;
-        residentData[resident.id] = { needs: resident.needs, mood: resident.mood, trust: resident.trust, lastSimHour: resident.lastSimHour, lastSocialDay: resident.lastSocialDay, workHours: resident.workHours, role: resident.role, work: resident.work };
+        residentData[resident.id] = { needs: resident.needs, mood: resident.mood, trust: resident.trust, lastSimHour: resident.lastSimHour, lastSocialDay: resident.lastSocialDay, lastGroupSocialDay: resident.lastGroupSocialDay, workHours: resident.workHours, role: resident.role, work: resident.work };
       }
       const recruits = residents.filter(resident => resident.isRecruit).map(resident => ({ id: resident.id, name: resident.name, role: resident.role, model: resident.model, color: resident.color, home: resident.home, work: resident.work, greeting: resident.greeting, townId: resident.town.id }));
       localStorage.setItem(SAVE_KEY, JSON.stringify({ version: 3, met, residents: residentData, recruits }));
@@ -171,6 +171,27 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
     }
   }
 
+  function makeSocialMarker() {
+    const canvas = document.createElement("canvas"); canvas.width = 128; canvas.height = 80;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.fillStyle = "rgba(28,48,34,.94)"; ctx.strokeStyle = "#e6c979"; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.roundRect(12, 7, 104, 54, 18); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(43, 58); ctx.lineTo(35, 73); ctx.lineTo(62, 59); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#fff0c9"; ctx.font = "bold 37px Georgia"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("•••", 64, 34);
+    }
+    const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
+    const marker = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false }));
+    marker.position.y = 2.78; marker.scale.set(.72, .45, 1); marker.visible = false; return marker;
+  }
+  function updateSocialPose(resident, dt, socializing) {
+    const amount = THREE.MathUtils.damp(resident.socialPose || 0, socializing ? 1 : 0, 3.5, Math.max(0, dt));
+    resident.socialPose = amount; resident.socialPhase = ((resident.socialPhase || 0) + Math.max(0, dt) * 2.4) % (Math.PI * 2);
+    const nod = Math.sin(resident.socialPhase) * .045 * amount;
+    if (resident.modelRoot) { resident.modelRoot.rotation.x = nod; resident.modelRoot.rotation.z = Math.cos(resident.socialPhase * .5) * .018 * amount; }
+    else if (resident.fallback?.head) { resident.fallback.head.rotation.x = nod; resident.fallback.head.rotation.z = Math.cos(resident.socialPhase * .5) * .025 * amount; }
+    if (resident.socialMarker) resident.socialMarker.visible = socializing && !resident.moving;
+  }
   function loadModel(resident) {
     const fallback = resident.fallback;
     const url = new URL("../../assets/3d/" + resident.model, import.meta.url).href;
@@ -222,6 +243,7 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
       trust: Number.isFinite(previous.trust) ? previous.trust : 0,
       lastSimHour: Number.isFinite(previous.lastSimHour) ? previous.lastSimHour : ((Number(state.day) || 1) * 24 + (Number(state.timeOfDay) || 8)),
       lastSocialDay: Number.isFinite(previous.lastSocialDay) ? previous.lastSocialDay : 0,
+      lastGroupSocialDay: Number.isFinite(previous.lastGroupSocialDay) ? previous.lastGroupSocialDay : 0,
       workHours: Number.isFinite(previous.workHours) ? previous.workHours : 0,
       mixer: null, idleAction: null, walkAction: null, moving: false, routeKey: "",
       routeIndex: 0, target: null, pauseRemaining: 0, workPhase: 0, group: new THREE.Group()
@@ -233,6 +255,8 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
     resident.fallback = makeFallback(resident.group, data.color);
     resident.tag = makeTag(resident);
     resident.group.add(resident.tag);
+    resident.socialMarker = makeSocialMarker();
+    resident.group.add(resident.socialMarker);
     residents.push(resident);
     loadModel(resident);
     return resident;
@@ -364,11 +388,28 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
 
   function update(dt) {
     const hour = Number(state.timeOfDay) || 0;
-    const absoluteHour = (Number(state.day) || 1) * 24 + hour;
+    const currentDay = Number(state.day) || 1;
+    const absoluteHour = currentDay * 24 + hour;
+    const socializingNow = hour >= 11.5 && hour < 13.5;
+    const socialTargets = new Map();
+    let socialProgressed = false;
+    if (socializingNow) {
+      for (const town of towns) {
+        const group = residents.filter(resident => resident.town.id === town.id);
+        if (group.length < 2) continue;
+        const radius = Math.min(2.2, .9 + group.length * .16);
+        group.forEach((resident, index) => { const angle = index / group.length * Math.PI * 2; socialTargets.set(resident.id, [town.x + Math.cos(angle) * radius, town.z + .6 + Math.sin(angle) * radius]); });
+        if (hour >= 12) for (const resident of group) if (resident.lastGroupSocialDay !== currentDay) {
+          resident.lastGroupSocialDay = currentDay; resident.trust = Math.min(100, resident.trust + 1.5); resident.mood = Math.min(100, resident.mood + 1); socialProgressed = true;
+        }
+      }
+      if (socialProgressed) save();
+    }
     for (const resident of residents) {
       updateNeeds(resident, absoluteHour);
-      const plan = schedule(resident, hour);
-      resident.activity = plan.key === "sleep" ? "Dormindo em casa" : plan.key === "meal" ? "Refeição e descanso" : plan.key.startsWith("work") ? resident.role + " · trabalhando" : "Voltando para casa";
+      let plan = schedule(resident, hour);
+      if (socialTargets.has(resident.id)) plan = { key: "social-break", points: [socialTargets.get(resident.id)] };
+      resident.activity = plan.key === "sleep" ? "Dormindo em casa" : plan.key === "social-break" ? "Conversa e encontro com a comunidade" : plan.key === "meal" ? "Refeição e descanso" : plan.key.startsWith("work") ? resident.role + " · trabalhando" : "Voltando para casa";
       if (plan.key !== resident.routeKey) {
         resident.routeKey = plan.key; resident.routeIndex = 0; resident.pauseRemaining = 0; resident.target = plan.points[0];
       }
@@ -398,6 +439,8 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
       }
       if (resident.mixer) resident.mixer.update(dt);
       updateWorkPose(resident, dt, plan.key.startsWith("work"));
+      updateSocialPose(resident, dt, plan.key === "social-break" && !resident.moving);
+      if (plan.key === "social-break" && !resident.moving) resident.group.rotation.y = Math.atan2(resident.town.x - resident.group.position.x, resident.town.z + .6 - resident.group.position.z);
     }
 
     nearest = null;
