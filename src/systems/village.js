@@ -172,7 +172,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   document.head.appendChild(workStyle);
   const workPanel = document.createElement("section");
   workPanel.id = "village-work";
-  workPanel.innerHTML = '<strong>ADMINISTRAÇÃO DA ALDEIA CENTRAL</strong><label class="production" for="village-work-shift">JORNADA DOS MORADORES</label><select id="village-work-shift" aria-label="Jornada de trabalho da aldeia"><option value="reduced">Jornada reduzida · 7h–17h</option><option value="normal">Jornada normal · 6h–19h30</option><option value="extended">Jornada estendida · 5h–21h</option></select><div id="village-shift-detail" class="production"></div><label class="production" for="village-food-reserve-target">META DE RESERVA DE ALIMENTOS</label><select id="village-food-reserve-target" aria-label="Meta de dias de reserva de alimentos"><option value="1">1 dia · economia de espaço</option><option value="3">3 dias · equilibrado</option><option value="5">5 dias · segurança</option><option value="7">7 dias · grande reserva</option></select><div id="village-food-priority" class="production"></div><label class="production" for="village-ration-policy">POLÍTICA DE DISTRIBUIÇÃO DE ALIMENTOS</label><select id="village-ration-policy" aria-label="Política de distribuição de alimentos"><option value="berries-first">Frutas primeiro · preservar carne</option><option value="meat-first">Carne primeiro · preservar frutas</option></select><div id="village-ration-policy-detail" class="production"></div><div id="village-housing-status" class="production"></div><div id="village-alerts" aria-live="polite"><strong>CONDIÇÃO DA ALDEIA</strong></div><div class="village-management-actions"><button id="village-build-house" type="button">🏠 CONSTRUIR CASA · 16 MADEIRAS + 8 PEDRAS</button><button id="village-recruit" type="button">👥 RECRUTAR · 25 MOEDAS</button></div><div class="work-list"></div><div id="village-morale" class="production"></div><div id="village-prosperity" class="production"></div><button id="village-communal-meal" type="button">PREPARAR REFEIÇÃO · 5 FRUTAS</button><div id="village-stockpile" class="production"></div><button id="village-upgrade-storage" type="button">MELHORAR DEPÓSITO</button><button id="village-collect-stockpile" type="button">RECOLHER PRODUÇÃO</button><div id="village-work-summary" class="production"></div><div id="village-production-report" class="production"></div>';
+  workPanel.innerHTML = '<strong>ADMINISTRAÇÃO DA ALDEIA CENTRAL</strong><label class="production" for="village-work-shift">JORNADA DOS MORADORES</label><select id="village-work-shift" aria-label="Jornada de trabalho da aldeia"><option value="reduced">Jornada reduzida · 7h–17h</option><option value="normal">Jornada normal · 6h–19h30</option><option value="extended">Jornada estendida · 5h–21h</option></select><div id="village-shift-detail" class="production"></div><label class="production" for="village-food-reserve-target">META DE RESERVA DE ALIMENTOS</label><select id="village-food-reserve-target" aria-label="Meta de dias de reserva de alimentos"><option value="1">1 dia · economia de espaço</option><option value="3">3 dias · equilibrado</option><option value="5">5 dias · segurança</option><option value="7">7 dias · grande reserva</option></select><div id="village-food-priority" class="production"></div><label class="production" for="village-ration-policy">POLÍTICA DE DISTRIBUIÇÃO DE ALIMENTOS</label><select id="village-ration-policy" aria-label="Política de distribuição de alimentos"><option value="berries-first">Frutas primeiro · preservar carne</option><option value="meat-first">Carne primeiro · preservar frutas</option></select><div id="village-ration-policy-detail" class="production"></div><div id="village-housing-status" class="production"></div><div id="village-security-status" class="production"></div><div id="village-alerts" aria-live="polite"><strong>CONDIÇÃO DA ALDEIA</strong></div><div class="village-management-actions"><button id="village-build-house" type="button">🏠 CONSTRUIR CASA · 16 MADEIRAS + 8 PEDRAS</button><button id="village-recruit" type="button">👥 RECRUTAR · 25 MOEDAS</button></div><div class="work-list"></div><div id="village-morale" class="production"></div><div id="village-prosperity" class="production"></div><button id="village-communal-meal" type="button">PREPARAR REFEIÇÃO · 5 FRUTAS</button><div id="village-stockpile" class="production"></div><button id="village-upgrade-storage" type="button">MELHORAR DEPÓSITO</button><button id="village-collect-stockpile" type="button">RECOLHER PRODUÇÃO</button><div id="village-work-summary" class="production"></div><div id="village-production-report" class="production"></div>';
   if (managementRoot) managementRoot.appendChild(workPanel);
   else document.body.appendChild(workPanel);
   const workList = workPanel.querySelector(".work-list");
@@ -263,6 +263,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     tanner: { label: "Curtidor", resource: "hide", resourceLabel: "peles", amount: 1, detail: "Prepara peles para roupas e equipamentos." },
     shepherd: { label: "Pastor", resource: "wool", resourceLabel: "lãs", amount: 1, detail: "Cuida dos rebanhos e separa lã para a comunidade." },
     beekeeper: { label: "Apicultor", resource: "honey", resourceLabel: "méis", amount: 1, detail: "Cuida das colmeias e recolhe mel." },
+    guard: { label: "Vigia", resource: null, resourceLabel: "—", amount: 0, detail: "Faz rondas pelos limites da aldeia e mantém a vigilância durante o expediente." },
     idle: { label: "Sem tarefa", resource: null, resourceLabel: "—", amount: 0 }
   };
   const workElapsed = Object.fromEntries(residents.map(resident=>[resident.id,0]));
@@ -272,10 +273,12 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     mason: [[2.5, 9.2], [4.1, 7.4]],
     hunter: [[-12.5,-5.5],[-10.2,-8.2]], herbalist: [[-3.5,11.5],[-1.5,13]],
     gatherer: [[-11,7],[-8.5,9]], tanner: [[12,8],[14,10]],
-    shepherd: [[16,-7],[18,-9]], beekeeper: [[-17,-7],[-19,-9]]
+    shepherd: [[16,-7],[18,-9]], beekeeper: [[-17,-7],[-19,-9]],
+    guard: [[-12,-12],[12,-12],[12,12],[-12,12]]
   };
   const housingStatus = workPanel.querySelector("#village-housing-status");
   const villageAlerts = workPanel.querySelector("#village-alerts");
+  const securityDisplay = workPanel.querySelector("#village-security-status");
   const buildHouseButton = workPanel.querySelector("#village-build-house");
   const recruitButton = workPanel.querySelector("#village-recruit");
   function availableConstructionResource(resource) {
@@ -633,6 +636,19 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     onToast("Você recolheu a produção comunitária: " + Object.entries(amounts).filter(([,amount])=>amount>0).map(([resource,amount])=>amount+" "+({wood:"madeiras",stone:"pedras",berries:"frutas",meat:"carnes",herbs:"ervas",hide:"peles",fiber:"fibras",wool:"lãs",honey:"méis"}[resource]||resource)).join(", ")+".");
   });
 
+  function refreshSecurityUI() {
+    const guards = residents.filter(resident => resident.profession === "guard" && resident.enabled).length;
+    const level = guards === 0 ? "SEM PATRULHA" : guards === 1 ? "VIGILÂNCIA BÁSICA" : guards <= 3 ? "VIGILÂNCIA REGULAR" : "VIGILÂNCIA REFORÇADA";
+    const detail = guards === 0
+      ? "Nenhum morador está fazendo rondas. Atribua a profissão Vigia para iniciar a patrulha."
+      : guards === 1
+        ? "1 vigia percorre os pontos de ronda durante a jornada de trabalho."
+        : guards <= 3
+          ? guards + " vigias percorrem as rotas da aldeia durante a jornada."
+          : guards + " vigias mantêm rondas distribuídas pelo povoado.";
+    securityDisplay.textContent = "VIGILÂNCIA · " + level + " · " + guards + " VIGIA(S). " + detail;
+  }
+
   function experienceNeeded(level) { return level * 5; }
 
   function productionBonus(resident) { return Math.floor((skills[resident.id].level - 1) / 2); }
@@ -672,7 +688,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const production = row.querySelector(".production");
     if (production) {
       const skillLine = (skill.level >= 10 ? "NÍVEL 10 · MESTRE" : "NÍVEL " + skill.level + " · XP " + skill.xp + "/" + experienceNeeded(skill.level)) + (bonus ? " · +" + bonus + " por ciclo" : "") + " · " + workEfficiencyLabel(resident);
-      production.textContent = job.resource ? (job.detail || ("Produz " + job.amount + " " + job.resourceLabel + " por ciclo de trabalho.")) + " " + skillLine : "Sem produção atribuída. " + skillLine;
+      production.textContent = job.resource ? (job.detail || ("Produz " + job.amount + " " + job.resourceLabel + " por ciclo de trabalho.")) + " " + skillLine : (job.detail || "Sem produção atribuída.") + " " + skillLine;
     }
     const fill = row.querySelector('[aria-label="Progresso da profissão de ' + resident.name + '"] > div');
     if (fill) fill.style.width = skillProgress + "%";
@@ -764,7 +780,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       const skill = skills[resident.id];
       const bonus = productionBonus(resident);
       const skillLine = (skill.level >= 10 ? "NÍVEL 10 · MESTRE" : "NÍVEL " + skill.level + " · XP " + skill.xp + "/" + experienceNeeded(skill.level)) + (bonus ? " · +" + bonus + " por ciclo" : "") + " · " + workEfficiencyLabel(resident);
-      production.textContent = job.resource ? (job.detail || ("Produz " + job.amount + " " + job.resourceLabel + " por ciclo de trabalho.")) + " " + skillLine : "Sem produção atribuída. " + skillLine;
+      production.textContent = job.resource ? (job.detail || ("Produz " + job.amount + " " + job.resourceLabel + " por ciclo de trabalho.")) + " " + skillLine : (job.detail || "Sem produção atribuída.") + " " + skillLine;
       const skillTrack = document.createElement("div");
       skillTrack.setAttribute("aria-label", "Progresso da profissão de " + resident.name);
       skillTrack.style.cssText = "height:5px;margin-top:6px;border-radius:5px;background:#ffffff24;overflow:hidden";
@@ -780,6 +796,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       workList.appendChild(row);
     }
     refreshStockpileUI();
+    refreshSecurityUI();
   }
   function makeNameTag(name, role, level) {
     const canvas = document.createElement("canvas");
@@ -1110,6 +1127,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
         const active = residents.filter(r => r.enabled && r.profession !== "idle").length;
         productionLine.textContent = active + "/" + residents.length + " moradores em atividade · ciclos durante o expediente.";
       }
+      refreshSecurityUI();
       roster.querySelector("div:last-child").textContent = hour >= 20 || hour < 5.5
         ? "Todos descansam · " + hourText
         : hour >= 11.5 && hour < 13.5
