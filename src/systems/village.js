@@ -131,13 +131,26 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     }
   }
 
+  function moraleDescription() {
+    if (morale >= 75) return "POVOADO ANIMADO";
+    if (morale >= 45) return "POVOADO ESTÁVEL";
+    if (morale >= 25) return "POVOADO DESMOTIVADO";
+    return "POVOADO DESANIMADO";
+  }
+
+  function foodReserveDays() {
+    return Math.floor(stockpile.berries / 3);
+  }
+
   function refreshStockpileUI() {
     stockpileDisplay.textContent = "DEPÓSITO COMUNITÁRIO · " + stockpile.wood + " madeira · " + stockpile.stone + " pedra · " + stockpile.berries + " frutas";
     const total = stockpile.wood + stockpile.stone + stockpile.berries;
     collectStockpileButton.disabled = total < 1;
-    moraleDisplay.textContent = "ÂNIMO DO POVOADO · " + Math.round(morale) + "/100";
+    moraleDisplay.textContent = "ÂNIMO DO POVOADO · " + Math.round(morale) + "/100 · " + moraleDescription();
     communalMealButton.disabled = stockpile.berries < 5 || morale >= 100;
-    upkeepStatus.textContent = "REFEIÇÃO DIÁRIA · 3 frutas por dia";
+    const reserveDays = foodReserveDays();
+    const reserveText = reserveDays === 1 ? "1 dia" : reserveDays + " dias";
+    upkeepStatus.textContent = "RAÇÕES · 3 frutas/dia · reserva para " + reserveText + (reserveDays < 2 ? " · REABASTECER" : " · suficiente");
     workSummary.textContent = residents.filter(r => r.enabled && r.profession !== "idle").length + "/3 moradores em atividade · produção guardada no depósito.";
   }
 
@@ -371,7 +384,20 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     saveVillageProgress();
     dialogName.textContent = resident.name;
     dialogRole.textContent = resident.role;
-    dialogText.textContent = resident.greeting + " Hoje estou " + (resident.moving ? "indo para meu local de trabalho." : "no meu ponto da rotina diária.");
+    const reserveDays = foodReserveDays();
+    const villageCondition = morale >= 75
+      ? "O povoado está animado e o trabalho rende mais."
+      : morale >= 45
+        ? "O povoado está estável, mas precisamos manter as provisões."
+        : morale >= 25
+          ? "O ânimo está baixo. Uma refeição comunitária ajudaria."
+          : "O povoado está desanimado; precisamos cuidar das pessoas.";
+    const foodCondition = reserveDays > 1
+      ? "Temos frutas para " + reserveDays + " dias de refeições."
+      : reserveDays === 1
+        ? "Nosso estoque só cobre mais um dia de refeições."
+        : "Estamos sem frutas para as refeições diárias.";
+    dialogText.textContent = resident.greeting + " Hoje estou " + (resident.moving ? "indo para meu local de trabalho. " : "no meu ponto da rotina diária. ") + villageCondition + " " + foodCondition;
     dialog.hidden = false;
     onToast("Você conversou com " + resident.name + ".");
   }
