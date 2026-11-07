@@ -149,6 +149,28 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
     return { body, head };
   }
 
+  function updateWorkPose(resident, dt, working) {
+    const profile = (resident.profession || resident.role || "").toLowerCase();
+    const phase = (resident.workPhase || 0) + Math.max(0, dt) * (
+      /guard|vigia/.test(profile) ? 1.15 :
+      /smith|min|armor|ferro/.test(profile) ? 4.2 :
+      /carpent|stone|wood|pedra/.test(profile) ? 3.4 : 2.25
+    );
+    resident.workPhase = phase % (Math.PI * 2);
+    const target = working ? 1 : 0;
+    resident.workPose = THREE.MathUtils.damp(resident.workPose || 0, target, working ? 3.2 : 2.4, Math.max(0, dt));
+    const amount = resident.workPose, swing = Math.sin(resident.workPhase);
+    if (resident.modelRoot) {
+      resident.modelRoot.rotation.x = swing * .035 * amount;
+      resident.modelRoot.rotation.z = Math.cos(resident.workPhase * .5) * .022 * amount;
+      if (resident.workBaseY === undefined) resident.workBaseY = resident.modelRoot.position.y;
+      resident.modelRoot.position.y = resident.workBaseY + Math.abs(swing) * .012 * amount;
+    } else if (resident.fallback) {
+      if (resident.fallback.body) resident.fallback.body.rotation.z = swing * .035 * amount;
+      if (resident.fallback.head) resident.fallback.head.rotation.z = Math.cos(resident.workPhase * .5) * .025 * amount;
+    }
+  }
+
   function loadModel(resident) {
     const fallback = resident.fallback;
     const url = new URL("../../assets/3d/" + resident.model, import.meta.url).href;
@@ -170,6 +192,7 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
         resident.group.remove(fallback.body, fallback.head);
         resident.group.add(model);
         resident.modelRoot = model;
+        resident.workBaseY = model.position.y;
         if (gltf.animations?.length) {
           resident.mixer = new THREE.AnimationMixer(model);
           const clips = gltf.animations;
@@ -374,6 +397,7 @@ export function createDistantVillageResidents({ THREE, scene, player, terrainHei
         }
       }
       if (resident.mixer) resident.mixer.update(dt);
+      updateWorkPose(resident, dt, plan.key.startsWith("work"));
     }
 
     nearest = null;

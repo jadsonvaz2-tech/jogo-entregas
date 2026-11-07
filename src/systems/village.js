@@ -1708,6 +1708,27 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     return { clothes, head };
   }
 
+  function updateWorkPose(resident, dt, working) {
+    const phase = (resident.workPhase || 0) + Math.max(0, dt) * (
+      resident.profession === "guard" ? 1.15 :
+      ["blacksmith","steelworker","armorer","miner"].includes(resident.profession) ? 4.2 :
+      ["carpenter","stonecutter"].includes(resident.profession) ? 3.4 : 2.25
+    );
+    resident.workPhase = phase % (Math.PI * 2);
+    const target = working ? 1 : 0;
+    resident.workPose = THREE.MathUtils.damp(resident.workPose || 0, target, working ? 3.2 : 2.4, Math.max(0, dt));
+    const amount = resident.workPose, swing = Math.sin(resident.workPhase);
+    if (resident.modelRoot) {
+      resident.modelRoot.rotation.x = swing * .035 * amount;
+      resident.modelRoot.rotation.z = Math.cos(resident.workPhase * .5) * .022 * amount;
+      if (resident.workBaseY === undefined) resident.workBaseY = resident.modelRoot.position.y;
+      resident.modelRoot.position.y = resident.workBaseY + Math.abs(swing) * .012 * amount;
+    } else if (resident.fallback) {
+      if (resident.fallback.clothes) resident.fallback.clothes.rotation.z = swing * .035 * amount;
+      if (resident.fallback.head) resident.fallback.head.rotation.z = Math.cos(resident.workPhase * .5) * .025 * amount;
+    }
+  }
+
   function loadResidentModel(resident, group, fallback) {
     const url = new URL("../../assets/3d/" + resident.model, import.meta.url).href;
     let finished = false;
@@ -1740,6 +1761,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
         group.remove(fallback.clothes);
         group.remove(fallback.head);
         resident.modelRoot = model;
+        resident.workBaseY = model.position.y;
         if (gltf.animations && gltf.animations.length) {
           resident.mixer = new THREE.AnimationMixer(model);
           for (const clip of gltf.animations) {
@@ -1947,6 +1969,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
         resident.setMoving(false);
       }
       if (resident.mixer) resident.mixer.update(dt);
+      updateWorkPose(resident, dt, schedule.key.includes("work") && resident.enabled && resident.profession !== "idle");
       const shift = WORK_SHIFTS[workShift];
       const workingTime = hour >= shift.start && hour < 11.5 || hour >= 13.5 && hour < shift.end;
       const job = professions[resident.profession];
