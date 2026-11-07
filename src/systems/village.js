@@ -128,6 +128,13 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     #village-work #village-work-shift{margin:4px 0 2px;border-color:#d6b45d;font-weight:700}
     #village-work button{margin-top:5px;width:100%;padding:7px;border:1px solid #b99b5c;border-radius:6px;background:#52634a;color:#fff1cc;font:700 10px system-ui}
     #village-work .production{color:#c4cfaa;font-size:10px;margin-top:3px}
+    #village-work #village-alerts{margin:8px 0;padding:8px;border:1px solid #8a774b;border-radius:7px;background:#202d22}
+    #village-work #village-alerts strong{margin:0 0 5px;color:#f0d58a}
+    #village-work #village-alerts .village-alert{padding:3px 0;border-top:1px solid #ffffff18;color:#e9d9b6;font-size:10px}
+    #village-work #village-alerts .village-alert:first-of-type{border-top:0}
+    #village-work #village-alerts .village-alert[data-level="critical"]{color:#ffb0a0}
+    #village-work #village-alerts .village-alert[data-level="warning"]{color:#f0d58a}
+    #village-work #village-alerts .village-alert[data-level="good"]{color:#b9d48d}
     #village-work .stockpile-heading{margin:10px 0 6px;padding-top:9px;border-top:1px solid #b99b5c88;color:#f0d58a;font-weight:800;font-size:11px;letter-spacing:.04em}
     #village-work .stockpile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
     #village-work .stockpile-item{display:flex;justify-content:space-between;align-items:center;gap:4px;padding:6px;background:#293b2d;border:1px solid #65714d;border-radius:6px;color:#eee5cf;font-size:11px}
@@ -145,7 +152,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   document.head.appendChild(workStyle);
   const workPanel = document.createElement("section");
   workPanel.id = "village-work";
-  workPanel.innerHTML = '<strong>ADMINISTRAÇÃO DA ALDEIA CENTRAL</strong><label class="production" for="village-work-shift">JORNADA DOS MORADORES</label><select id="village-work-shift" aria-label="Jornada de trabalho da aldeia"><option value="reduced">Jornada reduzida · 7h–17h</option><option value="normal">Jornada normal · 6h–19h30</option><option value="extended">Jornada estendida · 5h–21h</option></select><div id="village-shift-detail" class="production"></div><label class="production" for="village-food-reserve-target">META DE RESERVA DE ALIMENTOS</label><select id="village-food-reserve-target" aria-label="Meta de dias de reserva de alimentos"><option value="1">1 dia · economia de espaço</option><option value="3">3 dias · equilibrado</option><option value="5">5 dias · segurança</option><option value="7">7 dias · grande reserva</option></select><div id="village-food-priority" class="production"></div><div id="village-housing-status" class="production"></div><div class="village-management-actions"><button id="village-build-house" type="button">🏠 CONSTRUIR CASA · 16 MADEIRAS + 8 PEDRAS</button><button id="village-recruit" type="button">👥 RECRUTAR · 25 MOEDAS</button></div><div class="work-list"></div><div id="village-morale" class="production"></div><div id="village-prosperity" class="production"></div><button id="village-communal-meal" type="button">PREPARAR REFEIÇÃO · 5 FRUTAS</button><div id="village-stockpile" class="production"></div><button id="village-upgrade-storage" type="button">MELHORAR DEPÓSITO</button><button id="village-collect-stockpile" type="button">RECOLHER PRODUÇÃO</button><div id="village-work-summary" class="production"></div>';
+  workPanel.innerHTML = '<strong>ADMINISTRAÇÃO DA ALDEIA CENTRAL</strong><label class="production" for="village-work-shift">JORNADA DOS MORADORES</label><select id="village-work-shift" aria-label="Jornada de trabalho da aldeia"><option value="reduced">Jornada reduzida · 7h–17h</option><option value="normal">Jornada normal · 6h–19h30</option><option value="extended">Jornada estendida · 5h–21h</option></select><div id="village-shift-detail" class="production"></div><label class="production" for="village-food-reserve-target">META DE RESERVA DE ALIMENTOS</label><select id="village-food-reserve-target" aria-label="Meta de dias de reserva de alimentos"><option value="1">1 dia · economia de espaço</option><option value="3">3 dias · equilibrado</option><option value="5">5 dias · segurança</option><option value="7">7 dias · grande reserva</option></select><div id="village-food-priority" class="production"></div><div id="village-housing-status" class="production"></div><div id="village-alerts" aria-live="polite"><strong>CONDIÇÃO DA ALDEIA</strong></div><div class="village-management-actions"><button id="village-build-house" type="button">🏠 CONSTRUIR CASA · 16 MADEIRAS + 8 PEDRAS</button><button id="village-recruit" type="button">👥 RECRUTAR · 25 MOEDAS</button></div><div class="work-list"></div><div id="village-morale" class="production"></div><div id="village-prosperity" class="production"></div><button id="village-communal-meal" type="button">PREPARAR REFEIÇÃO · 5 FRUTAS</button><div id="village-stockpile" class="production"></div><button id="village-upgrade-storage" type="button">MELHORAR DEPÓSITO</button><button id="village-collect-stockpile" type="button">RECOLHER PRODUÇÃO</button><div id="village-work-summary" class="production"></div>';
   if (managementRoot) managementRoot.appendChild(workPanel);
   else document.body.appendChild(workPanel);
   const workList = workPanel.querySelector(".work-list");
@@ -230,6 +237,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     shepherd: [[16,-7],[18,-9]], beekeeper: [[-17,-7],[-19,-9]]
   };
   const housingStatus = workPanel.querySelector("#village-housing-status");
+  const villageAlerts = workPanel.querySelector("#village-alerts");
   const buildHouseButton = workPanel.querySelector("#village-build-house");
   const recruitButton = workPanel.querySelector("#village-recruit");
   function refreshHousingUI() {
@@ -443,6 +451,27 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const foodPriorityActive = reserveDays < foodReserveTargetDays;
     foodPriorityDisplay.textContent = "META · " + foodReserveTargetDays + " dias · " + (foodPriorityActive ? "PRIORIDADE ATIVA: agricultor e caçador trabalham até 22% mais rápido." : "Reserva atingida · produção normal.");
     workSummary.textContent = residents.filter(r => r.enabled && r.profession !== "idle").length + "/" + residents.length + " moradores em atividade · produção guardada no depósito.";
+    refreshVillageAlerts(total, reserveDays);
+  }
+
+  function refreshVillageAlerts(total = stockpileTotal(), reserveDays = foodReserveDays()) {
+    const capacity = 3 + housesBuilt * 2;
+    const assigned = residents.filter(r => r.homeSlot && housingSlots().some(slot => slot.id === r.homeSlot)).length;
+    const active = residents.filter(r => r.enabled && r.profession !== "idle").length;
+    const alerts = [];
+    if (reserveDays < 1) alerts.push(["critical", "ALIMENTO ESGOTADO · prepare ou recolha provisões para os moradores."]);
+    else if (reserveDays < foodReserveTargetDays) alerts.push(["warning", "RESERVA BAIXA · faltam " + (foodReserveTargetDays - reserveDays) + " dia(s) para atingir a meta."]);
+    else alerts.push(["good", "ALIMENTAÇÃO · reserva dentro da meta de " + foodReserveTargetDays + " dias."]);
+    if (assigned < residents.length) alerts.push(["warning", "MORADIA · " + (residents.length - assigned) + " morador(es) sem cama atribuída."]);
+    else if (residents.length > capacity) alerts.push(["critical", "MORADIA · população acima da capacidade disponível."]);
+    else alerts.push(["good", "MORADIA · todos possuem cama atribuída."]);
+    if (active < residents.length) alerts.push(["warning", "MÃO DE OBRA · " + (residents.length - active) + " morador(es) sem tarefa ativa."]);
+    if (total >= storageCapacity()) alerts.push(["warning", "DEPÓSITO CHEIO · recolha ou retire recursos para liberar espaço."]);
+    else if (total >= storageCapacity() * .9) alerts.push(["warning", "DEPÓSITO QUASE CHEIO · " + total + "/" + storageCapacity() + " unidades."]);
+    else alerts.push(["good", "DEPÓSITO · " + total + "/" + storageCapacity() + " unidades ocupadas."]);
+    villageAlerts.innerHTML = "<strong>CONDIÇÃO DA ALDEIA</strong>" + alerts.map(([level,message]) => {
+      const line = document.createElement("div"); line.className = "village-alert"; line.dataset.level = level; line.textContent = message; return line.outerHTML;
+    }).join("");
   }
 
   function getStockpile(resource) {
