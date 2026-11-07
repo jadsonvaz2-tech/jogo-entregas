@@ -76,3 +76,10 @@
 
 /* Botão de ocultar/mostrar permanece no rodapé; o painel de posicionamento fica sob FABRICAR. */
 #buildPlacementToggle{left:50%!important;right:auto!important;top:auto!important;bottom:calc(16px + env(safe-area-inset-bottom,0px))!important;transform:translateX(-50%)!important}
+
+/* Indicador dinâmico da proteção térmica da fogueira. */
+#fireWarmthStatus{position:absolute;top:calc(55px + 174px);left:12px;width:150px;padding:7px 9px;background:#101812d9;border:1px solid #d69a4c88;border-radius:8px;font:9px Arial,sans-serif;letter-spacing:.7px;color:#f2d49a;pointer-events:none}
+#fireWarmthStatus[hidden]{display:none}
+#fireWarmthTrack{height:5px;margin-top:5px;background:#303a30;border-radius:8px;overflow:hidden}
+#fireWarmthFill{display:block;width:0;height:100%;background:linear-gradient(90deg,#b66b35,#ffd27a);border-radius:8px;transition:width .2s ease}
+@media(min-width:800px){#fireWarmthStatus{top:calc(68px + 208px);left:20px;width:185px}}

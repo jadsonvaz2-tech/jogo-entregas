@@ -3900,6 +3900,14 @@ function update(dt){
  const fireWarmth=THREE.MathUtils.clamp(1-(fireDistance-2)/8,0,1);
  const nearFire=fireWarmth>.5;
  const nearShelter=state.shelter&&Math.hypot(player.position.x-state.shelterX,player.position.z-state.shelterZ)<5;
+ const fireStatus=$("fireWarmthStatus");
+ if(fireStatus){
+  fireStatus.hidden=!state.campfire||fireWarmth<=0;
+  if(!fireStatus.hidden){
+   $("fireWarmthFill").style.width=Math.round(fireWarmth*100)+"%";
+   $("fireWarmthLabel").textContent=fireWarmth>.72?"🔥 CALOR FORTE":fireWarmth>.35?"🔥 CALOR MODERADO":"🔥 CALOR FRACO";
+  }
+ }
  // O calor da fogueira diminui gradualmente com a distância, em vez de desligar de uma vez.
  if(!moving)state.energy=Math.min(100,state.energy+dt*4);
  if(fireWarmth>0){

@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#17231b">
   <meta name="description" content="Aventura medieval de sobrevivência em mundo aberto.">
   <title>Crônicas da Floresta — Aventura Medieval</title>
-  <link rel="stylesheet" href="./src/style.css?v=settlement-campfire-smoke-1">
+  <link rel="stylesheet" href="./src/style.css?v=settlement-fire-indicator-1">
   <script type="importmap">
     {
       "imports": {
@@ -21,6 +21,7 @@
     <div id="loading"><div class="loading-card"><div class="brand-mark">⚔</div><h1>CRÔNICAS DA FLORESTA</h1><p id="loadingText">Preparando o mundo medieval...</p><div class="loading-track"><span id="loadingBar"></span></div></div></div>
     <div id="hud">
       <div class="topline"><div class="game-title">CRÔNICAS DA FLORESTA</div><div class="day-pill">DIA <b id="day">1</b> · <span id="period">DIA</span></div></div>
+      <div id="fireWarmthStatus" hidden><div id="fireWarmthLabel">🔥 CALOR DA FOGUEIRA</div><div id="fireWarmthTrack"><i id="fireWarmthFill"></i></div></div>
       <div class="status-panel">
         <div class="status"><span>❤ VIDA</span><div class="meter"><i id="healthBar" class="health"></i></div></div>
         <div class="status"><span>🍖 FOME</span><div class="meter"><i id="hungerBar" class="hunger"></i></div></div>
@@ -48,6 +49,6 @@
       <div id="desktopHelp">WASD mover · Shift correr · E coletar · Arraste para girar a câmera</div>
     </div>
   </div>
-  <script type="module" src="./src/main.js?v=settlement-fire-warmth-1"></script>
+  <script type="module" src="./src/main.js?v=settlement-fire-indicator-1"></script>
 </body>
 </html>
