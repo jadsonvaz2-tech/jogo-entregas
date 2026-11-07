@@ -530,6 +530,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
           '<div class="stockpile-resource"><span>' + icon + ' ' + label + '</span><b>' + stockpile[key] + '</b></div>' +
           '<span class="personal-count">Na sua mochila: ' + personal + '</span>' +
           '<div class="stockpile-quantity"><label>Quantidade <input type="number" min="1" step="1" inputmode="numeric" data-transfer-amount value="1" aria-label="Quantidade de ' + label + ' para transferir"></label></div>' +
+          '<div class="stockpile-presets" aria-label="Atalhos de quantidade"><button type="button" data-transfer-preset="1">1</button><button type="button" data-transfer-preset="5">5</button><button type="button" data-transfer-preset="10">10</button><button type="button" data-transfer-preset="max">MÁX.</button></div>' +
           '<div class="stockpile-actions"><button type="button" data-transfer="deposit">GUARDAR TUDO</button><button type="button" data-transfer="withdraw">RETIRAR TUDO</button></div>' +
           '<div class="stockpile-actions"><button type="button" data-transfer="deposit-amount">GUARDAR QTD.</button><button type="button" data-transfer="withdraw-amount">RETIRAR QTD.</button></div></div>';
       }).join("") + '</div><div class="stockpile-capacity">TOTAL ARMAZENADO · ' + total + ' / ' + storageCapacity() + ' unidades</div>';
@@ -546,6 +547,15 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       depositAmount.disabled = personal < 1 || total >= storageCapacity();
       withdrawAmount.disabled = stockpile[resource] < 1;
       quantityInput.max = String(Math.max(personal, stockpile[resource], 1));
+      for (const preset of card.querySelectorAll("[data-transfer-preset]")) {
+        preset.addEventListener("click", () => {
+          const value = preset.dataset.transferPreset === "max"
+            ? Math.max(personal, stockpile[resource], 1)
+            : Number(preset.dataset.transferPreset);
+          quantityInput.value = String(value);
+          quantityInput.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+      }
       deposit.addEventListener("click", () => transferStockpileResource(resource, "deposit"));
       withdraw.addEventListener("click", () => transferStockpileResource(resource, "withdraw"));
       depositAmount.addEventListener("click", () => transferStockpileResource(resource, "deposit", quantityInput.value));
