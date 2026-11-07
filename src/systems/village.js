@@ -18,6 +18,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     blacksmith: { label: "Ferreiro(a)", resource: null, resourceLabel: "lingotes e ferramentas", amount: 1, detail: "Na forja comunitária, transforma minério e carvão em lingotes e ferramentas de ferro." },
     carpenter: { label: "Carpinteiro(a)", resource: null, resourceLabel: "tábuas", amount: 1, detail: "Na carpintaria, usa machado comunitário e 2 madeiras para produzir 2 tábuas; o machado perde durabilidade após 8 ciclos." },
     stonecutter: { label: "Canteiro(a)", resource: null, resourceLabel: "pedras lavradas", amount: 1, detail: "Na oficina de cantaria, usa picareta comunitária e 2 pedras para produzir 2 pedras lavradas; a picareta perde durabilidade após 8 ciclos." },
+    weaver: { label: "Tecelão(ã)", resource: null, resourceLabel: "tecidos", amount: 1, detail: "Na tecelagem comunitária, transforma 2 lãs e 1 fibra em 2 tecidos para roupas e equipamentos." },
+    leatherworker: { label: "Artesão(ã) de couro", resource: null, resourceLabel: "couros curtidos", amount: 1, detail: "Na oficina de couro, prepara 2 peles e 1 fibra para produzir 1 couro curtido." },
     guard: { label: "Vigia", resource: null, resourceLabel: "—", amount: 0, detail: "Faz rondas pelos limites da aldeia, ganha experiência patrulhando e melhora a cobertura de vigilância." },
     idle: { label: "Sem tarefa", resource: null, resourceLabel: "—", amount: 0 }
   };
@@ -59,7 +61,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   let lastUpkeepDay = Number.isFinite(Number(saved.lastUpkeepDay)) ? Math.max(1, Number(saved.lastUpkeepDay)) : Math.max(1, Number(state.day) || 1);
   const WORK_SHIFTS = { reduced:{label:"Jornada reduzida · 7h–17h",start:7,end:17,detail:"Menos horas de trabalho e mais tempo de descanso."}, normal:{label:"Jornada normal · 6h–19h30",start:6,end:19.5,detail:"Equilíbrio entre produção e descanso."}, extended:{label:"Jornada estendida · 5h–21h",start:5,end:21,detail:"Mais tempo de produção, com menos descanso."} };
   let workShift = Object.prototype.hasOwnProperty.call(WORK_SHIFTS,saved.workShift) ? saved.workShift : "normal";
-  const RECRUIT_PROFESSIONS = ["auto","farmer","lumberjack","mason","hunter","herbalist","gatherer","tanner","shepherd","beekeeper","miner","blacksmith","carpenter","stonecutter"];
+  const RECRUIT_PROFESSIONS = ["auto","farmer","lumberjack","mason","hunter","herbalist","gatherer","tanner","shepherd","beekeeper","miner","blacksmith","carpenter","stonecutter","weaver","leatherworker"];
   let nextRecruitProfession = RECRUIT_PROFESSIONS.includes(saved.nextRecruitProfession) ? saved.nextRecruitProfession : "auto";
   const FOOD_RESERVE_TARGETS = [1,3,5,7];
   const FOOD_RATION_POLICIES = ["berries-first","meat-first"];
@@ -70,13 +72,13 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   let communalMealPolicy = COMMUNAL_MEAL_POLICIES.includes(saved.communalMealPolicy) ? saved.communalMealPolicy : "auto";
   let protectFoodReserve = saved.protectFoodReserve === true;
   // Metais compartilham o depósito, sem entrar nas metas de produção dos moradores.
-  const stockpile = Object.fromEntries(["wood","stone","berries","meat","herbs","hide","fiber","wool","honey","ironOre","coal","ironIngots","steelIngots","ironPickaxes","ironAxes","planks","cutStone"].map(key => [key, Math.max(0, Number(saved.stockpile?.[key]) || 0)]));
+  const stockpile = Object.fromEntries(["wood","stone","berries","meat","herbs","hide","fiber","wool","honey","ironOre","coal","ironIngots","steelIngots","ironPickaxes","ironAxes","planks","cutStone","cloth","leather"].map(key => [key, Math.max(0, Number(saved.stockpile?.[key]) || 0)]));
   const RESOURCE_KEYS = ["wood","stone","berries","meat","herbs","hide","fiber","wool","honey"];
   const resourceTargets = Object.fromEntries(RESOURCE_KEYS.map(key => [
     key, Math.max(0, Math.min(200, Math.floor(Number(saved.resourceTargets?.[key]) || 0)))
   ]));
   const legacyStorageFloor = Object.values(stockpile).reduce((sum, amount) => sum + amount, 0);
-  const RESOURCE_LABELS = {wood:"Madeira",stone:"Pedra",berries:"Frutas",meat:"Carne",herbs:"Ervas",hide:"Peles",fiber:"Fibras",wool:"Lã",honey:"Mel",ironOre:"Minério de ferro",coal:"Carvão",ironIngots:"Lingotes de ferro",steelIngots:"Lingotes de aço",ironPickaxes:"Picaretas de ferro",ironAxes:"Machados de ferro",planks:"Tábuas",cutStone:"Pedras lavradas"};
+  const RESOURCE_LABELS = {wood:"Madeira",stone:"Pedra",berries:"Frutas",meat:"Carne",herbs:"Ervas",hide:"Peles",fiber:"Fibras",wool:"Lã",honey:"Mel",ironOre:"Minério de ferro",coal:"Carvão",ironIngots:"Lingotes de ferro",steelIngots:"Lingotes de aço",ironPickaxes:"Picaretas de ferro",ironAxes:"Machados de ferro",planks:"Tábuas",cutStone:"Pedras lavradas",cloth:"Tecidos",leather:"Couros curtidos"};
   const savedProduction = saved.productionReport && typeof saved.productionReport === "object" ? saved.productionReport : {};
   const savedFoodReport = saved.foodReport && typeof saved.foodReport === "object" ? saved.foodReport : {};
   const foodReport = {
@@ -250,7 +252,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   document.head.appendChild(workStyle);
   const workPanel = document.createElement("section");
   workPanel.id = "village-work";
-  workPanel.innerHTML = '<strong>ADMINISTRAÇÃO DA ALDEIA CENTRAL</strong><label class="production" for="village-work-shift">JORNADA DOS MORADORES</label><select id="village-work-shift" aria-label="Jornada de trabalho da aldeia"><option value="reduced">Jornada reduzida · 7h–17h</option><option value="normal">Jornada normal · 6h–19h30</option><option value="extended">Jornada estendida · 5h–21h</option></select><div id="village-shift-detail" class="production"></div><label class="production" for="village-food-reserve-target">META DE RESERVA DE ALIMENTOS</label><select id="village-food-reserve-target" aria-label="Meta de dias de reserva de alimentos"><option value="1">1 dia · economia de espaço</option><option value="3">3 dias · equilibrado</option><option value="5">5 dias · segurança</option><option value="7">7 dias · grande reserva</option></select><div id="village-food-priority" class="production"></div><label class="production" for="village-protect-food-reserve"><input id="village-protect-food-reserve" type="checkbox"> PROTEGER RESERVA DE ALIMENTOS</label><div id="village-food-protection-detail" class="production"></div><label class="production" for="village-ration-policy">POLÍTICA DE DISTRIBUIÇÃO DE ALIMENTOS</label><select id="village-ration-policy" aria-label="Política de distribuição de alimentos"><option value="berries-first">Frutas primeiro · preservar carne</option><option value="meat-first">Carne primeiro · preservar frutas</option></select><div id="village-ration-policy-detail" class="production"></div><div class="stockpile-heading">METAS DE ESTOQUE DA ALDEIA</div><div class="production">Defina quanto deseja manter de cada recurso. A profissão responsável recebe prioridade enquanto o estoque estiver abaixo da meta.</div><div id="village-resource-targets" class="resource-target-grid"></div><div id="village-material-priority" class="production"></div><div id="village-housing-status" class="production"></div><div id="village-housing-roster" aria-live="polite"></div><button id="village-auto-assign-homes" type="button">ATRIBUIR MORADORES SEM CAMA</button><div id="village-security-status" class="production"></div><div id="village-alerts" aria-live="polite"><strong>CONDIÇÃO DA ALDEIA</strong></div><div class="village-management-actions"><button id="village-build-house" type="button">🏠 CONSTRUIR CASA · 16 MADEIRAS + 8 PEDRAS</button><label class="production" for="village-next-recruit-profession">PROFISSÃO DO PRÓXIMO RECRUTA</label><select id="village-next-recruit-profession" aria-label="Profissão do próximo morador recrutado"><option value="auto">Automática · rodízio</option><option value="farmer">Agricultor(a)</option><option value="lumberjack">Lenhador</option><option value="mason">Pedreiro</option><option value="hunter">Caçador(a)</option><option value="herbalist">Herborista</option><option value="gatherer">Coletor(a)</option><option value="tanner">Curtidor(a)</option><option value="shepherd">Pastor(a)</option><option value="beekeeper">Apicultor(a)</option><option value="miner">Minerador(a)</option><option value="blacksmith">Ferreiro(a)</option><option value="carpenter">Carpinteiro(a)</option><option value="stonecutter">Canteiro(a)</option></select><button id="village-recruit" type="button">👥 RECRUTAR · 25 MOEDAS</button></div><label class="production" for="village-resident-search">BUSCAR MORADOR</label><input id="village-resident-search" type="search" placeholder="Digite o nome..." autocomplete="off"><label class="production" for="village-resident-filter">FILTRAR POR PROFISSÃO</label><select id="village-resident-filter" aria-label="Filtrar moradores por profissão"><option value="all">Todas as profissões</option><option value="farmer">Agricultores</option><option value="lumberjack">Lenhadores</option><option value="mason">Pedreiros</option><option value="hunter">Caçadores</option><option value="herbalist">Herboristas</option><option value="gatherer">Coletores</option><option value="tanner">Curtidores</option><option value="shepherd">Pastores</option><option value="beekeeper">Apicultores</option><option value="miner">Mineradores</option><option value="blacksmith">Ferreiros</option><option value="carpenter">Carpinteiros</option><option value="stonecutter">Canteiros</option><option value="guard">Vigias</option><option value="idle">Sem tarefa</option></select><div id="village-resident-filter-count" class="production" aria-live="polite"></div><div class="work-list"></div><div id="village-morale" class="production"></div><div id="village-prosperity" class="production"></div><label class="production" for="village-communal-meal-policy">INGREDIENTE DA REFEIÇÃO COMUNITÁRIA</label><select id="village-communal-meal-policy" aria-label="Escolher ingrediente da refeição comunitária"><option value="auto">Automático · frutas primeiro</option><option value="berries">Somente frutas · 5 unidades</option><option value="meat">Somente carne · 3 unidades</option></select><button id="village-communal-meal" type="button">PREPARAR REFEIÇÃO · 5 FRUTAS</button><div id="village-stockpile" class="production"></div><section id="village-workshops" class="production"><strong>OFICINAS COMUNITÁRIAS</strong><div id="village-workshops-status"></div><button id="village-build-carpentry" type="button">🪚 CONSTRUIR CARPINTARIA · 16 MADEIRAS + 10 PEDRAS</button><button id="village-build-stonecutting" type="button">🪨 CONSTRUIR CANTARIA · 14 MADEIRAS + 14 PEDRAS</button><div id="village-workshop-output"></div></section><button id="village-upgrade-storage" type="button">MELHORAR DEPÓSITO</button><button id="village-collect-stockpile" type="button">RECOLHER PRODUÇÃO</button><div id="village-work-summary" class="production"></div><div id="village-food-report" class="production"></div><div id="village-production-report" class="production"></div>';
+  workPanel.innerHTML = '<strong>ADMINISTRAÇÃO DA ALDEIA CENTRAL</strong><label class="production" for="village-work-shift">JORNADA DOS MORADORES</label><select id="village-work-shift" aria-label="Jornada de trabalho da aldeia"><option value="reduced">Jornada reduzida · 7h–17h</option><option value="normal">Jornada normal · 6h–19h30</option><option value="extended">Jornada estendida · 5h–21h</option></select><div id="village-shift-detail" class="production"></div><label class="production" for="village-food-reserve-target">META DE RESERVA DE ALIMENTOS</label><select id="village-food-reserve-target" aria-label="Meta de dias de reserva de alimentos"><option value="1">1 dia · economia de espaço</option><option value="3">3 dias · equilibrado</option><option value="5">5 dias · segurança</option><option value="7">7 dias · grande reserva</option></select><div id="village-food-priority" class="production"></div><label class="production" for="village-protect-food-reserve"><input id="village-protect-food-reserve" type="checkbox"> PROTEGER RESERVA DE ALIMENTOS</label><div id="village-food-protection-detail" class="production"></div><label class="production" for="village-ration-policy">POLÍTICA DE DISTRIBUIÇÃO DE ALIMENTOS</label><select id="village-ration-policy" aria-label="Política de distribuição de alimentos"><option value="berries-first">Frutas primeiro · preservar carne</option><option value="meat-first">Carne primeiro · preservar frutas</option></select><div id="village-ration-policy-detail" class="production"></div><div class="stockpile-heading">METAS DE ESTOQUE DA ALDEIA</div><div class="production">Defina quanto deseja manter de cada recurso. A profissão responsável recebe prioridade enquanto o estoque estiver abaixo da meta.</div><div id="village-resource-targets" class="resource-target-grid"></div><div id="village-material-priority" class="production"></div><div id="village-housing-status" class="production"></div><div id="village-housing-roster" aria-live="polite"></div><button id="village-auto-assign-homes" type="button">ATRIBUIR MORADORES SEM CAMA</button><div id="village-security-status" class="production"></div><div id="village-alerts" aria-live="polite"><strong>CONDIÇÃO DA ALDEIA</strong></div><div class="village-management-actions"><button id="village-build-house" type="button">🏠 CONSTRUIR CASA · 16 MADEIRAS + 8 PEDRAS</button><label class="production" for="village-next-recruit-profession">PROFISSÃO DO PRÓXIMO RECRUTA</label><select id="village-next-recruit-profession" aria-label="Profissão do próximo morador recrutado"><option value="auto">Automática · rodízio</option><option value="farmer">Agricultor(a)</option><option value="lumberjack">Lenhador</option><option value="mason">Pedreiro</option><option value="hunter">Caçador(a)</option><option value="herbalist">Herborista</option><option value="gatherer">Coletor(a)</option><option value="tanner">Curtidor(a)</option><option value="shepherd">Pastor(a)</option><option value="beekeeper">Apicultor(a)</option><option value="miner">Minerador(a)</option><option value="blacksmith">Ferreiro(a)</option><option value="carpenter">Carpinteiro(a)</option><option value="stonecutter">Canteiro(a)</option><option value="weaver">Tecelão(ã)</option><option value="leatherworker">Artesão(ã) de couro</option></select><button id="village-recruit" type="button">👥 RECRUTAR · 25 MOEDAS</button></div><label class="production" for="village-resident-search">BUSCAR MORADOR</label><input id="village-resident-search" type="search" placeholder="Digite o nome..." autocomplete="off"><label class="production" for="village-resident-filter">FILTRAR POR PROFISSÃO</label><select id="village-resident-filter" aria-label="Filtrar moradores por profissão"><option value="all">Todas as profissões</option><option value="farmer">Agricultores</option><option value="lumberjack">Lenhadores</option><option value="mason">Pedreiros</option><option value="hunter">Caçadores</option><option value="herbalist">Herboristas</option><option value="gatherer">Coletores</option><option value="tanner">Curtidores</option><option value="shepherd">Pastores</option><option value="beekeeper">Apicultores</option><option value="miner">Mineradores</option><option value="blacksmith">Ferreiros</option><option value="carpenter">Carpinteiros</option><option value="stonecutter">Canteiros</option><option value="weaver">Tecelões</option><option value="leatherworker">Artesãos de couro</option><option value="guard">Vigias</option><option value="idle">Sem tarefa</option></select><div id="village-resident-filter-count" class="production" aria-live="polite"></div><div class="work-list"></div><div id="village-morale" class="production"></div><div id="village-prosperity" class="production"></div><label class="production" for="village-communal-meal-policy">INGREDIENTE DA REFEIÇÃO COMUNITÁRIA</label><select id="village-communal-meal-policy" aria-label="Escolher ingrediente da refeição comunitária"><option value="auto">Automático · frutas primeiro</option><option value="berries">Somente frutas · 5 unidades</option><option value="meat">Somente carne · 3 unidades</option></select><button id="village-communal-meal" type="button">PREPARAR REFEIÇÃO · 5 FRUTAS</button><div id="village-stockpile" class="production"></div><section id="village-workshops" class="production"><strong>OFICINAS COMUNITÁRIAS</strong><div id="village-workshops-status"></div><button id="village-build-carpentry" type="button">🪚 CONSTRUIR CARPINTARIA · 16 MADEIRAS + 10 PEDRAS</button><button id="village-build-stonecutting" type="button">🪨 CONSTRUIR CANTARIA · 14 MADEIRAS + 14 PEDRAS</button><button id="village-build-weaving" type="button">🧶 CONSTRUIR TECELAGEM · 10 TÁBUAS + 4 PEDRAS LAVRADAS</button><button id="village-build-leatherwork" type="button">🟤 CONSTRUIR OFICINA DE COURO · 8 TÁBUAS + 8 PEDRAS LAVRADAS</button><div id="village-workshop-output"></div></section><button id="village-upgrade-storage" type="button">MELHORAR DEPÓSITO</button><button id="village-collect-stockpile" type="button">RECOLHER PRODUÇÃO</button><div id="village-work-summary" class="production"></div><div id="village-food-report" class="production"></div><div id="village-production-report" class="production"></div>';
   if (managementRoot) managementRoot.appendChild(workPanel);
   else document.body.appendChild(workPanel);
   const workList = workPanel.querySelector(".work-list");
@@ -432,6 +434,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   const workshopOutputDisplay = workPanel.querySelector("#village-workshop-output");
   const buildCarpentryButton = workPanel.querySelector("#village-build-carpentry");
   const buildStonecuttingButton = workPanel.querySelector("#village-build-stonecutting");
+  const buildWeavingButton = workPanel.querySelector("#village-build-weaving");
+  const buildLeatherworkButton = workPanel.querySelector("#village-build-leatherwork");
   const collectStockpileButton = workPanel.querySelector("#village-collect-stockpile");
   const upgradeStorageButton = workPanel.querySelector("#village-upgrade-storage");
   const workSummary = workPanel.querySelector("#village-work-summary");
@@ -479,7 +483,9 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   const workElapsed = Object.fromEntries(residents.map(resident=>[resident.id,0]));
   const workshops = {
     carpentry: saved.workshops?.carpentry && Number.isFinite(saved.workshops.carpentry.x) && Number.isFinite(saved.workshops.carpentry.z) ? saved.workshops.carpentry : null,
-    stonecutting: saved.workshops?.stonecutting && Number.isFinite(saved.workshops.stonecutting.x) && Number.isFinite(saved.workshops.stonecutting.z) ? saved.workshops.stonecutting : null
+    stonecutting: saved.workshops?.stonecutting && Number.isFinite(saved.workshops.stonecutting.x) && Number.isFinite(saved.workshops.stonecutting.z) ? saved.workshops.stonecutting : null,
+    weaving: saved.workshops?.weaving && Number.isFinite(saved.workshops.weaving.x) && Number.isFinite(saved.workshops.weaving.z) ? saved.workshops.weaving : null,
+    leatherwork: saved.workshops?.leatherwork && Number.isFinite(saved.workshops.leatherwork.x) && Number.isFinite(saved.workshops.leatherwork.z) ? saved.workshops.leatherwork : null
   };
   const workshopWear = { axe: Math.max(0, Math.min(7, Math.floor(Number(saved.workshopWear?.axe) || 0))), pickaxe: Math.max(0, Math.min(7, Math.floor(Number(saved.workshopWear?.pickaxe) || 0))) };
   const workshopObjects = {};
@@ -496,12 +502,14 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const bench=new THREE.Mesh(new THREE.BoxGeometry(2.4,.22,1),darkWood); bench.position.set(0,1.05,.15); group.add(bench);
     for (const x of [-.95,.95]) for (const z of [-.18,.48]) { const leg=new THREE.Mesh(new THREE.BoxGeometry(.14,.95,.14),wood); leg.position.set(x,.57,z); group.add(leg); }
     if (type === "carpentry") { const log=new THREE.Mesh(new THREE.CylinderGeometry(.2,.2,1.6,10),wood); log.rotation.z=Math.PI/2; log.position.set(0,1.38,-.65); group.add(log); const blade=new THREE.Mesh(new THREE.BoxGeometry(.08,.62,.34),stone); blade.position.set(.45,1.65,-.65); group.add(blade); }
-    else { for (let i=0;i<3;i++) { const block=new THREE.Mesh(new THREE.BoxGeometry(.55,.42,.48),stone); block.position.set(-.7+i*.7,1.38,-.55); group.add(block); } }
+    else if (type === "stonecutting") { for (let i=0;i<3;i++) { const block=new THREE.Mesh(new THREE.BoxGeometry(.55,.42,.48),stone); block.position.set(-.7+i*.7,1.38,-.55); group.add(block); } }
+    else if (type === "weaving") { for (const x of [-.72,.72]) { const post=new THREE.Mesh(new THREE.BoxGeometry(.12,1.55,.12),wood); post.position.set(x,1.85,-.55); group.add(post); } const cross=new THREE.Mesh(new THREE.BoxGeometry(1.65,.12,.12),darkWood); cross.position.set(0,2.55,-.55); group.add(cross); for(let i=0;i<7;i++){const thread=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,1.35,6),new THREE.MeshStandardMaterial({color:i%2?0xc7b98a:0x8c9b70}));thread.position.set(-.54+i*.18,1.82,-.48);group.add(thread);} }
+    else { const rack=new THREE.Mesh(new THREE.BoxGeometry(2.1,.12,.12),darkWood); rack.position.set(0,2.15,-.6); group.add(rack); for(const x of [-.8,0,.8]){const hidePanel=new THREE.Mesh(new THREE.BoxGeometry(.55,.8,.06),new THREE.MeshStandardMaterial({color:0x9b7048,roughness:1}));hidePanel.position.set(x,1.62,-.55);group.add(hidePanel);} }
     group.position.set(data.x,terrainHeight(data.x,data.z),data.z); group.rotation.y=Number(data.yaw)||0;
     group.traverse(object=>{if(object.isMesh){object.castShadow=true;object.receiveShadow=true;}});
     scene.add(group); workshopObjects[type]=group;
   }
-  for (const type of ["carpentry","stonecutting"]) if (workshops[type]) createWorkshopVisual(type,workshops[type]);
+  for (const type of ["carpentry","stonecutting","weaving","leatherwork"]) if (workshops[type]) createWorkshopVisual(type,workshops[type]);
   const professionWorkPoints = {
     farmer: [[-8.2, 1.5], [-7.1, 4.2]],
     lumberjack: [[9.1, 1.4], [8.4, -2.2]],
@@ -513,6 +521,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     blacksmith: [[8,11],[11,12]],
     carpenter: [[-10,-9],[-8.8,-8.4]],
     stonecutter: [[10,-9],[8.8,-8.4]],
+    weaver: [[-18,-15],[-16.8,-14.2]],
+    leatherworker: [[18,-15],[16.8,-14.2]],
     guard: [[-12,-12],[12,-12],[12,12],[-12,12]]
   };
   const housingStatus = workPanel.querySelector("#village-housing-status");
@@ -1035,34 +1045,44 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     if (!workshopStatusDisplay) return;
     const axeWear = workshopWear.axe + "/8";
     const pickWear = workshopWear.pickaxe + "/8";
-    workshopStatusDisplay.textContent = "CARPINTARIA · " + (workshops.carpentry ? "construída" : "não construída") + " · CANTARIA · " + (workshops.stonecutting ? "construída" : "não construída") + ". Ferramentas comunitárias: machados " + stockpile.ironAxes + " (" + axeWear + " ciclos) · picaretas " + stockpile.ironPickaxes + " (" + pickWear + " ciclos).";
+    workshopStatusDisplay.textContent = "CARPINTARIA · " + (workshops.carpentry ? "construída" : "não construída") + " · CANTARIA · " + (workshops.stonecutting ? "construída" : "não construída") + " · TECELAGEM · " + (workshops.weaving ? "construída" : "não construída") + " · OFICINA DE COURO · " + (workshops.leatherwork ? "construída" : "não construída") + ". Ferramentas comunitárias: machados " + stockpile.ironAxes + " (" + axeWear + " ciclos) · picaretas " + stockpile.ironPickaxes + " (" + pickWear + " ciclos).";
     buildCarpentryButton.disabled = !!workshops.carpentry || stockpile.wood < 16 || stockpile.stone < 10;
     buildStonecuttingButton.disabled = !!workshops.stonecutting || stockpile.wood < 14 || stockpile.stone < 14;
+    buildWeavingButton.disabled = !!workshops.weaving || stockpile.planks < 10 || stockpile.cutStone < 4;
+    buildLeatherworkButton.disabled = !!workshops.leatherwork || stockpile.planks < 8 || stockpile.cutStone < 8;
     buildCarpentryButton.textContent = workshops.carpentry ? "CARPINTARIA CONSTRUÍDA" : "🪚 CONSTRUIR CARPINTARIA · 16 MADEIRAS + 10 PEDRAS";
     buildStonecuttingButton.textContent = workshops.stonecutting ? "CANTARIA CONSTRUÍDA" : "🪨 CONSTRUIR CANTARIA · 14 MADEIRAS + 14 PEDRAS";
-    workshopOutputDisplay.textContent = "Receitas automáticas: 2 madeiras → 2 tábuas (machado de ferro, 1 desgaste a cada 8 ciclos); 2 pedras → 2 pedras lavradas (picareta de ferro, 1 desgaste a cada 8 ciclos). O ferreiro repõe ferramentas quando houver lingotes e madeira.";
+    buildWeavingButton.textContent = workshops.weaving ? "TECELAGEM CONSTRUÍDA" : "🧶 CONSTRUIR TECELAGEM · 10 TÁBUAS + 4 PEDRAS LAVRADAS";
+    buildLeatherworkButton.textContent = workshops.leatherwork ? "OFICINA DE COURO CONSTRUÍDA" : "🟤 CONSTRUIR OFICINA DE COURO · 8 TÁBUAS + 8 PEDRAS LAVRADAS";
+    workshopOutputDisplay.textContent = "Cadeia de produção: machado + madeira → tábuas; picareta + pedra → pedra lavrada; 2 lãs + 1 fibra → 2 tecidos; 2 peles + 1 fibra → 1 couro curtido. Tecidos e couros podem ser retirados do depósito comunitário.";
   }
   function buildCommunityWorkshop(type) {
-    const isCarpentry = type === "carpentry";
-    if (!isCarpentry && type !== "stonecutting") return;
+    const recipes = {
+      carpentry:{cost:{wood:16,stone:10},position:{x:-10,z:-9,yaw:0},label:"Carpintaria construída! Designe um carpinteiro e mantenha um machado de ferro no depósito."},
+      stonecutting:{cost:{wood:14,stone:14},position:{x:10,z:-9,yaw:0},label:"Oficina de cantaria construída! Designe um canteiro e mantenha uma picareta de ferro no depósito."},
+      weaving:{cost:{planks:10,cutStone:4},position:{x:-18,z:-15,yaw:0},label:"Tecelagem construída! Designe um tecelão e mantenha lã e fibras no depósito."},
+      leatherwork:{cost:{planks:8,cutStone:8},position:{x:18,z:-15,yaw:0},label:"Oficina de couro construída! Designe um artesão de couro e mantenha peles e fibras no depósito."}
+    };
+    const recipe = recipes[type];
+    if (!recipe) return;
     if (workshops[type]) { onToast("Esta oficina já foi construída."); return; }
-    const cost = isCarpentry ? {wood:16,stone:10} : {wood:14,stone:14};
-    if (stockpile.wood < cost.wood || stockpile.stone < cost.stone) { onToast("Materiais comunitários insuficientes: " + cost.wood + " madeiras e " + cost.stone + " pedras."); return; }
-    stockpile.wood -= cost.wood; stockpile.stone -= cost.stone;
-    const position = isCarpentry ? {x:-10,z:-9,yaw:0} : {x:10,z:-9,yaw:0};
-    workshops[type] = position;
-    createWorkshopVisual(type,position);
+    for (const [resource,amount] of Object.entries(recipe.cost)) if (stockpile[resource] < amount) { onToast("Materiais comunitários insuficientes para esta oficina."); return; }
+    for (const [resource,amount] of Object.entries(recipe.cost)) stockpile[resource] -= amount;
+    workshops[type] = recipe.position;
+    createWorkshopVisual(type,recipe.position);
     saveVillageProgress(); refreshStockpileUI();
-    onToast(isCarpentry ? "Carpintaria construída! Designe um carpinteiro e mantenha um machado de ferro no depósito." : "Oficina de cantaria construída! Designe um canteiro e mantenha uma picareta de ferro no depósito.");
+    onToast(recipe.label);
   }
   buildCarpentryButton.addEventListener("click",()=>buildCommunityWorkshop("carpentry"));
   buildStonecuttingButton.addEventListener("click",()=>buildCommunityWorkshop("stonecutting"));
+  buildWeavingButton.addEventListener("click",()=>buildCommunityWorkshop("weaving"));
+  buildLeatherworkButton.addEventListener("click",()=>buildCommunityWorkshop("leatherwork"));
 
   function refreshStockpileUI() {
     const resources = [
       ["🪵","Madeira","wood"],["🪨","Pedra","stone"],["🫐","Frutas","berries"],
       ["🥩","Carne","meat"],["🌿","Ervas","herbs"],["🟤","Peles","hide"],
-      ["🧵","Fibras","fiber"],["🐑","Lã","wool"],["🍯","Mel","honey"],
+      ["🧵","Fibras","fiber"],["🐑","Lã","wool"],["🍯","Mel","honey"],["🧶","Tecidos","cloth"],["🟤","Couro curtido","leather"],
       ["⛏️","Minério de ferro","ironOre"],["⚫","Carvão","coal"],["🔩","Lingotes de ferro","ironIngots"],["⚙️","Lingotes de aço","steelIngots"]
     ];
     const total = stockpileTotal();
@@ -1165,6 +1185,12 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     else if (carpenters && stockpile.ironAxes < 1) alerts.push(["warning", "CARPINTARIA · falta um machado comunitário de ferro no depósito."]);
     if (stonecutters && !workshops.stonecutting) alerts.push(["warning", "CANTARIA · construa a oficina para os canteiros trabalharem."]);
     else if (stonecutters && stockpile.ironPickaxes < 1) alerts.push(["warning", "CANTARIA · falta uma picareta comunitária de ferro no depósito."]);
+    const weavers = residents.filter(r => r.profession === "weaver" && r.enabled).length;
+    const leatherworkers = residents.filter(r => r.profession === "leatherworker" && r.enabled).length;
+    if (weavers && !workshops.weaving) alerts.push(["warning", "TECELAGEM · construa a oficina para os tecelões trabalharem."]);
+    else if (weavers && (stockpile.wool < 2 || stockpile.fiber < 1)) alerts.push(["warning", "TECELAGEM · são necessárias 2 lãs e 1 fibra por ciclo."]);
+    if (leatherworkers && !workshops.leatherwork) alerts.push(["warning", "OFICINA DE COURO · construa a oficina para os artesãos trabalharem."]);
+    else if (leatherworkers && (stockpile.hide < 2 || stockpile.fiber < 1)) alerts.push(["warning", "OFICINA DE COURO · são necessárias 2 peles e 1 fibra por ciclo."]);
     if (total >= storageCapacity()) alerts.push(["warning", "DEPÓSITO CHEIO · recolha ou retire recursos para liberar espaço."]);
     else if (total >= storageCapacity() * .9) alerts.push(["warning", "DEPÓSITO QUASE CHEIO · " + total + "/" + storageCapacity() + " unidades."]);
     else alerts.push(["good", "DEPÓSITO · " + total + "/" + storageCapacity() + " unidades ocupadas."]);
@@ -1884,7 +1910,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       const shift = WORK_SHIFTS[workShift];
       const workingTime = hour >= shift.start && hour < 11.5 || hour >= 13.5 && hour < shift.end;
       const job = professions[resident.profession];
-      if (resident.enabled && job && (job.resource || ["guard","miner","blacksmith","carpenter","stonecutter"].includes(resident.profession)) && workingTime && (resident.profession !== "blacksmith" || !!state.smithy) && (resident.profession !== "carpenter" || !!workshops.carpentry) && (resident.profession !== "stonecutter" || !!workshops.stonecutting)) {
+      if (resident.enabled && job && (job.resource || ["guard","miner","blacksmith","carpenter","stonecutter","weaver","leatherworker"].includes(resident.profession)) && workingTime && (resident.profession !== "blacksmith" || !!state.smithy) && (resident.profession !== "carpenter" || !!workshops.carpentry) && (resident.profession !== "stonecutter" || !!workshops.stonecutting) && (resident.profession !== "weaver" || !!workshops.weaving) && (resident.profession !== "leatherworker" || !!workshops.leatherwork)) {
         workElapsed[resident.id] += Math.max(0, dt);
         const workCycle = workCycleFor(resident);
         if (workElapsed[resident.id] >= workCycle) {
@@ -1955,6 +1981,24 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
             if (workshopWear.pickaxe >= 8) { stockpile.ironPickaxes--; workshopWear.pickaxe = 0; onToast("A picareta comunitária foi gasta na cantaria; o ferreiro poderá fabricar outra."); }
             recordProduction(resident,"cutStone",produced,stored); saveVillageProgress(); refreshStockpileUI();
             onToast(resident.name + " lavrou 2 pedras e produziu " + stored + " pedras trabalhadas para a comunidade.");
+            continue;
+          }
+          if (resident.profession === "weaver") {
+            if (!workshops.weaving || stockpile.wool < 2 || stockpile.fiber < 1 || stockpileTotal() >= storageCapacity()) { updateSkillProgressUI(resident); continue; }
+            stockpile.wool -= 2; stockpile.fiber -= 1;
+            const produced = 2 + bonus;
+            const stored = storeResource("cloth",produced);
+            recordProduction(resident,"cloth",produced,stored); saveVillageProgress(); refreshStockpileUI();
+            onToast(resident.name + " teceu " + stored + " tecido(s) para a comunidade.");
+            continue;
+          }
+          if (resident.profession === "leatherworker") {
+            if (!workshops.leatherwork || stockpile.hide < 2 || stockpile.fiber < 1 || stockpileTotal() >= storageCapacity()) { updateSkillProgressUI(resident); continue; }
+            stockpile.hide -= 2; stockpile.fiber -= 1;
+            const produced = 1 + bonus;
+            const stored = storeResource("leather",produced);
+            recordProduction(resident,"leather",produced,stored); saveVillageProgress(); refreshStockpileUI();
+            onToast(resident.name + " preparou " + stored + " couro(s) curtido(s) para a comunidade.");
             continue;
           }
           const farmResult = resident.profession === "farmer" && typeof onFarmAction === "function" && stockpileTotal() < storageCapacity() ? onFarmAction() : null;
