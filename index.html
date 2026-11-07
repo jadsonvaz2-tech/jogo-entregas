@@ -97,7 +97,17 @@
           "\\nCASAS E GESTÃO DAS POVOAÇÕES — "+inspect("cronicas-floresta-settlement-management-v1")+
           "\\nESTOQUES DAS POVOAÇÕES — "+inspect("cronicas-floresta-settlement-economy-v1")+
           "\\nMUNDO — Atual: "+readWorld("cronicas-floresta-save")+" | Cópia: "+readWorld("cronicas-floresta-save-backup")+
-          "\\nRecuperação automática da aldeia central: "+(localStorage.getItem("cronicas-floresta-village-v1-recovery-used")?"registrada":"não registrada");
+          "\\nRecuperação automática da aldeia central: "+(localStorage.getItem("cronicas-floresta-village-v1-recovery-used")?"registrada":"não registrada")+
+          "\\nOUTRAS CHAVES DE ALDEIA — "+(function(){
+            var known=["cronicas-floresta-village-v1","cronicas-floresta-village-v1-backup","cronicas-floresta-distant-villages-v1","cronicas-floresta-settlement-management-v1","cronicas-floresta-settlement-economy-v1","cronicas-floresta-save","cronicas-floresta-save-backup"];
+            var matches=[];
+            for(var i=0;i<localStorage.length;i++){
+              var key=localStorage.key(i);
+              if(!key||known.indexOf(key)>=0)continue;
+              if(/village|aldeia|resident|morador|recruit|recrut|settlement|house|moradia/i.test(key))matches.push(key+" ("+inspect(key)+")");
+            }
+            return matches.length?matches.slice(0,12).join(" | "):"nenhuma outra chave relacionada encontrada";
+          })();
         panel.hidden=false;
       });
       document.getElementById("save-check-close").addEventListener("click",function(){panel.hidden=true;});
