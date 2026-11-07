@@ -16,6 +16,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   })();
 
   const savedJobs = saved.jobs && typeof saved.jobs === "object" ? saved.jobs : {};
+  let morale = Math.min(100, Math.max(0, Number(saved.morale ?? 50) || 0));
   const stockpile = { wood: Math.max(0, Number(saved.stockpile?.wood) || 0), stone: Math.max(0, Number(saved.stockpile?.stone) || 0), berries: Math.max(0, Number(saved.stockpile?.berries) || 0) };
   const residents = [
     {
@@ -79,12 +80,14 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   document.head.appendChild(workStyle);
   const workPanel = document.createElement("section");
   workPanel.id = "village-work";
-  workPanel.innerHTML = '<strong>GESTÃO DO POVOADO</strong><div class="work-list"></div><div id="village-stockpile" class="production"></div><button id="village-collect-stockpile" type="button">RECOLHER PRODUÇÃO</button><div id="village-work-summary" class="production"></div>';
+  workPanel.innerHTML = '<strong>GESTÃO DO POVOADO</strong><div class="work-list"></div><div id="village-morale" class="production"></div><button id="village-communal-meal" type="button">PREPARAR REFEIÇÃO · 5 FRUTAS</button><div id="village-stockpile" class="production"></div><button id="village-collect-stockpile" type="button">RECOLHER PRODUÇÃO</button><div id="village-work-summary" class="production"></div>';
   document.body.appendChild(workPanel);
   const workList = workPanel.querySelector(".work-list");
   const stockpileDisplay = workPanel.querySelector("#village-stockpile");
   const collectStockpileButton = workPanel.querySelector("#village-collect-stockpile");
   const workSummary = workPanel.querySelector("#village-work-summary");
+  const moraleDisplay = workPanel.querySelector("#village-morale");
+  const communalMealButton = workPanel.querySelector("#village-communal-meal");
 
   const talkButton = document.createElement("button");
   talkButton.id = "village-talk-button";
@@ -117,7 +120,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     try {
       const jobs = {};
       for (const resident of residents) jobs[resident.id] = { profession: resident.profession, enabled: resident.enabled };
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile }));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale }));
     } catch (error) {
       console.warn("Não foi possível salvar o progresso dos moradores.", error);
     }
@@ -127,6 +130,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     stockpileDisplay.textContent = "DEPÓSITO COMUNITÁRIO · " + stockpile.wood + " madeira · " + stockpile.stone + " pedra · " + stockpile.berries + " frutas";
     const total = stockpile.wood + stockpile.stone + stockpile.berries;
     collectStockpileButton.disabled = total < 1;
+    moraleDisplay.textContent = "ÂNIMO DO POVOADO · " + Math.round(morale) + "/100";
+    communalMealButton.disabled = stockpile.berries < 5 || morale >= 100;
     workSummary.textContent = residents.filter(r => r.enabled && r.profession !== "idle").length + "/3 moradores em atividade · produção guardada no depósito.";
   }
 
@@ -142,6 +147,15 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     refreshStockpileUI();
     return true;
   }
+
+  communalMealButton.addEventListener("click", () => {
+    if (stockpile.berries < 5 || morale >= 100) return;
+    stockpile.berries -= 5;
+    morale = Math.min(100, morale + 15);
+    saveVillageProgress();
+    refreshStockpileUI();
+    onToast("Refeição comunitária servida! O ânimo do povoado aumentou para " + Math.round(morale) + "/100.");
+  });
 
   collectStockpileButton.addEventListener("click", () => {
     const amounts = { ...stockpile };
@@ -399,7 +413,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       const job = professions[resident.profession];
       if (resident.enabled && job && job.resource && workingTime) {
         workElapsed[resident.id] += Math.max(0, dt);
-        if (workElapsed[resident.id] >= 45) {
+        const workCycle = morale >= 75 ? 40 : morale < 25 ? 55 : 45;
+        if (workElapsed[resident.id] >= workCycle) {
           workElapsed[resident.id] -= 45;
           const farmResult = resident.profession === "farmer" && typeof onFarmAction === "function"
             ? onFarmAction()
@@ -451,5 +466,5 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     }
   }
 
-  return { update, getStockpile, takeFromStockpile };
+  return { update, getStockpile, takeFromStockpile, getMorale: () => morale };
 }
