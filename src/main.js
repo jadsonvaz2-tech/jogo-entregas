@@ -4629,7 +4629,7 @@ async function start(){
  const loaded=await loadCharacter();
  if(!loaded)toast("Modelo do viajante indisponível: usando personagem provisório.");
  storyEncounter=startOptional("a missão e o personagem Edrik",()=>createStoryEncounter({THREE,scene,player,terrainHeight,state,onSave:saveGame,onToast:toast}));
- villageResidents=startOptional("os moradores da aldeia central",()=>createVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,onSave:saveGame,onFarmAction:villageFarmAction,onClaimTool:(type)=>{state[type]=true;updateHUD();saveGame();return true;},managementRoot:$("playerVillageManagementSlot")}));
+ villageResidents=startOptional("os moradores da aldeia central",()=>createVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,onSave:saveGame,onFarmAction:villageFarmAction,onClaimTool:(type)=>{state[type]=true;if(type==="ironHelmet")createIronHelmetVisual();if(type==="ironChestplate")createIronChestplateVisual();updateHUD();saveGame();return true;},managementRoot:$("playerVillageManagementSlot")}));
  settlementEconomy=startOptional("a economia das aldeias",()=>createSettlementEconomy({THREE,player,state,onToast:toast,onChange:()=>{updateHUD();saveGame();}}));
  distantVillageResidents=startOptional("os moradores das outras aldeias",()=>createDistantVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,economy:settlementEconomy}));
  startupStage="finalizando a entrada no mundo";
