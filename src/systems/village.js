@@ -33,7 +33,8 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     produced: Math.max(0, Math.floor(Number(savedProduction.produced) || 0)),
     stored: Math.max(0, Math.floor(Number(savedProduction.stored) || 0)),
     lost: Math.max(0, Math.floor(Number(savedProduction.lost) || 0)),
-    byResource: Object.fromEntries(Object.keys(RESOURCE_LABELS).map(key => [key, Math.max(0, Math.floor(Number(savedProduction.byResource?.[key]) || 0))]))
+    byResource: Object.fromEntries(Object.keys(RESOURCE_LABELS).map(key => [key, Math.max(0, Math.floor(Number(savedProduction.byResource?.[key]) || 0))])),
+    byResident: savedProduction.byResident && typeof savedProduction.byResident === "object" ? Object.fromEntries(Object.entries(savedProduction.byResident).filter(([id]) => residents.some(person => person.id === id)).map(([id,entry]) => [id,{name:String(entry?.name || residents.find(person => person.id === id)?.name || "Morador"),amount:Math.max(0,Math.floor(Number(entry?.amount)||0)),stored:Math.max(0,Math.floor(Number(entry?.stored)||0))}])) : {}
   };
   const residents = [
     {
@@ -149,6 +150,9 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     #village-work #village-production-report .report-total b{display:block;color:#f0d58a;font-size:14px}
     #village-work #village-production-report .report-resources{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 8px;color:#c4cfaa;font-size:9px}
     #village-work #village-production-report .report-resources span{display:flex;justify-content:space-between;gap:5px;border-top:1px solid #ffffff14;padding-top:3px}
+    #village-work #village-production-report .report-contributors{margin-top:8px;padding-top:6px;border-top:1px solid #ffffff25}
+    #village-work #village-production-report .contributor{display:flex;justify-content:space-between;gap:8px;padding:3px 0;color:#e6ddc7;font-size:10px}
+    #village-work #village-production-report .contributor small{color:#aebd91}
     #village-work .stockpile-heading{margin:10px 0 6px;padding-top:9px;border-top:1px solid #b99b5c88;color:#f0d58a;font-weight:800;font-size:11px;letter-spacing:.04em}
     #village-work .stockpile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
     #village-work .stockpile-item{display:flex;justify-content:space-between;align-items:center;gap:4px;padding:6px;background:#293b2d;border:1px solid #65714d;border-radius:6px;color:#eee5cf;font-size:11px}
@@ -454,7 +458,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     refreshStockpileUI();
   }
 
-  function recordProduction(resource, produced, stored) {
+  function recordProduction(resident, resource, produced, stored) {
     const amount = Math.max(0, Math.floor(Number(produced) || 0));
     const accepted = Math.max(0, Math.min(amount, Math.floor(Number(stored) || 0)));
     if (!Object.prototype.hasOwnProperty.call(RESOURCE_LABELS, resource) || amount < 1) return;
@@ -462,13 +466,19 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     productionReport.stored += accepted;
     productionReport.lost += amount - accepted;
     productionReport.byResource[resource] += amount;
+    const contribution = productionReport.byResident[resident.id] || {name:resident.name,amount:0,stored:0};
+    contribution.name = resident.name;
+    contribution.amount += amount;
+    contribution.stored += accepted;
+    productionReport.byResident[resident.id] = contribution;
   }
 
   function refreshProductionReport() {
     const rows = Object.entries(productionReport.byResource).filter(([,amount]) => amount > 0).sort((a,b) => b[1]-a[1]);
     productionReportDisplay.innerHTML = "<strong>PRODUÇÃO ACUMULADA DA ALDEIA</strong>" +
       '<div class="report-totals"><div class="report-total"><b>' + productionReport.produced + '</b>produzidas</div><div class="report-total"><b>' + productionReport.stored + '</b>armazenadas</div><div class="report-total"><b>' + productionReport.lost + '</b>sem espaço</div></div>' +
-      '<div class="report-resources">' + (rows.length ? rows.map(([key,amount]) => "<span><span>" + RESOURCE_LABELS[key] + "</span><b>" + amount + "</b></span>").join("") : "<span>Nenhuma produção registrada</span>") + "</div>";
+      '<div class="report-resources">' + (rows.length ? rows.map(([key,amount]) => "<span><span>" + RESOURCE_LABELS[key] + "</span><b>" + amount + "</b></span>").join("") : "<span>Nenhuma produção registrada</span>") + "</div>" +
+      '<div class="report-contributors"><strong>CONTRIBUIÇÃO POR MORADOR</strong>' + Object.entries(productionReport.byResident).sort((a,b) => b[1].amount-a[1].amount).slice(0,5).map(([id,entry]) => '<div class="contributor"><span>' + entry.name + '</span><span><b>' + entry.amount + '</b> <small>produzidas · ' + entry.stored + ' guardadas</small></span></div>').join("") + (Object.keys(productionReport.byResident).length ? "" : '<div class="contributor"><span>Aguardando produção dos moradores</span></div>') + "</div>";
   }
 
   function refreshStockpileUI() {
@@ -1030,7 +1040,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
           if (farmResult && typeof farmResult === "object" && farmResult.resource && Number(farmResult.amount) > 0) {
             const produced = Number(farmResult.amount) + bonus;
             const stored = storeResource(farmResult.resource, produced);
-            recordProduction(farmResult.resource, produced, stored);
+            recordProduction(resident, farmResult.resource, produced, stored);
             saveVillageProgress();
             refreshStockpileUI();
             onToast((farmResult.message || "Lina trabalhou na horta.") + (stored < produced ? " Depósito cheio: " + stored + "/" + produced + " unidades armazenadas." : (bonus ? " Bônus de experiência: +" + bonus + " unidade(s)." : "")));
@@ -1039,7 +1049,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
           } else {
             const produced = job.amount + bonus;
             const stored = storeResource(job.resource, produced);
-            recordProduction(job.resource, produced, stored);
+            recordProduction(resident, job.resource, produced, stored);
             saveVillageProgress();
             refreshStockpileUI();
             onToast(stored > 0 ? resident.name + " armazenou " + stored + " " + job.resourceLabel + " no depósito comunitário." + (stored < produced ? " O depósito está cheio; amplie-o em GESTÃO." : "") : "Depósito comunitário cheio! Amplie a capacidade em GESTÃO para retomar a produção.");
