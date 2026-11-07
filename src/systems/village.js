@@ -6,11 +6,13 @@ const SAVE_KEY = "cronicas-floresta-village-v1";
 export function createVillageResidents({ THREE, scene, player, terrainHeight, state, onToast, onSave, onFarmAction, managementRoot = null }) {
   const loader = new GLTFLoader();
   const saved = (() => {
+    const raw = localStorage.getItem(SAVE_KEY);
     try {
-      const data = JSON.parse(localStorage.getItem(SAVE_KEY) || "null");
+      const data = JSON.parse(raw || "null");
       return data && typeof data === "object" ? data : {};
     } catch (error) {
       console.warn("Não foi possível ler o progresso dos moradores.", error);
+      try { if (raw) localStorage.setItem(SAVE_KEY + "-recovery-raw", raw); } catch (backupError) { console.warn("Não foi possível preservar o salvamento dos moradores.", backupError); }
       return {};
     }
   })();
@@ -683,6 +685,11 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       for (const resident of residents) jobs[resident.id] = { profession: resident.profession, enabled: resident.enabled, priority: resident.priority || "normal", ...(resident.patrolRoute ? { patrolRoute: resident.patrolRoute } : {}) };
       const recruits = residents.filter(r => r.isRecruit).map(r => ({ id:r.id, name:r.name, role:r.role, profession:r.profession, model:r.model, start:r.start, home:r.home, homeSlot:r.homeSlot, work:r.work, greeting:r.greeting }));
       const homes = Object.fromEntries(residents.map(r => [r.id,{slot:r.homeSlot,position:r.home}]));
+      const previous = localStorage.getItem(SAVE_KEY);
+      if (previous) {
+        try { JSON.parse(previous); localStorage.setItem(SAVE_KEY + "-backup", previous); }
+        catch (backupError) { localStorage.setItem(SAVE_KEY + "-recovery-raw", previous); }
+      }
       localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, prosperityXp, lastUpkeepDay, skills, recruits, houses:housesBuilt, homes, storageLevel, workShift, foodReserveTargetDays, foodRationPolicy, communalMealPolicy, protectFoodReserve, productionReport, foodReport, resourceTargets, nextRecruitProfession, residentSort, residentStatusFilter, residentHousingFilter }));
     } catch (error) {
       console.warn("Não foi possível salvar o progresso dos moradores.", error);

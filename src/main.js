@@ -1223,8 +1223,11 @@ function updateCharacterTerrainTilt(){
  characterVisual.quaternion.copy(slopeTilt);
 }
 function loadGame(){
+ const saveKey="cronicas-floresta-save";
+ let rawSave=null;
  try{
-  const saved=JSON.parse(localStorage.getItem("cronicas-floresta-save")||"null");
+  rawSave=localStorage.getItem(saveKey);
+  const saved=JSON.parse(rawSave||"null");
   if(!saved)return;
   for(const key of ["health","hunger","thirst","temperature","energy","wood","stone","ironOre","coal","ironIngots","steelIngots","day","timeOfDay","berries","fiber","herbs","meat","cookedMeat","smokedMeat","healingSalve","hide","leather","bandages","waterCharges","arrows","coins","eggs","honey","wool"])if(Number.isFinite(saved[key]))state[key]=saved[key];
   state.axe=saved.axe===true;state.pickaxe=saved.pickaxe===true;
@@ -1283,10 +1286,19 @@ function loadGame(){
   if(Number.isFinite(saved.x))player.position.x=saved.x;
   if(Number.isFinite(saved.z))player.position.z=saved.z;
   player.position.y=terrainHeight(player.position.x,player.position.z);
- }catch(e){console.warn("Não foi possível carregar o salvamento",e);}
+ }catch(e){
+  console.warn("Não foi possível carregar o salvamento",e);
+  try{if(rawSave)localStorage.setItem("cronicas-floresta-save-recovery-raw",rawSave);}catch(backupError){console.warn("Não foi possível preservar o salvamento bruto.",backupError);}
+ }
 }
 function saveGame(){
- try{localStorage.setItem("cronicas-floresta-save",JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,ironOre:state.ironOre,coal:state.coal,ironIngots:state.ironIngots,steelIngots:state.steelIngots,steelSword:state.steelSword,steelHelmet:state.steelHelmet,steelChestplate:state.steelChestplate,steelAxe:state.steelAxe,steelPickaxe:state.steelPickaxe,steelShield:state.steelShield,steelShieldGuarding:state.steelShieldGuarding,steelSpear:state.steelSpear,steelFurnace:state.steelFurnace,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,herbs:state.herbs,herbBeds:state.herbBeds,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,leatherArmor:state.leatherArmor,reinforcedAxe:state.reinforcedAxe,reinforcedPickaxe:state.reinforcedPickaxe,ironAxe:state.ironAxe,ironPickaxe:state.ironPickaxe,ironSword:state.ironSword,ironHelmet:state.ironHelmet,ironChestplate:state.ironChestplate,smithy:state.smithy,meat:state.meat,cookedMeat:state.cookedMeat,smokedMeat:state.smokedMeat,smokehouse:state.smokehouse,healingSalve:state.healingSalve,herbalistHut:state.herbalistHut,leather:state.leather,tannery:state.tannery,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,huntedWolves:state.huntedWolves,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,wells:state.wells,gardenPlots:state.gardenPlots,watchtowers:state.watchtowers,marketStalls:state.marketStalls,coins:state.coins,chickenCoops:state.chickenCoops,apiaries:state.apiaries,honey:state.honey,sheepPens:state.sheepPens,wool:state.wool,loom:state.loom,woolGarment:state.woolGarment,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
+ try{
+  const key="cronicas-floresta-save";
+  const previous=localStorage.getItem(key);
+  if(previous){
+   try{JSON.parse(previous);localStorage.setItem(key+"-backup",previous);}catch(backupError){localStorage.setItem(key+"-recovery-raw",previous);}
+  }
+  localStorage.setItem(key,JSON.stringify({x:player.position.x,z:player.position.z,health:state.health,hunger:state.hunger,thirst:state.thirst,temperature:state.temperature,energy:state.energy,wood:state.wood,stone:state.stone,ironOre:state.ironOre,coal:state.coal,ironIngots:state.ironIngots,steelIngots:state.steelIngots,steelSword:state.steelSword,steelHelmet:state.steelHelmet,steelChestplate:state.steelChestplate,steelAxe:state.steelAxe,steelPickaxe:state.steelPickaxe,steelShield:state.steelShield,steelShieldGuarding:state.steelShieldGuarding,steelSpear:state.steelSpear,steelFurnace:state.steelFurnace,axe:state.axe,pickaxe:state.pickaxe,day:state.day,timeOfDay:state.timeOfDay,campfire:state.campfire,campfireX:state.campfireX,campfireZ:state.campfireZ,shelter:state.shelter,shelterX:state.shelterX,shelterZ:state.shelterZ,bed:state.bed,bedX:state.bedX,bedZ:state.bedZ,storageChest:state.storageChest,storageChestX:state.storageChestX,storageChestZ:state.storageChestZ,storage:state.storage,waterSkin:state.waterSkin,waterCharges:state.waterCharges,bow:state.bow,arrows:state.arrows,collectedResources:state.collectedResources,berries:state.berries,herbs:state.herbs,herbBeds:state.herbBeds,fiber:state.fiber,coldCloak:state.coldCloak,leatherBoots:state.leatherBoots,leatherArmor:state.leatherArmor,reinforcedAxe:state.reinforcedAxe,reinforcedPickaxe:state.reinforcedPickaxe,ironAxe:state.ironAxe,ironPickaxe:state.ironPickaxe,ironSword:state.ironSword,ironHelmet:state.ironHelmet,ironChestplate:state.ironChestplate,smithy:state.smithy,meat:state.meat,cookedMeat:state.cookedMeat,smokedMeat:state.smokedMeat,smokehouse:state.smokehouse,healingSalve:state.healingSalve,herbalistHut:state.herbalistHut,leather:state.leather,tannery:state.tannery,hide:state.hide,bandages:state.bandages,huntedAnimals:state.huntedAnimals,huntedWolves:state.huntedWolves,fenceSections:state.fenceSections,gates:state.gates,floorTiles:state.floorTiles,wallPanels:state.wallPanels,windowPanels:state.windowPanels,roofTiles:state.roofTiles,gablePanels:state.gablePanels,ridgeCaps:state.ridgeCaps,chimneys:state.chimneys,pathTiles:state.pathTiles,lanternPosts:state.lanternPosts,wells:state.wells,gardenPlots:state.gardenPlots,watchtowers:state.watchtowers,marketStalls:state.marketStalls,coins:state.coins,chickenCoops:state.chickenCoops,apiaries:state.apiaries,honey:state.honey,sheepPens:state.sheepPens,wool:state.wool,loom:state.loom,woolGarment:state.woolGarment,doorPanels:state.doorPanels,windowShutters:state.windowShutters,starterKitGranted:state.starterKitGranted}));}
  catch(e){console.warn("Não foi possível salvar o jogo",e);}
 }
 loadGame();
