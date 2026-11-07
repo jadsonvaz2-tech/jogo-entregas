@@ -233,6 +233,19 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const quantity = Math.max(0, Math.floor(Number(amount) || 0));
     if (!quantity) return;
     productionTotals[resident.id][resource] += quantity;
+    refreshProductionSummary();
+  }
+
+  function refreshProductionSummary() {
+    const summary = workList.querySelector(".village-production-summary");
+    if (!summary) return;
+    const totals = residents.map(resident => {
+      const value = productionTotals[resident.id];
+      return { name: resident.name, total: value.berries + value.wood + value.stone };
+    });
+    const grandTotal = totals.reduce((sum, item) => sum + item.total, 0);
+    const leader = totals.slice().sort((a, b) => b.total - a.total)[0];
+    summary.textContent = "CONTRIBUIÇÃO DO POVOADO · " + grandTotal + " itens produzidos · DESTAQUE: " + (leader && leader.total > 0 ? leader.name + " (" + leader.total + ")" : "aguardando produção");
   }
 
   function productionHistoryText(resident) {
@@ -297,6 +310,11 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
 
   function renderWorkPanel() {
     workList.innerHTML = "";
+    const summary = document.createElement("div");
+    summary.className = "village-production-summary";
+    summary.style.cssText = "padding:9px 10px;margin-bottom:9px;border:1px solid #b9a16a55;border-radius:7px;background:#1c2a20;color:#e6d5a5;font-size:10px;line-height:1.5;font-weight:700";
+    workList.appendChild(summary);
+    refreshProductionSummary();
     for (const resident of residents) {
       const row = document.createElement("div");
       row.className = "work-row";
