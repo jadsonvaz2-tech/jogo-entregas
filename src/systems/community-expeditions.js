@@ -5,7 +5,7 @@ const DESTINATIONS = {
   marsh:{label:"Pântano Antigo",duration:150000,detail:"Terreno alagado, fibras resistentes e peles raras.",rewards:[["herbs",4,7],["hide",2,4],["fiber",3,6],["leather",1,2]]}
 };
 const clampInt=(n,min,max)=>Math.max(min,Math.min(max,Math.floor(Number(n)||0)));
-export function createCommunityExpeditions({villageResidents,onToast,root=document.getElementById("communityExpeditionsPanel")}){
+export function createCommunityExpeditions({villageResidents,state,onToast,root=document.getElementById("communityExpeditionsPanel")}){
  if(!root||!villageResidents)return null;
  let saved={active:null,history:[],completed:0};
  const parse=value=>{try{const data=JSON.parse(value||"null");return data&&typeof data==="object"?data:null;}catch{return null;}};
@@ -16,7 +16,8 @@ export function createCommunityExpeditions({villageResidents,onToast,root=docume
  saved.completed=clampInt(saved.completed,0,999999);
  let active=saved.active&&typeof saved.active==="object"?saved.active:null;
  let lastRender=0;
- const roster=()=>villageResidents.getExpeditionRoster?.()||[];
+ const allRoster=()=>villageResidents.getExpeditionRoster?.()||[];
+ const roster=()=>allRoster().filter(person=>!person.away);
  const stock=key=>villageResidents.getStockpile?.(key)||0;
  const persist=()=>{
   try{const previous=localStorage.getItem(SAVE_KEY);if(previous&&parse(previous))localStorage.setItem(SAVE_KEY+"-backup",previous);
@@ -61,7 +62,7 @@ export function createCommunityExpeditions({villageResidents,onToast,root=docume
  };
  const start=()=>{
   if(active){onToast("Já existe um grupo em expedição.");return;}
-  if(!(window.__gameExpeditionTentCount>0)){/* validated from the game state below */ }
+  if(!Array.isArray(state?.expeditionTents)||state.expeditionTents.length<1){onToast("Monte ao menos uma tenda de expedição antes de enviar o grupo.");return;}
   const selected=[...root.querySelectorAll("input[name=expedition-member]:checked")].map(input=>input.value);
   if(selected.length<2||selected.length>4){onToast("Escolha de 2 a 4 moradores para a expedição.");return;}
   const available=new Set(roster().map(person=>person.id));
@@ -104,7 +105,7 @@ export function createCommunityExpeditions({villageResidents,onToast,root=docume
   if(Date.now()-lastRender>900){refresh();lastRender=Date.now();}
  };
  if(active){
-  const known=new Set(roster().map(person=>person.id));
+  const known=new Set(allRoster().map(person=>person.id));
   const away=active.members.filter(id=>known.has(id));
   if(away.length){active.members=away;villageResidents.setExpeditionAway?.(away,true);}
   else{active=null;persist();}

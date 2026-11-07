@@ -1234,7 +1234,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   }
 
   function getExpeditionRoster() {
-    return residents.filter(resident => !expeditionAwayIds.has(resident.id)).map(resident => ({id:resident.id,name:resident.name,role:resident.role,profession:resident.profession}));
+    return residents.map(resident => ({id:resident.id,name:resident.name,role:resident.role,profession:resident.profession,away:expeditionAwayIds.has(resident.id)}));
   }
 
   function setExpeditionAway(ids, away) {
