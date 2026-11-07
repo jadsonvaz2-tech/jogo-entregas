@@ -4648,7 +4648,7 @@ async function start(){
  startupStage="criando as aldeias e estradas";
  const settlements = createWorldSettlements({ THREE, scene, terrainHeight });
  communityEvents=startOptional("as festas e feiras comunitárias",()=>createCommunityEvents({THREE,scene,terrainHeight,centers:settlements.centers,onToast:toast}));
- travelNetwork=startOptional("as hospedarias e caravanas",()=>createTravelNetwork({THREE,scene,terrainHeight,centers:settlements.centers,paths:settlements.paths,player,state,economy:settlementEconomy,onToast:toast,onSave:saveGame}));
+
  const expandedWorld=await createExpandedWorld({ THREE, scene, terrainHeight, player, state, registerResource, onToast:toast, onSave:saveGame });
   undergroundWorld=expandedWorld.undergroundWorld;
  const distanceToSegment = (px, pz, ax, az, bx, bz) => {
@@ -4707,6 +4707,7 @@ async function start(){
  distantExploration=startOptional("a exploração das regiões distantes",()=>createDistantExploration({THREE,scene,player,terrainHeight,state,onToast:toast,onSave:saveGame}));
  communityExpeditions=startOptional("as expedições comunitárias",()=>createCommunityExpeditions({villageResidents,state,onToast:toast,onDiscovery:info=>distantExploration?.discoverFromExpedition(info)}));
  settlementEconomy=startOptional("a economia das aldeias",()=>createSettlementEconomy({THREE,player,state,onToast:toast,onChange:()=>{updateHUD();saveGame();}}));
+ travelNetwork=startOptional("as hospedarias e caravanas",()=>createTravelNetwork({THREE,scene,terrainHeight,centers:settlements.centers,paths:settlements.paths,player,state,economy:settlementEconomy,onToast:toast,onSave:saveGame}));
  distantVillageResidents=startOptional("os moradores das outras aldeias",()=>createDistantVillageResidents({THREE,scene,player,terrainHeight,state,onToast:toast,economy:settlementEconomy}));
  startupStage="finalizando a entrada no mundo";
  $("loadingBar").style.width="100%";
