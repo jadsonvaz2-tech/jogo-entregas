@@ -270,7 +270,18 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       const bonus = productionBonus(resident);
       const skillLine = skill.level >= 10 ? "NÍVEL 10 · MESTRE" : "NÍVEL " + skill.level + " · XP " + skill.xp + "/" + experienceNeeded(skill.level) + (bonus ? " · +" + bonus + " por ciclo" : "");
       production.textContent = job.resource ? (job.detail || ("Produz " + job.amount + " " + job.resourceLabel + " por ciclo de trabalho.")) + " " + skillLine : "Sem produção atribuída. " + skillLine;
-      row.append(head, select, toggle, production);
+      const skillTrack = document.createElement("div");
+      skillTrack.setAttribute("aria-label", "Progresso da profissão de " + resident.name);
+      skillTrack.style.cssText = "height:5px;margin-top:6px;border-radius:5px;background:#ffffff24;overflow:hidden";
+      const skillFill = document.createElement("div");
+      const skillProgress = skill.level >= 10 ? 100 : Math.min(100, Math.round(skill.xp / experienceNeeded(skill.level) * 100));
+      skillFill.style.cssText = "height:100%;width:" + skillProgress + "%;border-radius:5px;background:linear-gradient(90deg,#8d9f65,#e6c979);transition:width .25s ease";
+      skillTrack.appendChild(skillFill);
+      const skillCaption = document.createElement("div");
+      skillCaption.className = "production";
+      skillCaption.style.cssText = "font-size:9px;text-align:right;color:#d6c58f";
+      skillCaption.textContent = skill.level >= 10 ? "MAESTRIA ALCANÇADA" : "PROGRESSO PARA O PRÓXIMO NÍVEL · " + skillProgress + "%";
+      row.append(head, select, toggle, production, skillTrack, skillCaption);
       workList.appendChild(row);
     }
     refreshStockpileUI();
