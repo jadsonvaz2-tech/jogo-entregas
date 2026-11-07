@@ -501,37 +501,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   saveDiagnostics.setAttribute("aria-live","polite");
   workPanel.insertBefore(saveDiagnostics, housingStatus);
 
-  // Atalho visível na tela do jogo: não exige abrir GESTÃO nem localizar filtros.
-  const quickSaveStyle = document.createElement("style");
-  quickSaveStyle.textContent = `
-    #quick-save-check{position:fixed;z-index:80;right:10px;top:112px;max-width:calc(100vw - 20px);font:700 11px system-ui}
-    #quick-save-check button{border:1px solid #d6b45d;border-radius:18px;padding:9px 12px;background:rgba(35,49,34,.96);color:#fff1cc;box-shadow:0 3px 12px #0008;touch-action:manipulation}
-    #quick-save-check .quick-save-card{display:none;margin-top:7px;width:min(340px,calc(100vw - 20px));padding:12px;border:1px solid #d6b45d;border-radius:10px;background:rgba(22,32,24,.98);color:#eee5cf;box-shadow:0 8px 28px #000b;font:12px/1.5 system-ui;white-space:normal}
-    #quick-save-check.open .quick-save-card{display:block}
-    #quick-save-check .quick-save-card strong{display:block;margin-bottom:6px;color:#f0d58a}
-    #quick-save-check .quick-save-card p{margin:5px 0}
-    #quick-save-check .quick-save-card .quick-save-values{padding:8px;margin:6px 0;border-radius:6px;background:#293b2d}
-    #quick-save-check .quick-save-card .quick-save-note{color:#c4cfaa;font-size:10px}
-  `;
-  document.head.appendChild(quickSaveStyle);
-  const quickSave = document.createElement("div");
-  quickSave.id = "quick-save-check";
-  quickSave.innerHTML = '<button type="button" aria-expanded="false">🔎 VER SALVAMENTO</button><div class="quick-save-card" role="status"><strong>DIAGNÓSTICO DA ALDEIA</strong><div class="quick-save-values"></div><p class="quick-save-note">Somente leitura: esta consulta não apaga nem altera construções, moradores ou progresso.</p><button type="button" class="quick-save-close">FECHAR</button></div>';
-  document.body.appendChild(quickSave);
-  const quickSaveButton = quickSave.querySelector("button");
-  const quickSaveValues = quickSave.querySelector(".quick-save-values");
-  const updateQuickSave = () => { quickSaveValues.textContent = saveDiagnostics.textContent; };
-  quickSaveButton.addEventListener("click", () => {
-    const open = quickSave.classList.toggle("open");
-    quickSaveButton.setAttribute("aria-expanded", String(open));
-    if (open) { renderSaveDiagnostics(); updateQuickSave(); }
-  });
-  quickSave.querySelector(".quick-save-close").addEventListener("click", () => {
-    quickSave.classList.remove("open");
-    quickSaveButton.setAttribute("aria-expanded","false");
-  });
   renderSaveDiagnostics();
-  updateQuickSave();
   const housingRosterDisplay = workPanel.querySelector("#village-housing-roster");
   const autoAssignHomesButton = workPanel.querySelector("#village-auto-assign-homes");
   const villageAlerts = workPanel.querySelector("#village-alerts");
