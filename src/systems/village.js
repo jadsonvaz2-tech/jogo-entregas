@@ -253,7 +253,21 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   applyBulkPriorityButton.type = "button";
   applyBulkPriorityButton.textContent = "APLICAR PRIORIDADE";
   applyBulkPriorityButton.setAttribute("aria-label","Aplicar prioridade aos moradores exibidos");
-  residentBulkActions.append(activateVisibleButton,pauseVisibleButton,bulkPrioritySelect,applyBulkPriorityButton);
+  const bulkProfessionSelect = document.createElement("select");
+  bulkProfessionSelect.id = "village-resident-bulk-profession";
+  bulkProfessionSelect.setAttribute("aria-label","Profissão para moradores exibidos");
+  const bulkProfessionPlaceholder = document.createElement("option");
+  bulkProfessionPlaceholder.value = "";
+  bulkProfessionPlaceholder.textContent = "Profissão para exibidos...";
+  bulkProfessionSelect.appendChild(bulkProfessionPlaceholder);
+  for(const [value,profession] of Object.entries(professions)){
+    const option=document.createElement("option");option.value=value;option.textContent=profession.label;bulkProfessionSelect.appendChild(option);
+  }
+  const applyBulkProfessionButton = document.createElement("button");
+  applyBulkProfessionButton.type = "button";
+  applyBulkProfessionButton.textContent = "ATRIBUIR PROFISSÃO";
+  applyBulkProfessionButton.setAttribute("aria-label","Atribuir profissão aos moradores exibidos");
+  residentBulkActions.append(activateVisibleButton,pauseVisibleButton,bulkPrioritySelect,applyBulkPriorityButton,bulkProfessionSelect,applyBulkProfessionButton);
   residentFilterCount.parentNode.insertBefore(residentBulkActions,residentFilterCount);
   const RESIDENT_SORTS = ["name","level","production","profession"];
   let residentSort = RESIDENT_SORTS.includes(saved.residentSort) ? saved.residentSort : "name";
@@ -1109,6 +1123,32 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     onToast("Prioridade "+label.replace("Prioridade ","").toLowerCase()+" aplicada a "+changed+" morador(es).");
   }
   applyBulkPriorityButton.addEventListener("click",()=>setVisibleResidentsPriority(bulkPrioritySelect.value));
+  function setVisibleResidentsProfession(professionKey) {
+    if(!Object.prototype.hasOwnProperty.call(professions,professionKey)){onToast("Escolha uma profissão válida.");return;}
+    let changed=0;
+    for(const row of workList.children){
+      if(row.hidden) continue;
+      const resident=residents.find(item=>item.id===row.dataset.residentId);
+      if(!resident || resident.profession===professionKey) continue;
+      resident.profession=professionKey;
+      resident.role=professions[professionKey].label;
+      if(professionKey==="idle") resident.enabled=false;
+      else resident.enabled=true;
+      if(professionKey==="guard" && !Object.prototype.hasOwnProperty.call(GUARD_PATROL_ROUTES,resident.patrolRoute)) resident.patrolRoute=guardPatrolFor(resident).key;
+      resident.routeKey="";
+      resident.target=null;
+      resident.routeIndex=0;
+      updateResidentNameTag(resident);
+      changed++;
+    }
+    if(!changed){onToast("Nenhum morador exibido precisa dessa profissão.");return;}
+    saveVillageProgress();
+    refreshRoster();
+    refreshSecurityUI();
+    renderWorkPanel();
+    onToast(professions[professionKey].label+" atribuída a "+changed+" morador(es) exibido(s).");
+  }
+  applyBulkProfessionButton.addEventListener("click",()=>setVisibleResidentsProfession(bulkProfessionSelect.value));
   activateVisibleButton.addEventListener("click",()=>setVisibleResidentsWorkState(true));
   pauseVisibleButton.addEventListener("click",()=>setVisibleResidentsWorkState(false));
   residentSearchInput.addEventListener("input",applyResidentFilters);
