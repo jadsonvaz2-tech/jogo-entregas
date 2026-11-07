@@ -52,11 +52,6 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     #village-dialog[hidden]{display:none}
     #village-dialog h2{margin:0 0 4px;color:#e6c979;font-size:21px}
     #village-dialog .role{margin:0 0 12px;color:#bfc99d;font:700 10px system-ui;letter-spacing:.1em;text-transform:uppercase}
-    #village-dialog .trust{margin:0 0 14px;padding:9px 10px;border:1px solid #ffffff20;border-radius:8px;background:#101b1680;font:11px/1.4 system-ui;color:#e8d9ad}
-    #village-dialog .trust-track{height:5px;margin-top:6px;border-radius:5px;background:#ffffff24;overflow:hidden}
-    #village-dialog .trust-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,#8d9f65,#e6c979)}
-    #village-dialog #village-gift-button{width:100%;margin:0 0 8px;background:#6b7543}
-    #village-dialog #village-gift-button:disabled{opacity:.5}
     #village-dialog p{margin:0 0 16px}
     #village-dialog button{padding:10px 15px;border:1px solid #d6b45d;border-radius:9px;background:#52634a;color:#fff1cc;font:700 12px system-ui}
     #village-dialog .close{float:right;background:transparent}
@@ -108,15 +103,12 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   const dialog = document.createElement("section");
   dialog.id = "village-dialog";
   dialog.hidden = true;
-  dialog.innerHTML = '<button class="close" type="button">FECHAR ✕</button><h2 id="village-dialog-name"></h2><div class="role" id="village-dialog-role"></div><div class="trust" id="village-dialog-trust"></div><p id="village-dialog-text"></p><button id="village-gift-button" type="button">🎁 OFERECER 2 FRUTAS</button><button id="village-dialog-done" type="button">CONTINUAR</button>';
+  dialog.innerHTML = '<button class="close" type="button">FECHAR ✕</button><h2 id="village-dialog-name"></h2><div class="role" id="village-dialog-role"></div><p id="village-dialog-text"></p><button id="village-dialog-done" type="button">CONTINUAR</button>';
   document.body.appendChild(dialog);
 
   const dialogName = dialog.querySelector("#village-dialog-name");
   const dialogRole = dialog.querySelector("#village-dialog-role");
   const dialogText = dialog.querySelector("#village-dialog-text");
-  const dialogTrust = dialog.querySelector("#village-dialog-trust");
-  const giftButton = dialog.querySelector("#village-gift-button");
-  let activeResident = null;
   const closeDialog = () => { dialog.hidden = true; };
   dialog.querySelector(".close").addEventListener("click", closeDialog);
   dialog.querySelector("#village-dialog-done").addEventListener("click", closeDialog);
@@ -124,26 +116,6 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
   const skills = Object.fromEntries(residents.map(resident => {
     const savedSkill = saved.skills && typeof saved.skills === "object" ? saved.skills[resident.id] || {} : {};
     return [resident.id, { xp: Math.max(0, Math.floor(Number(savedSkill.xp) || 0)), level: Math.min(10, Math.max(1, Math.floor(Number(savedSkill.level) || 1))) }];
-  }));
-
-  const relationships = Object.fromEntries(residents.map(resident => {
-    const savedRelationship = saved.relationships && typeof saved.relationships === "object" ? saved.relationships[resident.id] || {} : {};
-    const points = Math.min(12, Math.max(0, Math.floor(Number(savedRelationship.points) || 0)));
-    return [resident.id, {
-      points,
-      level: Math.min(5, Math.max(1, Math.floor(Number(savedRelationship.level) || (1 + Math.floor(points / 3))))),
-      lastTalkDay: Math.max(0, Math.floor(Number(savedRelationship.lastTalkDay) || 0)),
-      lastGiftDay: Math.max(0, Math.floor(Number(savedRelationship.lastGiftDay) || 0))
-    }];
-  }));
-
-  const productionTotals = Object.fromEntries(residents.map(resident => {
-    const savedTotals = saved.productionTotals && typeof saved.productionTotals === "object" ? saved.productionTotals[resident.id] || {} : {};
-    return [resident.id, {
-      wood: Math.max(0, Math.floor(Number(savedTotals.wood) || 0)),
-      stone: Math.max(0, Math.floor(Number(savedTotals.stone) || 0)),
-      berries: Math.max(0, Math.floor(Number(savedTotals.berries) || 0))
-    }];
   }));
 
   const professions = {
@@ -163,7 +135,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     try {
       const jobs = {};
       for (const resident of residents) jobs[resident.id] = { profession: resident.profession, enabled: resident.enabled };
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, lastUpkeepDay, skills, relationships, productionTotals }));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ met: residents.filter(r => r.met).map(r => r.id), jobs, stockpile, morale, lastUpkeepDay, skills }));
     } catch (error) {
       console.warn("Não foi possível salvar o progresso dos moradores.", error);
     }
@@ -228,97 +200,9 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     onToast("Você recolheu a produção comunitária: " + amounts.wood + " madeiras, " + amounts.stone + " pedras e " + amounts.berries + " frutas.");
   });
 
-  function recordProduction(resident, resource, amount) {
-    if (!productionTotals[resident.id] || !Object.prototype.hasOwnProperty.call(productionTotals[resident.id], resource)) return;
-    const quantity = Math.max(0, Math.floor(Number(amount) || 0));
-    if (!quantity) return;
-    productionTotals[resident.id][resource] += quantity;
-    refreshProductionSummary();
-  }
-
-  function refreshProductionSummary() {
-    const summary = workList.querySelector(".village-production-summary");
-    if (!summary) return;
-    const totals = residents.map(resident => {
-      const value = productionTotals[resident.id];
-      return { name: resident.name, berries: value.berries, wood: value.wood, stone: value.stone, total: value.berries + value.wood + value.stone };
-    }).sort((a, b) => b.total - a.total);
-    const grandTotal = totals.reduce((sum, item) => sum + item.total, 0);
-    const resources = totals.reduce((sum, item) => ({
-      berries: sum.berries + item.berries,
-      wood: sum.wood + item.wood,
-      stone: sum.stone + item.stone
-    }), { berries: 0, wood: 0, stone: 0 });
-    summary.replaceChildren();
-    const heading = document.createElement("div");
-    heading.textContent = "CONTRIBUIÇÃO DO POVOADO · " + grandTotal + " ITENS";
-    heading.style.cssText = "font-weight:800;letter-spacing:.35px;margin-bottom:5px";
-    const breakdown = document.createElement("div");
-    breakdown.textContent = resources.berries + " frutas  ·  " + resources.wood + " madeiras  ·  " + resources.stone + " pedras";
-    breakdown.style.cssText = "font-weight:500;color:#d4d0b8;margin-bottom:8px";
-    const rankingTitle = document.createElement("div");
-    rankingTitle.textContent = "RANKING DE CONTRIBUIÇÃO";
-    rankingTitle.style.cssText = "font-size:9px;color:#cbb77e;margin-bottom:5px";
-    summary.append(heading, breakdown, rankingTitle);
-    const maximum = totals.length ? totals[0].total : 0;
-    totals.forEach((item, index) => {
-      const line = document.createElement("div");
-      line.style.cssText = "display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin-top:5px";
-      const label = document.createElement("span");
-      label.textContent = (index + 1) + ". " + item.name + " · " + item.total;
-      label.style.cssText = "font-size:10px;color:#f0e8d2";
-      const percent = maximum ? Math.round(item.total / maximum * 100) : 0;
-      const value = document.createElement("span");
-      value.textContent = percent + "%";
-      value.style.cssText = "font-size:9px;color:#d6c58f";
-      line.append(label, value);
-      const track = document.createElement("div");
-      track.style.cssText = "height:4px;border-radius:4px;background:#ffffff20;overflow:hidden;grid-column:1 / -1";
-      const fill = document.createElement("div");
-      fill.style.cssText = "height:100%;width:" + percent + "%;background:linear-gradient(90deg,#788e5a,#d9c27f);transition:width .25s ease";
-      track.appendChild(fill);
-      summary.append(line, track);
-    });
-    if (!grandTotal) {
-      const empty = document.createElement("div");
-      empty.textContent = "Aguardando as primeiras contribuições dos moradores.";
-      empty.style.cssText = "font-weight:500;color:#d4d0b8;margin-top:5px";
-      summary.appendChild(empty);
-    }
-  }
-
-  function productionHistoryText(resident) {
-    const totals = productionTotals[resident.id];
-    const total = totals.berries + totals.wood + totals.stone;
-    const milestones = [
-      { amount: 25, title: "AJUDANTE DEDICADO" },
-      { amount: 100, title: "ARTESÃO EXPERIENTE" },
-      { amount: 250, title: "MESTRE DO POVOADO" }
-    ];
-    const reached = milestones.filter(item => total >= item.amount).pop();
-    const next = milestones.find(item => total < item.amount);
-    const title = reached ? reached.title : "NOVATO";
-    const progress = next ? Math.floor(Math.min(1, total / next.amount) * 100) : 100;
-    const nextText = next ? "PRÓXIMO TÍTULO: " + next.title + " · " + total + "/" + next.amount + " (" + progress + "%)" : "TODOS OS TÍTULOS DE PRODUÇÃO CONQUISTADOS";
-    return "HISTÓRICO · " + totals.berries + " frutas · " + totals.wood + " madeiras · " + totals.stone + " pedras · TÍTULO: " + title + " · " + nextText;
-  }
-
   function experienceNeeded(level) { return level * 5; }
 
-  function productionBonus(resident) {
-    const skillBonus = Math.floor((skills[resident.id].level - 1) / 2);
-    const relationship = relationships[resident.id];
-    const friendshipBonus = relationship.level >= 5 ? 2 : relationship.level >= 3 ? 1 : 0;
-    return skillBonus + friendshipBonus;
-  }
-
-  function workCycleDuration(resident) {
-    const moraleCycle = morale >= 75 ? 40 : morale < 25 ? 55 : 45;
-    const skillReduction = Math.floor((skills[resident.id].level - 1) / 2);
-    const relationship = relationships[resident.id];
-    const friendshipReduction = relationship.level >= 5 ? 2 : relationship.level >= 3 ? 1 : 0;
-    return Math.max(30, moraleCycle - skillReduction - friendshipReduction);
-  }
+  function productionBonus(resident) { return Math.floor((skills[resident.id].level - 1) / 2); }
 
   function awardWorkExperience(resident) {
     const skill = skills[resident.id];
@@ -339,7 +223,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     const production = row.querySelector(".production");
     if (production) {
       const skillLine = skill.level >= 10 ? "NÍVEL 10 · MESTRE" : "NÍVEL " + skill.level + " · XP " + skill.xp + "/" + experienceNeeded(skill.level) + (bonus ? " · +" + bonus + " por ciclo" : "");
-      production.textContent = (job.resource ? (job.detail || ("Produz " + job.amount + " " + job.resourceLabel + " por ciclo de trabalho.")) : "Sem produção atribuída.") + " " + skillLine + (job.resource ? " · CICLO ATUAL: " + workCycleDuration(resident) + "s" : "") + " · " + productionHistoryText(resident);
+      production.textContent = job.resource ? (job.detail || ("Produz " + job.amount + " " + job.resourceLabel + " por ciclo de trabalho.")) + " " + skillLine : "Sem produção atribuída. " + skillLine;
     }
     const fill = row.querySelector('[aria-label="Progresso da profissão de ' + resident.name + '"] > div');
     if (fill) fill.style.width = skillProgress + "%";
@@ -349,11 +233,6 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
 
   function renderWorkPanel() {
     workList.innerHTML = "";
-    const summary = document.createElement("div");
-    summary.className = "village-production-summary";
-    summary.style.cssText = "padding:9px 10px;margin-bottom:9px;border:1px solid #b9a16a55;border-radius:7px;background:#1c2a20;color:#e6d5a5;font-size:10px;line-height:1.5;font-weight:700";
-    workList.appendChild(summary);
-    refreshProductionSummary();
     for (const resident of residents) {
       const row = document.createElement("div");
       row.className = "work-row";
@@ -409,7 +288,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       const skill = skills[resident.id];
       const bonus = productionBonus(resident);
       const skillLine = skill.level >= 10 ? "NÍVEL 10 · MESTRE" : "NÍVEL " + skill.level + " · XP " + skill.xp + "/" + experienceNeeded(skill.level) + (bonus ? " · +" + bonus + " por ciclo" : "");
-      production.textContent = (job.resource ? (job.detail || ("Produz " + job.amount + " " + job.resourceLabel + " por ciclo de trabalho.")) : "Sem produção atribuída.") + " " + skillLine + (job.resource ? " · CICLO ATUAL: " + workCycleDuration(resident) + "s" : "");
+      production.textContent = job.resource ? (job.detail || ("Produz " + job.amount + " " + job.resourceLabel + " por ciclo de trabalho.")) + " " + skillLine : "Sem produção atribuída. " + skillLine;
       const skillTrack = document.createElement("div");
       skillTrack.setAttribute("aria-label", "Progresso da profissão de " + resident.name);
       skillTrack.style.cssText = "height:5px;margin-top:6px;border-radius:5px;background:#ffffff24;overflow:hidden";
@@ -580,62 +459,9 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
     resident.group.add(resident.nameTag);
   }
 
-  function renderTrustPanel(resident, message) {
-    const relationship = relationships[resident.id];
-    const trustNames = ["Desconhecido", "Conhecido", "Companheiro", "Amigo", "Aliado"];
-    const trustProgress = relationship.level >= 5 ? 100 : (relationship.points % 3) / 3 * 100;
-    const friendshipBonus = relationship.level >= 5 ? 2 : relationship.level >= 3 ? 1 : 0;
-    dialogTrust.innerHTML = "<b>CONFIANÇA · " + trustNames[relationship.level - 1] + " · NÍVEL " + relationship.level + "/5</b><div>" + relationship.points + "/12 pontos · " + message + "</div><div class=\\"trust-track\\"><div class=\\"trust-fill\\" style=\\"width:" + trustProgress + "%\\"></div></div><div>" + (friendshipBonus ? "🤝 BÔNUS DE AMIZADE: +" + friendshipBonus + " unidade(s) por ciclo de trabalho." : "Fortaleça a amizade até Companheiro para desbloquear bônus de trabalho.") + "</div>";
-    renderWorkPanel();
-    const currentDay = Math.max(1, Number(state.day) || 1);
-    const giftedToday = relationship.lastGiftDay >= currentDay;
-    giftButton.disabled = giftedToday || relationship.points >= 12 || stockpile.berries < 2;
-    giftButton.textContent = giftedToday ? "PRESENTE ENTREGUE HOJE" : relationship.points >= 12 ? "CONFIANÇA MÁXIMA" : "🎁 OFERECER 2 FRUTAS";
-  }
-
-  giftButton.addEventListener("click", () => {
-    if (!activeResident) return;
-    const currentDay = Math.max(1, Number(state.day) || 1);
-    const relationship = relationships[activeResident.id];
-    if (relationship.lastGiftDay >= currentDay || relationship.points >= 12 || !takeFromStockpile("berries", 2)) return;
-    relationship.lastGiftDay = currentDay;
-    const previousLevel = relationship.level;
-    relationship.points = Math.min(12, relationship.points + 2);
-    relationship.level = Math.min(5, 1 + Math.floor(relationship.points / 3));
-    let message = "Presente recebido! A confiança aumentou.";
-    if (relationship.level > previousLevel) {
-      morale = Math.min(100, morale + 2);
-      message = "Presente recebido! " + activeResident.name + " avançou para o nível " + relationship.level + " e o ânimo do povoado recebeu +2.";
-    }
-    saveVillageProgress();
-    refreshStockpileUI();
-    renderTrustPanel(activeResident, message);
-    onToast("Você presenteou " + activeResident.name + " com 2 frutas.");
-  });
-
   function openResidentDialogue(resident) {
     resident.met = true;
-    const relationship = relationships[resident.id];
-    const currentDay = Math.max(1, Number(state.day) || 1);
-    let relationshipMessage = "Você já conversou com " + resident.name + " hoje.";
-    if (currentDay > relationship.lastTalkDay) {
-      relationship.lastTalkDay = currentDay;
-      relationship.points = Math.min(12, relationship.points + 1);
-      const nextLevel = Math.min(5, 1 + Math.floor(relationship.points / 3));
-      if (nextLevel > relationship.level) {
-        relationship.level = nextLevel;
-        morale = Math.min(100, morale + 2);
-        relationshipMessage = "A confiança cresceu! " + resident.name + " agora é nível " + relationship.level + ". O ânimo do povoado recebeu +2.";
-      } else {
-        relationshipMessage = "A confiança aumentou. Volte amanhã para fortalecer essa amizade.";
-      }
-      saveVillageProgress();
-      refreshStockpileUI();
-    } else {
-      saveVillageProgress();
-    }
-    activeResident = resident;
-    renderTrustPanel(resident, relationshipMessage);
+    saveVillageProgress();
     dialogName.textContent = resident.name;
     dialogRole.textContent = resident.role;
     const reserveDays = foodReserveDays();
@@ -720,7 +546,7 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
       const job = professions[resident.profession];
       if (resident.enabled && job && job.resource && workingTime) {
         workElapsed[resident.id] += Math.max(0, dt);
-        const workCycle = workCycleDuration(resident);
+        const workCycle = morale >= 75 ? 40 : morale < 25 ? 55 : 45;
         if (workElapsed[resident.id] >= workCycle) {
           workElapsed[resident.id] -= workCycle;
           const leveledUp = awardWorkExperience(resident);
@@ -736,7 +562,6 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
           if (farmResult && typeof farmResult === "object" && farmResult.resource && Number(farmResult.amount) > 0) {
             const produced = Number(farmResult.amount) + bonus;
             stockpile[farmResult.resource] = (stockpile[farmResult.resource] || 0) + produced;
-            recordProduction(resident, farmResult.resource, produced);
             saveVillageProgress();
             refreshStockpileUI();
             onToast((farmResult.message || "Lina armazenou a colheita no depósito comunitário.") + (bonus ? " Bônus de experiência: +" + bonus + " unidade(s)." : ""));
@@ -745,7 +570,6 @@ export function createVillageResidents({ THREE, scene, player, terrainHeight, st
           } else {
             const produced = job.amount + bonus;
             stockpile[job.resource] = (stockpile[job.resource] || 0) + produced;
-            recordProduction(resident, job.resource, produced);
             saveVillageProgress();
             refreshStockpileUI();
             onToast(resident.name + " armazenou " + produced + " " + job.resourceLabel + " no depósito comunitário.");
